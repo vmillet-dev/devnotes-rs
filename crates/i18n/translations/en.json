@@ -24,7 +24,7 @@
     "deleteSpaceFolders": "{count, plural, one {Its folder goes with it.} other {Its # folders go with it.}}",
     "deleteSpaceNeedsAnother": "Create a second space before deleting this one: its notes need somewhere to go.",
     "noteOptionsLabel": "Options for note {{title}}",
-    "moveToSpace": "Move to",
+    "moveToSpace": "Move to a space",
     "tags": "Tags",
     "tagsGroupLabel": "Filter by tag",
     "languages": "Format",
@@ -88,7 +88,6 @@
     "newRichNote": "Note",
     "newChecklist": "To-do list",
     "createMenuTitle": "Create",
-    "kindNew": "New",
     "kindLines": {
       "snippet": "A block of code, its language and its fields to fill in.",
       "note": "Formatted text: headings, lists, links, tables, code blocks.",
@@ -150,7 +149,8 @@
     "copy": "Copy",
     "duplicate": "Duplicate",
     "copyTitle": "{{title}} (copy)",
-    "fileInto": "File into",
+    "moveTo": "Move to…",
+    "fileInto": "Move to a folder",
     "noFolder": "No folder",
     "newCalc": "Calculation",
     "newDrawing": "Drawing",
@@ -744,7 +744,7 @@
     "label": "Selection actions",
     "count": "{count, plural, one {# selected} other {# selected}}",
     "clear": "Clear selection",
-    "moveTo": "Move to",
+    "moveTo": "Move to…",
     "priority": "Priority",
     "addTagLabel": "Add a tag to the selection",
     "addTagPlaceholder": "+ tag",
@@ -755,9 +755,7 @@
     "pin": "Pin",
     "unpin": "Unpin",
     "delete": "Move to trash",
-    "deleteConfirm": "Confirm?",
-    "fileInto": "File into",
-    "unfile": "Take out of folder"
+    "deleteConfirm": "Confirm?"
   },
   "palette": {
     "title": "Palette",
@@ -988,6 +986,8 @@
       "newDrawing": "New drawing"
     },
     "editor": {
+      "step": "Next or previous note, no field in focus",
+      "title": "Edit the title of the open note",
       "close": "Leave the code, then close the editor, saving",
       "newItem": "Add an item below this one",
       "removeItem": "Remove an empty item",
@@ -1472,6 +1472,9 @@
     "copy": "Copy",
     "copied": "Copied",
     "copyWhat": "Copy {{what}}",
+    "copyRawWhat": "Copy {{what}}, raw",
+    "raw": "Raw",
+    "copyRawHint": "Copy the raw value",
     "case": {
       "name": "Case converter",
       "description": "camelCase, snake_case, dot.case, Train-Case…",
@@ -2092,11 +2095,7 @@
         "landmarks": "Landmarks"
       },
       "localZone": "local time · UTC{{offset}}",
-      "tab": "Tab",
-      "tabs": {
-        "convert": "Convert",
-        "durations": "Gap and durations"
-      },
+      "convertTitle": "Convert a date",
       "gapTitle": "Gap between two dates",
       "fields": {
         "from": "From",
@@ -2432,12 +2431,8 @@
       "tooLarge": "Too large to count exactly: 28 digits at most.",
       "empty": "Type a quantity, with its unit or without: every unit shows here.",
       "noteTitle": "{{value}} {{unit}} in every unit",
-      "value": "Value",
-      "tab": "Tab",
-      "tabs": {
-        "conversion": "Conversion",
-        "transfer": "Transfer"
-      },
+      "conversionTitle": "Convert a size",
+      "transferTitle": "Transfer time",
       "transferSize": "Size to transfer",
       "rate": "Rate",
       "rateUnit": "Rate unit",
@@ -2613,7 +2608,23 @@
       "account": "Account number",
       "rib": "RIB key",
       "ribWrong": "{{given}} · {{expected}} expected",
-      "compact": "Compact format",
+      "validateTitle": "Validate",
+      "generateTitle": "Generate",
+      "generateIntro": "Test numbers that pass: a series of digits that begins and ends as you choose, or the IBAN of a country.",
+      "prefix": "Begins with",
+      "suffix": "Ends with",
+      "numberLength": "Length",
+      "count": "Count",
+      "again": "Generate again",
+      "generated": "{count, plural, one {# number} other {# numbers}}",
+      "generatedAll": "All the numbers",
+      "generatedNote": "Drawn at random for tests: no card and no account stands behind them. The copy has no space.",
+      "generateProblems": {
+        "prefix": "The beginning holds something else than a digit at character {{at}}.",
+        "suffix": "The end holds something else than a digit at character {{at}}.",
+        "tooLong": "The beginning and the end hold {count, plural, one {# digit} other {# digits}}, more than the length.",
+        "impossible": "No digit is left to draw, and this number does not pass the check."
+      },
       "footnote": "A valid number follows the format and the check digits. It does not prove the account or the card exists."
     },
     "jwt": {
@@ -4244,6 +4255,7 @@
     "diamond": "Diamond (D)",
     "arrow": "Arrow (A): started on a shape, it follows it",
     "pen": "Freehand (P)",
+    "eraser": "Eraser (E): click or drag across shapes",
     "text": "Text (T)",
     "colours": "Colour",
     "colour": {
@@ -4257,6 +4269,10 @@
     "remove": "Delete the selection (Del)",
     "undo": "Undo (Ctrl+Z)",
     "redo": "Redo (Ctrl+Y)",
+    "zoomIn": "Zoom in (Ctrl +)",
+    "zoomOut": "Zoom out (Ctrl −)",
+    "zoomReset": "Back to 100 % (Ctrl 0)",
+    "fit": "Show the whole drawing (F)",
     "exportPng": "Export as PNG",
     "exportSvg": "Export as SVG",
     "exported": "Drawing exported to {{name}}.",
@@ -4264,8 +4280,11 @@
     "empty": "Pick a tool, then draw.",
     "embed": "Insert a drawing",
     "embedNone": "No drawing to insert",
+    "embedOwnSize": "Auto",
+    "embedResize": "Resize the drawing (Alt + ← →)",
     "missing": "Drawing not found",
-    "noPicture": "No preview yet",
+    "noPicture": "No preview",
+    "emptyCard": "Empty drawing",
     "preview": "Drawing preview"
   },
   "crash": {

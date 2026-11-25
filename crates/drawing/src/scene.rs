@@ -10,6 +10,38 @@ const OBJECTS: &str = "objects";
 /// What the scene says it was written by: a format that does not change keeps its number.
 const FABRIC: &str = "7.4.0";
 
+/// The middle of a side of a shape, on its own plane: turned, its top is where it was.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Side {
+    Top,
+    Right,
+    Bottom,
+    Left,
+}
+
+impl Side {
+    pub const ALL: [Self; 4] = [Self::Top, Self::Right, Self::Bottom, Self::Left];
+
+    fn word(self) -> &'static str {
+        match self {
+            Self::Top => "top",
+            Self::Right => "right",
+            Self::Bottom => "bottom",
+            Self::Left => "left",
+        }
+    }
+
+    /// A word no code here wrote is the edge facing the other end, and stays stored.
+    fn named(word: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|side| side.word() == word)
+    }
+}
+
+/// `fromAnchor` beside `from`, `toAnchor` beside `to`.
+fn anchor_field(end: &str) -> String {
+    format!("{end}Anchor")
+}
+
 /// A drawing as stored: `{ version, scene }`, the scene's objects taken out to be worked on.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Drawing {
@@ -74,6 +106,12 @@ impl Drawing {
 
     /// `None` for a body that holds no scene, or one whose objects are not objects: what
     /// opens as a new drawing.
+    /// What everything drawn covers; `None` when nothing is.
+    pub fn bounds(&self) -> Option<crate::geometry::Box> {
+        let boxes: Vec<_> = self.objects.iter().map(Object::bounds).collect();
+        crate::geometry::scene_box(&boxes, 0.0)
+    }
+
     pub fn read(content: &str) -> Option<Self> {
         let Value::Object(mut body) = serde_json::from_str(content).ok()? else {
             return None;
@@ -177,9 +215,21 @@ impl Object {
         self.put_number("angle", degrees.rem_euclid(360.0));
     }
 
-    /// `None` lets go of the shape, as `null` in the scene.
+    /// `None` lets go of the shape, as `null` in the scene; the point chosen on it goes with it.
     pub(crate) fn set_bound(&mut self, name: &str, id: Option<&str>) {
         self.put(name, id.map_or(Value::Null, Value::from));
+        self.fields.remove(&anchor_field(name));
+    }
+
+    /// The point the end `name` holds its shape by; without one, its edge facing the other end.
+    pub(crate) fn set_anchor(&mut self, name: &str, side: Option<Side>) {
+        if let Some(side) = side {
+            self.put(&anchor_field(name), side.word());
+        }
+    }
+
+    pub(crate) fn anchor(&self, name: &str) -> Option<Side> {
+        Side::named(self.words(&anchor_field(name))?)
     }
 
     pub(crate) fn set_ends(&mut self, ends: Ends) {

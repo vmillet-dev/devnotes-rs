@@ -170,7 +170,7 @@ mod tests {
         let mut errors = ErrorNotifier::default();
         let bindings = Bindings::default();
         keys.update(&bindings, false, &mut errors);
-        errors.dismiss();
+        errors.dismiss(1);
 
         keys.update(&bindings, true, &mut errors);
         keys.update(&bindings, true, &mut errors);

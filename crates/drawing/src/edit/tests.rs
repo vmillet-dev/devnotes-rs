@@ -448,3 +448,291 @@ fn what_it_opened_comes_back_unchanged_until_it_is_touched() {
     assert!(editor.body().contains(r#""later":true"#));
     assert!(editor.body().contains(r#""left":70"#));
 }
+
+/// Three rectangles side by side, 60 wide and 40 apart, from (0, 0).
+fn three_rectangles() -> Editor {
+    let mut editor = editor();
+    for rank in 0..3 {
+        editor.set_tool(Tool::Rectangle);
+        let left = f64::from(rank) * 100.0;
+        drag(&mut editor, at(left, 0.0), at(left + 60.0, 60.0));
+    }
+    editor.set_tool(Tool::Eraser);
+    editor
+}
+
+#[test]
+fn three_clicks_of_the_eraser_remove_three_shapes_an_undo_each() {
+    let mut editor = three_rectangles();
+    for (rank, left) in [0.0, 100.0, 200.0].into_iter().enumerate() {
+        let on = at(left + 30.0, 30.0);
+        assert!(editor.erasable(on).is_some());
+        drag(&mut editor, on, on);
+        assert_eq!(editor.shapes(), 2 - rank);
+        assert_eq!(editor.tool(), Tool::Eraser, "it stays in hand");
+    }
+    assert!(editor.erasable(at(30.0, 30.0)).is_none());
+    for left in 1..=3 {
+        editor.undo();
+        assert_eq!(editor.shapes(), left);
+    }
+}
+
+#[test]
+fn a_drag_of_the_eraser_across_three_shapes_is_one_step_of_the_history() {
+    let mut editor = three_rectangles();
+    // Fast: one move over the whole row.
+    drag(&mut editor, at(-20.0, 30.0), at(300.0, 30.0));
+    assert_eq!(editor.shapes(), 0);
+
+    editor.undo();
+    assert_eq!(editor.shapes(), 3);
+}
+
+#[test]
+fn the_eraser_takes_the_topmost_and_a_shake_leaves_what_was_under_it() {
+    let mut editor = editor();
+    for _ in 0..2 {
+        editor.set_tool(Tool::Rectangle);
+        drag(&mut editor, at(0.0, 0.0), at(100.0, 100.0));
+    }
+    editor.set_tool(Tool::Eraser);
+    drag(&mut editor, at(50.0, 50.0), at(53.0, 51.0));
+    assert_eq!(editor.shapes(), 1);
+}
+
+#[test]
+fn the_eraser_on_the_paper_changes_nothing() {
+    let mut editor = three_rectangles();
+    editor.take_unsaved();
+    drag(&mut editor, at(500.0, 500.0), at(520.0, 500.0));
+    assert_eq!(editor.shapes(), 3);
+    assert!(!editor.take_unsaved());
+}
+
+#[test]
+fn an_arrow_keeps_its_other_end_when_the_eraser_takes_the_shape_it_starts_on() {
+    let mut editor = three_rectangles();
+    editor.set_tool(Tool::Arrow);
+    drag(&mut editor, at(30.0, 30.0), at(130.0, 30.0));
+    assert!(object(&editor, 3).from().is_some());
+
+    editor.set_tool(Tool::Eraser);
+    drag(&mut editor, at(10.0, 50.0), at(10.0, 50.0));
+
+    let arrow = object(&editor, 2);
+    assert!(arrow.from().is_none() && arrow.to().is_some());
+}
+
+/// Two rectangles, (0, 0)–(100, 60) and (300, 0)–(400, 60), an arrow from the first to the second.
+fn joined() -> Editor {
+    let mut editor = editor();
+    for left in [0.0, 300.0] {
+        editor.set_tool(Tool::Rectangle);
+        drag(&mut editor, at(left, 0.0), at(left + 100.0, 60.0));
+    }
+    editor.set_tool(Tool::Arrow);
+    drag(&mut editor, at(50.0, 30.0), at(350.0, 30.0));
+    editor
+}
+
+fn ends(editor: &Editor) -> Ends {
+    object(editor, 2).ends().unwrap()
+}
+
+#[test]
+fn an_arrow_selected_alone_shows_its_two_ends_and_no_frame() {
+    let editor = joined();
+    assert_eq!(editor.selected(), [2]);
+    assert!(editor.frame().is_none());
+    let [(_, from), (_, to)] = editor.arrow_ends().unwrap();
+    assert_eq!((from, to), (at(101.0, 30.0), at(299.0, 30.0)));
+}
+
+#[test]
+fn an_end_dragged_to_the_paper_lets_its_shape_go_and_back_on_a_shape_holds_it_again() {
+    let mut editor = joined();
+    drag(&mut editor, at(299.0, 30.0), at(250.0, 200.0));
+    assert_eq!(object(&editor, 2).to(), None);
+    assert_eq!(object(&editor, 2).from(), object(&editor, 0).id());
+    assert_eq!(ends(&editor)[2..], [250.0, 200.0]);
+    editor.undo();
+    assert_eq!(object(&editor, 2).to(), object(&editor, 1).id());
+
+    let mut editor = joined();
+    drag(&mut editor, at(299.0, 30.0), at(250.0, 200.0));
+    drag(&mut editor, at(250.0, 200.0), at(350.0, 40.0));
+    assert_eq!(object(&editor, 2).to(), object(&editor, 1).id());
+    assert_eq!(ends(&editor)[2..], [299.0, 30.0]);
+}
+
+#[test]
+fn a_click_on_an_end_moves_nothing() {
+    let mut editor = joined();
+    let before = editor.body();
+    drag(&mut editor, at(299.0, 30.0), at(299.0, 30.0));
+    assert_eq!(editor.body(), before);
+}
+
+#[test]
+fn an_end_takes_another_shape_but_not_the_one_the_other_end_is_on() {
+    let mut editor = joined();
+    editor.set_tool(Tool::Ellipse);
+    drag(&mut editor, at(0.0, 300.0), at(100.0, 400.0));
+    let third = object(&editor, 3).id().map(str::to_owned);
+
+    drag(&mut editor, at(200.0, 30.0), at(200.0, 30.0));
+    drag(&mut editor, at(299.0, 30.0), at(50.0, 350.0));
+    assert_eq!(object(&editor, 2).to(), third.as_deref());
+    let end = at(ends(&editor)[2], ends(&editor)[3]);
+    drag(&mut editor, end, at(20.0, 20.0));
+    assert_eq!(object(&editor, 2).to(), None);
+}
+
+#[test]
+fn the_shape_an_end_would_hold_is_told_while_an_arrow_is_drawn_or_an_end_moved() {
+    let mut editor = joined();
+    let on_the_second = at(350.0, 30.0);
+    assert!(editor.attaching(on_the_second).is_none(), "nothing in hand");
+
+    editor.set_tool(Tool::Arrow);
+    assert!(editor.attaching(on_the_second).is_some());
+    editor.press(at(50.0, 30.0), false);
+    assert!(
+        editor.attaching(at(60.0, 30.0)).is_none(),
+        "not the one it starts on"
+    );
+    editor.release(at(200.0, 200.0));
+
+    let end = editor.arrow_ends().unwrap()[1].1;
+    editor.press(end, false);
+    editor.drag(on_the_second);
+    assert!(editor.attaching(on_the_second).is_some());
+    editor.release(on_the_second);
+    assert!(editor.attaching(on_the_second).is_none());
+}
+
+#[test]
+fn a_shape_under_a_text_holds_an_arrow() {
+    let mut editor = editor();
+    editor.set_tool(Tool::Rectangle);
+    drag(&mut editor, at(0.0, 0.0), at(300.0, 200.0));
+    editor.set_tool(Tool::Text);
+    drag(&mut editor, at(50.0, 100.0), at(50.0, 100.0));
+    editor.set_text("label");
+    editor.leave_text();
+
+    editor.set_tool(Tool::Arrow);
+    drag(&mut editor, at(600.0, 100.0), at(60.0, 100.0));
+    assert_eq!(object(&editor, 2).to(), object(&editor, 0).id());
+}
+
+#[test]
+fn an_arrow_follows_a_shape_resized_and_rotated() {
+    let mut editor = joined();
+    drag(&mut editor, at(350.0, 30.0), at(350.0, 30.0));
+    // Its left side pulled 50 to the left.
+    drag(&mut editor, at(299.0, 30.0), at(249.0, 30.0));
+    assert!(
+        (ends(&editor)[2] - 249.0).abs() < 1.0,
+        "{:?}",
+        ends(&editor)
+    );
+
+    let mut editor = joined();
+    drag(&mut editor, at(350.0, 30.0), at(350.0, 30.0));
+    let frame = editor.frame().unwrap();
+    let handle = frame.grip(Grip::Rotate);
+    drag(
+        &mut editor,
+        handle,
+        at(frame.centre.x + 200.0, frame.centre.y),
+    );
+    // Turned a quarter, it is 62 wide: its left side came closer to its centre.
+    assert!(
+        (ends(&editor)[2] - 319.0).abs() < 1.5,
+        "{:?}",
+        ends(&editor)
+    );
+}
+
+#[test]
+fn an_end_let_go_on_the_middle_of_a_side_stays_on_it() {
+    let mut editor = joined();
+    drag(&mut editor, at(299.0, 30.0), at(352.0, 64.0));
+    assert_eq!(object(&editor, 2).to(), object(&editor, 1).id());
+    assert_eq!(
+        ends(&editor)[2..],
+        [350.0, 61.0],
+        "the middle of its bottom"
+    );
+    let stored = editor.body();
+    assert!(stored.contains(r#""toAnchor":"bottom""#), "{stored}");
+    assert!(!stored.contains("fromAnchor"));
+
+    // The shape moved, then pulled wider by its right side.
+    drag(&mut editor, at(380.0, 10.0), at(380.0, 110.0));
+    assert_eq!(ends(&editor)[2..], [350.0, 161.0]);
+    drag(&mut editor, at(401.0, 130.0), at(501.0, 130.0));
+    assert!(
+        (ends(&editor)[2] - 400.0).abs() < 1.0,
+        "{:?}",
+        ends(&editor)
+    );
+
+    let mut reopened = Editor::open(&editor.body(), Arc::new(fonts()));
+    drag(&mut reopened, at(480.0, 150.0), at(480.0, 50.0));
+    assert_eq!(
+        ends(&reopened)[3],
+        61.0,
+        "read back, it is on the same point"
+    );
+}
+
+#[test]
+fn the_point_chosen_turns_with_its_shape() {
+    let mut editor = joined();
+    drag(&mut editor, at(299.0, 30.0), at(350.0, 0.0));
+    drag(&mut editor, at(350.0, 40.0), at(350.0, 40.0));
+    let frame = editor.frame().unwrap();
+    // A quarter turn: its top is on the right.
+    drag(&mut editor, frame.grip(Grip::Rotate), at(600.0, 30.0));
+    let [.., x, y] = ends(&editor);
+    assert!((x - 381.0).abs() < 0.1 && (y - 30.0).abs() < 0.1, "{x} {y}");
+}
+
+#[test]
+fn let_go_anywhere_else_on_the_shape_an_end_slides_along_its_edge_again() {
+    let mut editor = joined();
+    drag(&mut editor, at(299.0, 30.0), at(350.0, 61.0));
+    drag(&mut editor, at(350.0, 61.0), at(340.0, 30.0));
+    assert_eq!(object(&editor, 2).to(), object(&editor, 1).id());
+    assert!(!editor.body().contains("Anchor"));
+    drag(&mut editor, at(299.0, 30.0), at(350.0, 61.0));
+    drag(&mut editor, at(350.0, 61.0), at(250.0, 300.0));
+    assert!(!editor.body().contains("Anchor"), "let go of, it has none");
+}
+
+#[test]
+fn an_arrow_is_drawn_from_a_point_and_the_points_are_told() {
+    let mut editor = joined();
+    editor.set_tool(Tool::Arrow);
+    let near = editor.attaching(at(405.0, 30.0)).unwrap();
+    assert_eq!(near.points.len(), 4);
+    assert_eq!(near.chosen, Some(at(401.0, 30.0)));
+    assert_eq!(editor.attaching(at(340.0, 30.0)).unwrap().chosen, None);
+
+    drag(&mut editor, at(405.0, 30.0), at(500.0, 300.0));
+    assert_eq!(object(&editor, 3).ends(), Some([401.0, 30.0, 500.0, 300.0]));
+}
+
+#[test]
+fn an_anchor_no_code_here_wrote_is_the_edge_and_stays_stored() {
+    let body = r#"{"scene":{"objects":[
+        {"type":"Rect","id":"a","left":100,"top":100,"width":100,"height":100},
+        {"type":"Path","id":"b","from":"a","fromAnchor":"corner","ends":[151,100,400,100],"path":[["M",151,100],["L",400,100]]}
+    ]}}"#;
+    let mut editor = Editor::open(body, Arc::new(fonts()));
+    drag(&mut editor, at(100.0, 100.0), at(100.0, 110.0));
+    assert!(editor.body().contains(r#""fromAnchor":"corner""#));
+}

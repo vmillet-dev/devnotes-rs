@@ -24,14 +24,7 @@ use crate::tools::ui::{
 use crate::tools::{Drawn, Tool, ToolResult};
 use crate::widgets::{Button, Segmented, TextField, address};
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-enum Tab {
-    Convert,
-    Durations,
-}
-
 pub(super) struct DatesTool {
-    tab: Tab,
     text: String,
     magnitude: Option<Magnitude>,
     from: String,
@@ -45,7 +38,6 @@ pub(super) struct DatesTool {
 
 pub(super) fn make() -> Box<dyn Tool> {
     Box::new(DatesTool {
-        tab: Tab::Convert,
         text: String::new(),
         magnitude: None,
         from: String::new(),
@@ -260,6 +252,7 @@ impl DatesTool {
     fn convert(&mut self, ui: &mut Ui, drawn: &mut Drawn<'_>) {
         let language = drawn.language;
         let tr = |key| i18n::translate(language, key, &[]);
+        section_title(ui, &tr(keys::tools::dates::CONVERT_TITLE));
         let name = tr(keys::tools::dates::INPUT_LABEL);
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = gap::CONTROLS;
@@ -463,7 +456,7 @@ impl DatesTool {
             }) => {
                 let p = palette(ui.ctx());
                 let words = spell_parts(parts, *negative, language);
-                let totals_shown: Vec<(String, String)> = totals
+                let totals_shown: Vec<(String, String, String)> = totals
                     .iter()
                     .flat_map(|it| {
                         [
@@ -474,7 +467,8 @@ impl DatesTool {
                     })
                     .map(|(id, value)| {
                         let path = format!("tools.dates.totals.{id}");
-                        (said(language, &path, &[]), number(value, language))
+                        let shown = number(value, language);
+                        (said(language, &path, &[]), shown, value.to_string())
                     })
                     .collect();
                 let iso_name = said(language, "tools.dates.totals.iso", &[]);
@@ -490,7 +484,11 @@ impl DatesTool {
                     if *from_words {
                         rows.push(ResultRow::new(&iso_name, iso));
                     }
-                    rows.extend(totals_shown.iter().map(|(n, v)| ResultRow::new(n, v)));
+                    rows.extend(
+                        totals_shown
+                            .iter()
+                            .map(|(name, shown, raw)| ResultRow::new(name, shown).raw(raw)),
+                    );
                     result_rows(ui, &rows, language);
                 });
                 if totals.is_none() {
@@ -519,6 +517,13 @@ impl DatesTool {
             tr(keys::tools::dates::EXPLAIN_T)
         );
         hint(ui, &explained);
+    }
+
+    /// The time between two dates, then one written in words or as ISO.
+    fn durations(&mut self, ui: &mut Ui, drawn: &mut Drawn<'_>) {
+        self.gap(ui, drawn);
+        ui.add_space(gap::GROUPS);
+        self.duration(ui, drawn);
     }
 
     fn durations_result(&self, language: Language) -> Option<ToolResult> {
@@ -641,6 +646,7 @@ fn measured(ui: &mut Ui, answer: &DurationsAnswer, language: Language) {
         .each_ref()
         .map(|(id, _)| said(language, &format!("tools.dates.elapsedRows.{id}"), &[]));
     let words = spell_calendar(calendar, *negative, language);
+    let minutes = elapsed.total_minutes.to_string();
     card(ui, "dates-gap", |ui| {
         ui.add_space(gap::GROUPS);
         ui.horizontal(|ui| {
@@ -652,7 +658,10 @@ fn measured(ui: &mut Ui, answer: &DurationsAnswer, language: Language) {
         let shown: Vec<_> = rows
             .iter()
             .zip(&names)
-            .map(|((_, value), name)| ResultRow::new(name, value))
+            .map(|((id, value), name)| match *id {
+                "minutes" => ResultRow::new(name, value).raw(&minutes),
+                _ => ResultRow::new(name, value),
+            })
             .collect();
         result_rows(ui, &shown, language);
     });
@@ -708,27 +717,7 @@ impl Tool for DatesTool {
     }
 
     fn ui(&mut self, ui: &mut Ui, drawn: &mut Drawn<'_>) {
-        use keys::tools::dates::tabs;
-        let tr = |key| i18n::translate(drawn.language, key, &[]);
-        let options = [
-            (Tab::Convert, tr(tabs::CONVERT)),
-            (Tab::Durations, tr(tabs::DURATIONS)),
-        ];
-        let options = options.each_ref().map(|(id, name)| (*id, name.as_str()));
-        Segmented::new(&options, "dates-tab").show(ui, &mut self.tab);
-        ui.add_space(gap::GROUPS);
-        match self.tab {
-            Tab::Convert => {
-                egui::ScrollArea::vertical()
-                    .id_salt("dates-convert")
-                    .auto_shrink(false)
-                    .show(ui, |ui| {
-                        ui.spacing_mut().item_spacing.y = gap::INSET;
-                        self.convert(ui, drawn);
-                    });
-            }
-            Tab::Durations => columns(ui, self, drawn, (Self::gap, Self::duration)),
-        }
+        columns(ui, self, drawn, (Self::convert, Self::durations));
     }
 
     fn keeps_result(&self) -> bool {
@@ -736,10 +725,7 @@ impl Tool for DatesTool {
     }
 
     fn result(&self, language: Language) -> Option<ToolResult> {
-        match self.tab {
-            Tab::Convert => self.converted(language),
-            Tab::Durations => self.durations_result(language),
-        }
+        ToolResult::together(self.converted(language), self.durations_result(language))
     }
 
     fn has_sample(&self) -> bool {

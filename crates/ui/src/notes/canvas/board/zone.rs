@@ -255,6 +255,7 @@ fn grip(
         || WidgetInfo::labeled(Role::Button, true, &label),
         CornerRadius::same(radius::TAG),
     );
+    widgets::grip_pointer(ui, &response);
     let response = widgets::tooltip(response, &label);
     let kind = Kind::MoveZone(zone.folder.id.clone());
     hand.grab(ui, &response, Some(kind), frame);

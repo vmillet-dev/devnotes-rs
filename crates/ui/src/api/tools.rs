@@ -4,6 +4,7 @@ use engine::tools;
 use engine::tools::bases::{
     self, Base64FileAnswer, DecodeAnswer, DecodeRequest, EncodeRequest, Encodings, SavedBytes,
 };
+use engine::tools::check_numbers::{NumbersAnswer, NumbersRequest};
 use engine::tools::checks::{self, CheckAnswer, CheckRequest};
 use engine::tools::cidr::{self, CidrAnswer, CidrRequest};
 use engine::tools::colour::{self, ColourAnswer, ColourRequest};
@@ -143,6 +144,20 @@ pub fn describe_permissions(
 
 pub fn check_digits(backend: &Backend, request: CheckRequest) -> Pending<CheckAnswer> {
     backend.compute(move |_| Ok(checks::check(&request)))
+}
+
+pub fn draw_numbers(backend: &Backend, request: NumbersRequest) -> Pending<NumbersAnswer> {
+    backend.compute(move |_| tools::draw_numbers(&request))
+}
+
+/// A printed number without its separators.
+pub fn raw_number(printed: &str) -> String {
+    engine::tools::printed::raw(printed)
+}
+
+/// The countries whose IBAN is drawn.
+pub fn iban_countries() -> Vec<engine::tools::identity::Country> {
+    engine::tools::check_numbers::iban_countries()
 }
 
 pub fn describe_cidr(backend: &Backend, request: CidrRequest) -> Pending<CidrAnswer> {

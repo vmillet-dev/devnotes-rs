@@ -2,10 +2,10 @@
 //! dragged along the strip, or moved by `Alt` and an arrow. The bar ends with « New request », an
 //! HTTP request in one click and the other kinds in two.
 
-use crate::theme::tokens::{BAR_HEIGHT, BAR_INSET, BAR_TOGGLE, font, gap, radius};
+use crate::theme::tokens::{BAR_HEIGHT, BAR_INSET, BAR_TOGGLE, Palette, font, gap, radius};
 use egui::{
     Color32, CornerRadius, FontFamily, Key, Modifiers, PointerButton, Popup, PopupCloseBehavior,
-    Rect, RectAlign, Response, Role, Sense, Stroke, Ui, Vec2, WidgetInfo, pos2, vec2,
+    Rect, RectAlign, Response, Role, Sense, Stroke, StrokeKind, Ui, Vec2, WidgetInfo, pos2, vec2,
 };
 use engine::http::model::{HttpMethod, RequestKind};
 use i18n::keys;
@@ -18,7 +18,7 @@ use crate::state::http::tabs::Tab;
 use crate::state::http::tree::Badge;
 use crate::theme::icons::{self, Icon};
 use crate::theme::palette;
-use crate::widgets::{self, interact};
+use crate::widgets::{self, SplitButton, SplitKind, interact};
 
 pub(super) const HEIGHT: f32 = BAR_HEIGHT;
 
@@ -29,6 +29,8 @@ pub(super) const KINDS: [(RequestKind, &str); 3] = [
     (RequestKind::Websocket, "websocket"),
 ];
 
+/// The other tabs, while one is dragged.
+const DIMMED: f32 = 0.55;
 /// Held this close to an end of the strip, a dragged tab scrolls it, by this much a frame.
 const EDGE: f32 = 32.0;
 const EDGE_STEP: f32 = 8.0;
@@ -94,9 +96,14 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, view: &mut TabsView, actions: 
                     let active = tabs.active_key() == Some(tab.key.as_str());
                     // Under the tab's key: the focus stays on a tab the keys move.
                     let id = ui.scope_id().with(("http-tab", &tab.key));
+                    let dragged = view.dragging.as_ref().map(|key| *key == tab.key);
                     let (open, whole) = ui
                         .scope_builder(egui::UiBuilder::new().scope_id(id), |ui| {
-                            tab_of(ui, tab, active, actions, language)
+                            if dragged == Some(false) {
+                                ui.multiply_opacity(DIMMED);
+                            }
+                            let look = (active, dragged == Some(true));
+                            tab_of(ui, tab, look, actions, language)
                         })
                         .inner;
                     if open.drag_started_by(PointerButton::Primary) {
@@ -133,7 +140,7 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, view: &mut TabsView, actions: 
 fn tab_of(
     ui: &mut Ui,
     tab: &Tab,
-    active: bool,
+    (active, dragged): (bool, bool),
     actions: &mut Actions,
     language: i18n::Language,
 ) -> (Response, Rect) {
@@ -185,11 +192,8 @@ fn tab_of(
     ui.add_space(gap::SNUG);
     let whole = open.rect.union(close.rect);
     let whole = Rect::from_min_max(whole.min, pos2(whole.max.x + 6.0, whole.max.y));
-    if active {
-        ui.painter().set(
-            fill,
-            egui::epaint::RectShape::filled(whole, CornerRadius::ZERO, p.bg_1),
-        );
+    ui.painter().set(fill, ground(whole, (active, dragged), p));
+    if active && !dragged {
         let edge = Rect::from_min_max(pos2(whole.left(), whole.bottom() - 2.0), whole.max);
         ui.painter()
             .rect_filled(edge, CornerRadius::ZERO, p.amber_fill);
@@ -227,6 +231,21 @@ fn tab_of(
     close_glyph(ui, &close);
     asked(ui, tab, (&open, &close), actions);
     (open, whole)
+}
+
+/// Under a tab: the panel's colour in front; dragged, raised off the strip.
+fn ground(whole: Rect, (active, dragged): (bool, bool), p: &Palette) -> egui::Shape {
+    if dragged {
+        let lifted = whole.shrink2(vec2(1.0, 2.0));
+        let corner = CornerRadius::same(radius::CONTROL);
+        let outline = Stroke::new(1.0, p.amber_fill);
+        return egui::epaint::RectShape::new(lifted, corner, p.bg_2, outline, StrokeKind::Inside)
+            .into();
+    }
+    if active {
+        return egui::Shape::rect_filled(whole, CornerRadius::ZERO, p.bg_1);
+    }
+    egui::Shape::Noop
 }
 
 /// What the pointer and the keys ask of a tab: in front, closed, moved one place.
@@ -350,18 +369,25 @@ fn end_width(ui: &Ui, state: &AppState) -> f32 {
 
 fn new_request_width(ui: &Ui, language: i18n::Language) -> f32 {
     let label = i18n::translate(language, keys::http::tabs::NEW, &[]);
-    widgets::Button::width(ui, &label) + 26.0
+    split(&label, "").width(ui)
+}
+
+fn split<'a>(label: &'a str, kinds: &'a str) -> SplitButton<'a> {
+    SplitButton::new(
+        (label, "http-tab-new"),
+        (kinds, "http-tab-new-kind"),
+        SplitKind::Neutral,
+    )
 }
 
 /// « + New request », split: an HTTP request in one click, the other kinds in two.
 fn new_request(ui: &mut Ui, actions: &mut Actions, language: i18n::Language) {
     let tr = |key| i18n::translate(language, key, &[]);
-    ui.spacing_mut().item_spacing.x = 0.0;
-    let main = widgets::Button::new(&tr(keys::http::tabs::NEW), "http-tab-new").show(ui);
+    let label = tr(keys::http::tabs::NEW);
+    let (main, caret) = split(&label, &tr(keys::http::tabs::NEW_KIND)).show(ui);
     if main.clicked() {
         push(actions, Action::NewRequest(RequestKind::Http));
     }
-    let caret = caret(ui, &tr(keys::http::tabs::NEW_KIND), main.rect.height());
     Popup::menu(&caret)
         .frame(widgets::menu_frame(ui.ctx()))
         .align(RectAlign::BOTTOM_END)
@@ -389,40 +415,6 @@ fn new_request(ui: &mut Ui, actions: &mut Actions, language: i18n::Language) {
                 }
             }
         });
-}
-
-/// The chevron joined to « New request », framed as it is.
-fn caret(ui: &mut Ui, label: &str, height: f32) -> Response {
-    let p = palette(ui.ctx());
-    let corner = CornerRadius {
-        nw: 0,
-        sw: 0,
-        ne: 6,
-        se: 6,
-    };
-    let response = interact(
-        ui,
-        Vec2::new(26.0, height),
-        Sense::click(),
-        "http-tab-new-kind",
-        || WidgetInfo::labeled(Role::Button, true, label),
-        corner,
-    );
-    let edge = if response.hovered() {
-        p.amber_dim
-    } else {
-        p.line_soft
-    };
-    ui.painter().rect(
-        response.rect,
-        corner,
-        p.bg_2,
-        Stroke::new(1.0, edge),
-        egui::StrokeKind::Inside,
-    );
-    let glyph = Rect::from_center_size(response.rect.center(), Vec2::splat(12.0));
-    icons::paint(ui, glyph, Icon::ChevronDown, p.text_1);
-    response
 }
 
 /// A kind of request: the badge its tab and its row will wear, its name, what it is for.

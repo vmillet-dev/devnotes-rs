@@ -8,7 +8,7 @@ mod reference_table;
 mod result_row;
 mod text_table;
 
-pub use copy_value::CopyValue;
+pub use copy_value::{CopyValue, copies, copies_width};
 pub use note_import::{note_import, note_import_into};
 pub use output_row::OutputRow;
 pub use reference_table::{Cell, Column, Group, ReferenceRow, ReferenceTable};

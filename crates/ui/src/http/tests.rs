@@ -700,6 +700,45 @@ fn a_tab_dragged_past_another_takes_its_place_and_is_remembered() {
 }
 
 #[test]
+fn a_dragged_tab_closes_the_hand_and_is_raised_over_the_others() {
+    let mut harness = two_tabs();
+    let cursor = |harness: &Harness<'_, Bench>| harness.output().platform_output.cursor_icon;
+    let login = tab_rect(&harness, "POST Login");
+    // The outline of the tab raised, if one is.
+    let raised = |harness: &Harness<'_, Bench>| {
+        let accent = crate::theme::palette(&harness.ctx).amber_fill;
+        let mut shapes = harness.output().shapes.iter();
+        shapes.find_map(|clipped| match &clipped.shape {
+            egui::Shape::Rect(rect)
+                if rect.stroke.color == accent && rect.rect.intersects(login) =>
+            {
+                Some(rect.rect)
+            }
+            _ => None,
+        })
+    };
+    harness.event(egui::Event::PointerMoved(login.center()));
+    harness.run();
+    assert_eq!(cursor(&harness), egui::CursorIcon::PointingHand);
+    assert_eq!(raised(&harness), None);
+
+    harness.drag_at(login.center());
+    harness.run();
+    harness.event(egui::Event::PointerMoved(
+        login.center() + egui::vec2(30.0, 0.0),
+    ));
+    harness.run();
+    harness.run();
+    assert_eq!(cursor(&harness), egui::CursorIcon::Grabbing);
+    let outline = raised(&harness).unwrap();
+    assert!((outline.left() - login.left()).abs() < 4.0, "{outline:?}");
+
+    harness.drop_at(login.center());
+    settle(&mut harness);
+    assert_eq!(raised(&harness), None);
+}
+
+#[test]
 fn alt_and_an_arrow_move_the_tab_that_has_the_keys() {
     let mut harness = two_tabs();
     click_named(&mut harness, "http-tab-open", "WS Socket");

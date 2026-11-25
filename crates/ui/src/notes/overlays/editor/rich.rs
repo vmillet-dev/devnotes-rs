@@ -9,12 +9,13 @@ use egui::{Event, Key, Modifiers, Pos2, Rect, Sense, Stroke, Ui, UiBuilder, pos2
 use i18n::{Language, keys};
 use richtext::edit::{self, ordered};
 use richtext::inlines::{self, Mark};
+use richtext::picture::{self, Beside};
 use richtext::{Document, History, ListKind, Marks, Position, Selection, tree};
 
 use crate::state::AppState;
 use crate::theme::palette;
 use crate::widgets;
-use crate::widgets::rich::{Embedded, Laid, RichView};
+use crate::widgets::rich::{Embedded, Laid, LaidImage, RichView};
 
 const TOOLBAR_HEIGHT: f32 = 40.0;
 const PADDING: egui::Vec2 = egui::vec2(gap::PAGE, gap::PANEL);
@@ -23,6 +24,8 @@ const PADDING: egui::Vec2 = egui::vec2(gap::PAGE, gap::PANEL);
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Step {
     Typing,
+    /// A drawing made larger or smaller, from where it was taken to where it is let go.
+    Sizing,
     Other,
 }
 
@@ -45,6 +48,9 @@ pub(super) struct RichEditor {
     stored: Option<Marks>,
     /// Where each leaf was laid out last frame.
     laid: Vec<Laid>,
+    images: Vec<LaidImage>,
+    /// The image the keys are for, in the caret's place.
+    picked: Option<Vec<usize>>,
     /// The caret's x, kept through ↑ and ↓.
     goal_x: Option<f32>,
     link: Option<LinkForm>,
@@ -77,6 +83,8 @@ impl RichEditor {
             changes: 0,
             stored: None,
             laid: Vec::new(),
+            images: Vec::new(),
+            picked: None,
             goal_x: None,
             link: None,
             reveal: false,
@@ -92,9 +100,11 @@ impl RichEditor {
 
     /// Before a change: undo comes back here.
     fn record(&mut self, step: Step) {
-        if !(step == Step::Typing && self.last == Some(Step::Typing)) {
+        let same = step != Step::Other && self.last == Some(step);
+        if !same {
             self.history.record(&self.document, &self.selection);
         }
+        self.picked = None;
         self.last = Some(step);
         self.edited = true;
         self.changes += 1;
@@ -170,6 +180,7 @@ impl RichEditor {
         if let Some((document, selection)) = back {
             self.document = document;
             self.selection = selection;
+            self.picked = None;
             self.last = None;
             self.edited = true;
             self.changes += 1;
@@ -204,34 +215,33 @@ impl RichEditor {
             return;
         }
         let length = tree::leaf(&self.document, &head.path).map_or(0, |leaf| leaf.len());
-        let leaves = tree::leaves(&self.document);
-        let index = leaves.iter().position(|path| *path == head.path);
-        let next = match (forward, index) {
-            (true, _) if head.offset < length => Some(Position {
-                offset: head.offset + 1,
-                ..head
-            }),
-            (false, _) if head.offset > 0 => Some(Position {
-                offset: head.offset - 1,
-                ..head
-            }),
-            (true, Some(at)) => leaves.get(at + 1).map(|path| Position {
-                path: path.clone(),
-                offset: 0,
-            }),
-            (false, Some(at)) => at.checked_sub(1).map(|at| Position {
-                path: leaves[at].clone(),
-                offset: tree::leaf(&self.document, &leaves[at]).map_or(0, |leaf| leaf.len()),
-            }),
-            _ => None,
+        let inside = if forward {
+            (head.offset < length).then_some(head.offset + 1)
+        } else {
+            head.offset.checked_sub(1)
         };
-        if let Some(next) = next {
-            self.move_head(next, extend);
+        if let Some(offset) = inside {
+            self.move_head(Position { offset, ..head }, extend);
+        } else {
+            self.step_past(head.path, forward, extend);
         }
         self.goal_x = None;
     }
 
+    /// Off a leaf or an image: onto the image beside it, which a selection goes over.
+    fn step_past(&mut self, mut path: Vec<usize>, forward: bool, extend: bool) {
+        loop {
+            match picture::beside(&self.document, &path, forward) {
+                Some(Beside::Image(image)) if extend => path = image,
+                Some(Beside::Image(image)) => return self.pick(image),
+                Some(Beside::Leaf(position)) => return self.move_head(position, extend),
+                None => return,
+            }
+        }
+    }
+
     fn move_head(&mut self, head: Position, extend: bool) {
+        self.picked = None;
         if extend {
             self.selection.head = head;
         } else {
@@ -267,6 +277,16 @@ impl RichEditor {
         })
     }
 
+    /// ↓ with nothing under a code block: a paragraph is opened there.
+    fn leave_code(&mut self) {
+        let path = &self.selection.head.path;
+        if matches!(tree::leaf(&self.document, path), Some(tree::Leaf::Code(_))) {
+            self.change(Step::Other, |document, selection| {
+                edit::leave_code(document, selection).unwrap_or_else(|| selection.clone())
+            });
+        }
+    }
+
     /// ↑ and ↓: a line up or down at the same x, into the leaf above or below.
     fn vertical(&mut self, down: bool, extend: bool) {
         let Some(caret) = self.caret_rect() else {
@@ -296,6 +316,9 @@ impl RichEditor {
             }
         });
         let Some(target) = target else {
+            if down && !extend {
+                self.leave_code();
+            }
             return;
         };
         let rect = laid_rect(target);
@@ -400,12 +423,18 @@ pub(super) fn show(ui: &mut Ui, view: &mut RichEditor, state: &AppState) -> Show
                     if reveal && let Some(caret) = caret {
                         ui.scroll_to_rect(caret.expand(PADDING.y), None);
                     }
+                    images::controls(ui, view, &painted.images, language);
                     painted
                 })
                 .inner
         });
     let painted = scrolled.inner;
     view.laid = painted.leaves;
+    view.images = painted.images;
+    if let Some(image) = painted.picked {
+        view.pick(image);
+        view.refocus = true;
+    }
     shown.wanted = painted.wanted;
     if let Some(link) = painted.link {
         shown.link = Some(link);
@@ -428,7 +457,9 @@ pub(super) fn show(ui: &mut Ui, view: &mut RichEditor, state: &AppState) -> Show
     if focused {
         lock_keys(ui, surface.id);
         shown.code_paste = keys(ui, view, state.clipboard.as_ref());
-        paint_caret(ui, view, body);
+        if view.picked.is_none() {
+            paint_caret(ui, view, body);
+        }
     }
     shown.left = surface.lost_focus();
     shown.changed = view.changes != before;
@@ -442,7 +473,7 @@ pub(in crate::notes) fn embedded(state: &AppState, id: &str) -> Option<Embedded>
     match state.caches.pictures.get(&Thumbnails::embedded(id)) {
         Thumbnail::Unknown => None,
         Thumbnail::Waiting => Some(Embedded::Waiting),
-        Thumbnail::Missing => Some(Embedded::Missing),
+        Thumbnail::Empty | Thumbnail::Missing => Some(Embedded::Missing),
         Thumbnail::Shown(texture) => Some(Embedded::Shown(texture.clone())),
     }
 }
@@ -584,6 +615,9 @@ fn key_pressed(
     if let Some(command) = shortcuts::find(key, physical, modifiers) {
         run_command(view, command);
         return true;
+    }
+    if let Some(shortcut) = images::key_pressed(view, key, modifiers) {
+        return shortcut;
     }
     match key {
         Key::Enter => view.change(Step::Other, edit::split),
@@ -763,6 +797,7 @@ fn paint_caret(ui: &Ui, view: &RichEditor, body: Rect) {
     });
 }
 
+mod images;
 mod search;
 mod shortcuts;
 mod toolbar;

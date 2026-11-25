@@ -131,8 +131,8 @@ pub struct Opened {
     id: Option<String>,
     /// A body put back: the fields start again from the next read.
     reseed: bool,
-    /// Opened by J or K: the title does not take the keys that step on.
-    pub stepped: bool,
+    /// A new note, whose title takes the focus. One that exists leaves the keys to J and K.
+    pub new: bool,
 }
 
 impl Opened {
@@ -197,16 +197,8 @@ impl EditorState {
             read: QueryCell::default(),
             id: Some(id),
             reseed: false,
-            stepped: false,
+            new: false,
         });
-    }
-
-    /// As [`Self::open`], reached by J or K, which go on stepping.
-    pub fn step_to(&mut self, id: String) {
-        self.open(id);
-        if let Some(open) = self.open.as_mut() {
-            open.stepped = true;
-        }
     }
 
     /// A new note of `kind` in `space`, filed in `folder`: nothing is written yet.
@@ -236,7 +228,7 @@ impl EditorState {
             read: QueryCell::default(),
             id: None,
             reseed: false,
-            stepped: false,
+            new: true,
         });
     }
 

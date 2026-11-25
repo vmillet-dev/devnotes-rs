@@ -109,6 +109,19 @@ pub struct ToolResult {
     pub warning: Option<i18n::Key>,
 }
 
+impl ToolResult {
+    /// Two parts of one page kept as one note, under the first one's title.
+    pub fn together(first: Option<Self>, second: Option<Self>) -> Option<Self> {
+        let (Some(first), Some(second)) = (&first, &second) else {
+            return first.or(second);
+        };
+        Some(Self {
+            content: format!("{}\n\n{}", first.content, second.content),
+            ..first.clone()
+        })
+    }
+}
+
 /// A button of the tool's own in the frame's header.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ToolAction {

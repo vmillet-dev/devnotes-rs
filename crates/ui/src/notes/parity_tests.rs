@@ -130,17 +130,16 @@ fn a_selection_is_copied_from_its_row() {
 }
 
 #[test]
-fn the_new_note_menu_says_new_until_a_note_was_made() {
+fn the_new_note_menu_lists_the_kinds_alone() {
     let (backend, profile) = testing::unlocked();
     testing::note(&backend, "psql prod");
     let mut harness = area(backend, profile);
-    assert!(!harness.state().state.settings.note_kind_tried);
 
     click_id(&mut harness, "new-note-kind");
-    click_id(&mut harness, "new-note-note");
-    settle(&mut harness);
 
-    assert!(harness.state().state.settings.note_kind_tried);
+    let painted = testing::painted(&harness);
+    assert!(painted.iter().any(|words| words == "Note"));
+    assert!(!painted.iter().any(|words| words == "New"));
 }
 
 #[test]
@@ -176,6 +175,38 @@ fn a_card_menu_draws_its_entries_and_deletes_in_two_steps() {
     ] {
         assert!(present(&harness, author_id), "{author_id} is not offered");
     }
+}
+
+#[test]
+fn the_priorities_of_a_card_menu_close_when_the_pointer_leaves_them() {
+    let (backend, profile) = testing::unlocked();
+    testing::note(&backend, "psql prod");
+    let mut harness = area(backend, profile);
+    hover_first_card(&mut harness);
+    click_id(&mut harness, "note-card-menu");
+    let point = |harness: &mut Harness<'_, Bench>, author_id: &str| {
+        let at = rect(harness, author_id).center();
+        harness.event(egui::Event::PointerMoved(at));
+        settle(harness);
+        harness
+            .query_all_by(|node| node.author_id() == Some("note-card-priority-level"))
+            .count()
+    };
+
+    assert_eq!(point(&mut harness, "note-card-priority"), 5);
+    assert_eq!(point(&mut harness, "note-card-duplicate"), 0);
+
+    point(&mut harness, "note-card-priority");
+    harness
+        .get_all_by(|node| node.author_id() == Some("note-card-priority-level"))
+        .last()
+        .unwrap()
+        .click();
+    settle(&mut harness);
+    assert!(
+        !present(&harness, "note-card-priority"),
+        "a pick closes the menu"
+    );
 }
 
 fn open_palette(harness: &mut Harness<'_, Bench>) {

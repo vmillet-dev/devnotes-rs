@@ -448,7 +448,7 @@ fn recette_the_rest() {
 
     step("TPS-07 a gap, TPS-10 a duration", || {
         open_tool(&mut app, "dates");
-        app.click("dates-tab-1");
+        app.wait_for("dates-input");
         retype(&mut app, "dates-from", "2026-01-01 00:00");
         retype(&mut app, "dates-to", "2026-03-01 12:00");
         reads(&mut app, &["59 j 12 h 00", "8 sem 3 j", "1 428 h 00"]);
@@ -462,9 +462,20 @@ fn recette_the_rest() {
         app.capture("TPS-10");
     });
 
+    step("CMP-13 numbers drawn that pass", || {
+        open_tool(&mut app, "checks");
+        app.wait_for("checks-numbers");
+        retype(&mut app, "checks-prefix", "4242");
+        app.eventually("five that begin so", |tree| {
+            let drawn = tree.texts("output-value");
+            drawn.len() == 5 && drawn.iter().all(|it| it.starts_with("4242"))
+        });
+        app.capture("CMP-13-generate");
+    });
+
     step("CMP-05 a transfer timed", || {
         open_tool(&mut app, "sizes");
-        app.click("sizes-tab-1");
+        app.wait_for("sizes-input");
         retype(&mut app, "transfer-size", "4,7");
         retype(&mut app, "transfer-rate", "100");
         reads(&mut app, &["6 min 16 s"]);

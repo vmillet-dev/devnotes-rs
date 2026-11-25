@@ -8,9 +8,9 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::geometry::{
-    Box, Ends, Point, arrow_path, bound_ends, diamond_points, drag_box, smooth_path,
+    Box, Ends, Held, Point, arrow_path, bound_ends, diamond_points, drag_box, smooth_path,
 };
-use crate::scene::{Drawing, Hue, Kind, Object};
+use crate::scene::{Drawing, Hue, Kind, Object, Side};
 use crate::text::{Fonts, text_height, wrap};
 
 /// A shape let go smaller than this was a click: it takes the size a click gives.
@@ -21,12 +21,15 @@ const TEXT_WIDTH: f64 = 180.0;
 const TEXT_MIN_WIDTH: f64 = 20.0;
 const TEXT_SIZE: f64 = 18.0;
 const TEXT_FONT: &str = "Inter Variable, sans-serif";
-const PEN_WIDTH: f64 = 2.5;
+pub const PEN_WIDTH: f64 = 2.5;
 const SHAPE_STROKE: f64 = 2.0;
 const CORNER_RADIUS: f64 = 6.0;
-/// Fabric's rotation handle, above the top side; how near a handle the pointer takes it.
+/// Fabric's rotation handle, above the top side; how near a handle the pointer takes it: on the
+/// screen, whatever the scene is shown at.
 const ROTATE_REACH: f64 = 40.0;
 const GRIP_REACH: f64 = 8.0;
+/// How far apart the eraser looks along its way, on the screen.
+const ERASER_STEP: f64 = 4.0;
 /// An object scaled to nothing could not be taken again.
 const LEAST_SCALE: f64 = 0.01;
 
@@ -39,6 +42,7 @@ pub enum Tool {
     Diamond,
     Arrow,
     Pen,
+    Eraser,
     Text,
 }
 
@@ -91,6 +95,8 @@ pub struct Frame {
     pub width: f64,
     pub height: f64,
     pub angle: f64,
+    /// How far above its top side the rotation handle stands.
+    pub reach: f64,
 }
 
 impl Frame {
@@ -112,11 +118,21 @@ impl Frame {
     pub fn grip(&self, grip: Grip) -> Point {
         let (x, y) = grip.place();
         let reach = if grip == Grip::Rotate {
-            ROTATE_REACH
+            self.reach
         } else {
             0.0
         };
         self.on_scene(x * self.width / 2.0, y * self.height / 2.0 - reach)
+    }
+
+    fn side(&self, side: Side) -> Point {
+        let (half_width, half_height) = (self.width / 2.0, self.height / 2.0);
+        match side {
+            Side::Top => self.on_scene(0.0, -half_height),
+            Side::Right => self.on_scene(half_width, 0.0),
+            Side::Bottom => self.on_scene(0.0, half_height),
+            Side::Left => self.on_scene(-half_width, 0.0),
+        }
     }
 
     pub fn corners(&self) -> [Point; 4] {
@@ -130,6 +146,72 @@ impl Frame {
     }
 }
 
+/// The shape the end of an arrow would hold on to, let go where the pointer is.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Attaching {
+    pub frame: Frame,
+    /// The points it can be held by, and the one the pointer is on: without it, its edge.
+    pub points: Vec<Point>,
+    pub chosen: Option<Point>,
+}
+
+/// A shape an arrow holds on to, and the side it holds it by.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Hold {
+    id: String,
+    side: Option<Side>,
+}
+
+/// The end of an arrow.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum End {
+    From,
+    To,
+}
+
+impl End {
+    /// The field that holds the shape it is bound to.
+    fn field(self) -> &'static str {
+        match self {
+            Self::From => "from",
+            Self::To => "to",
+        }
+    }
+
+    fn of(self, [x1, y1, x2, y2]: Ends) -> Point {
+        match self {
+            Self::From => Point { x: x1, y: y1 },
+            Self::To => Point { x: x2, y: y2 },
+        }
+    }
+
+    fn moved(self, [x1, y1, x2, y2]: Ends, to: Point) -> Ends {
+        match self {
+            Self::From => [to.x, to.y, x2, y2],
+            Self::To => [x1, y1, to.x, to.y],
+        }
+    }
+
+    fn bound(self, arrow: &Object) -> Option<&str> {
+        match self {
+            Self::From => arrow.from(),
+            Self::To => arrow.to(),
+        }
+    }
+
+    fn other_bound(self, arrow: &Object) -> Option<&str> {
+        match self {
+            Self::From => arrow.to(),
+            Self::To => arrow.from(),
+        }
+    }
+
+    fn hold(self, arrow: &mut Object, hold: Option<&Hold>) {
+        arrow.set_bound(self.field(), hold.map(|hold| hold.id.as_str()));
+        arrow.set_anchor(self.field(), hold.and_then(|hold| hold.side));
+    }
+}
+
 /// What a press started, until the release.
 #[derive(Debug, Clone)]
 enum Gesture {
@@ -139,9 +221,16 @@ enum Gesture {
     },
     Arrow {
         from: Point,
-        from_id: Option<String>,
+        held: Option<Hold>,
     },
     Pen(Vec<Point>),
+    Erasing(Point),
+    /// An end of the arrow of that index, dragged to a shape or off one.
+    MovingEnd {
+        index: usize,
+        end: End,
+        from: Point,
+    },
     Moving {
         from: Point,
         before: Selected,
@@ -176,6 +265,8 @@ pub struct Editor {
     /// What was selected when a tool was taken: Escape gives it back.
     kept: Vec<usize>,
     gesture: Option<Gesture>,
+    /// How many points of the screen a unit of the scene takes.
+    scale: f64,
     /// The text being typed into.
     editing: Option<usize>,
     history: Vec<String>,
@@ -199,12 +290,18 @@ impl Editor {
             selected: Vec::new(),
             kept: Vec::new(),
             gesture: None,
+            scale: 1.0,
             editing: None,
             history,
             at: 0,
             revision: 0,
             unsaved: false,
         }
+    }
+
+    /// What the scene is shown at: the handles and a click keep their size on the screen.
+    pub fn set_scale(&mut self, scale: f64) {
+        self.scale = scale;
     }
 
     pub fn drawing(&self) -> &Drawing {
@@ -278,7 +375,13 @@ impl Editor {
         if self.selected.is_empty() || self.editing.is_some() {
             return false;
         }
-        let mut gone: Vec<usize> = std::mem::take(&mut self.selected);
+        let gone = std::mem::take(&mut self.selected);
+        self.take_out(gone);
+        self.keep();
+        true
+    }
+
+    fn take_out(&mut self, mut gone: Vec<usize>) {
         gone.sort_unstable();
         let ids: Vec<Option<String>> = gone
             .iter()
@@ -296,8 +399,35 @@ impl Editor {
                 object.set_bound("to", None);
             }
         }
-        self.keep();
-        true
+    }
+
+    /// Where the eraser would take an object away: its frame.
+    pub fn erasable(&self, at: Point) -> Option<Frame> {
+        let object = &self.drawing.objects[self.object_at(at)?];
+        Some(self.frame_of(object))
+    }
+
+    /// From one point to the next, whatever the pointer comes onto: what it was already on, under
+    /// what it took away, stays.
+    fn erase_along(&mut self, from: Point, to: Point) {
+        let length = (to.x - from.x).hypot(to.y - from.y);
+        let steps = (length * self.scale / ERASER_STEP).ceil().max(1.0);
+        let mut last = from;
+        let mut step = 1.0;
+        while step <= steps {
+            let part = step / steps;
+            let at = Point {
+                x: from.x + (to.x - from.x) * part,
+                y: from.y + (to.y - from.y) * part,
+            };
+            let come_onto = |object: &Object| object.contains(at) && !object.contains(last);
+            let gone: Vec<usize> = (0..self.drawing.objects.len())
+                .filter(|&index| come_onto(&self.drawing.objects[index]))
+                .collect();
+            self.take_out(gone);
+            last = at;
+            step += 1.0;
+        }
     }
 
     /// Escape on a tool: back to the selection, as it was before the tool was taken.
@@ -355,20 +485,55 @@ impl Editor {
         self.unsaved = true;
     }
 
-    /// The handles' frame; `None` with nothing selected, or a text typed into.
+    /// The two ends of the arrow selected alone: its handles, in place of a frame's.
+    pub fn arrow_ends(&self) -> Option<[(End, Point); 2]> {
+        let [index] = self.selected[..] else {
+            return None;
+        };
+        let ends = self.drawing.objects[index].ends()?;
+        Some([End::From, End::To].map(|end| (end, end.of(ends))))
+    }
+
+    fn end_at(&self, at: Point) -> Option<End> {
+        let reach = GRIP_REACH / self.scale;
+        let near = |end: Point| (end.x - at.x).abs() <= reach && (end.y - at.y).abs() <= reach;
+        let ends = self.arrow_ends()?;
+        ends.into_iter()
+            .find(|(_, place)| near(*place))
+            .map(|(end, _)| end)
+    }
+
+    /// Asked while the arrow tool is in hand or an end is dragged.
+    pub fn attaching(&self, at: Point) -> Option<Attaching> {
+        let kept = match &self.gesture {
+            Some(Gesture::MovingEnd { index, end, .. }) => {
+                end.other_bound(&self.drawing.objects[*index])
+            }
+            Some(Gesture::Arrow { held, .. }) => held.as_ref().map(|hold| hold.id.as_str()),
+            None if self.tool == Tool::Arrow => None,
+            _ => return None,
+        };
+        let (index, side) = self.holder_at(at)?;
+        let object = &self.drawing.objects[index];
+        if object.id() == kept {
+            return None;
+        }
+        let frame = self.frame_of(object);
+        let sides = sides_of(object).iter();
+        Some(Attaching {
+            frame,
+            points: sides.map(|&side| frame.side(side)).collect(),
+            chosen: side.map(|side| frame.side(side)),
+        })
+    }
+
+    /// The handles' frame; `None` with nothing selected, a text typed into, or an arrow alone.
     pub fn frame(&self) -> Option<Frame> {
-        if self.editing.is_some() {
+        if self.editing.is_some() || self.arrow_ends().is_some() {
             return None;
         }
         if let [index] = self.selected[..] {
-            let object = &self.drawing.objects[index];
-            let (width, height) = object.dimensions();
-            return Some(Frame {
-                centre: object.centre(),
-                width,
-                height,
-                angle: object.angle(),
-            });
+            return Some(self.frame_of(&self.drawing.objects[index]));
         }
         let boxes: Vec<Box> = self
             .selected
@@ -381,7 +546,19 @@ impl Editor {
             width: around.width,
             height: around.height,
             angle: 0.0,
+            reach: ROTATE_REACH / self.scale,
         })
+    }
+
+    fn frame_of(&self, object: &Object) -> Frame {
+        let (width, height) = object.dimensions();
+        Frame {
+            centre: object.centre(),
+            width,
+            height,
+            angle: object.angle(),
+            reach: ROTATE_REACH / self.scale,
+        }
     }
 
     /// The rectangle a drag on the paper is selecting with.
@@ -404,7 +581,8 @@ impl Editor {
         let frame = self.frame()?;
         Grip::ALL.into_iter().find(|&grip| {
             let handle = frame.grip(grip);
-            (handle.x - at.x).abs() <= GRIP_REACH && (handle.y - at.y).abs() <= GRIP_REACH
+            let reach = GRIP_REACH / self.scale;
+            (handle.x - at.x).abs() <= reach && (handle.y - at.y).abs() <= reach
         })
     }
 
@@ -422,16 +600,21 @@ impl Editor {
             Tool::Select => self.press_selecting(at, adding),
             Tool::Pen => self.gesture = Some(Gesture::Pen(vec![at])),
             Tool::Text => self.make_text(at),
+            Tool::Eraser => {
+                self.gesture = Some(Gesture::Erasing(at));
+                // What a tool took the selection from may be what goes.
+                self.kept.clear();
+                let under = self.object_at(at);
+                self.take_out(under.into_iter().collect());
+                self.revision += 1;
+            }
             Tool::Arrow => {
-                let from_id = self.shape_at(at);
-                self.gesture = Some(Gesture::Arrow {
-                    from: at,
-                    from_id: from_id.clone(),
-                });
+                let held = self.hold_at(at);
                 let mut arrow = self.new_object("Path");
                 arrow.put_number("strokeWidth", SHAPE_STROKE);
-                arrow.set_bound("from", from_id.as_deref());
-                arrow.set_bound("to", None);
+                End::From.hold(&mut arrow, held.as_ref());
+                End::To.hold(&mut arrow, None);
+                self.gesture = Some(Gesture::Arrow { from: at, held });
                 set_arrow(&mut arrow, [at.x, at.y, at.x, at.y]);
                 self.drawing.objects.push(arrow);
                 self.revision += 1;
@@ -447,6 +630,17 @@ impl Editor {
     }
 
     fn press_selecting(&mut self, at: Point, adding: bool) {
+        if !adding
+            && let Some(end) = self.end_at(at)
+            && let [index] = self.selected[..]
+        {
+            self.gesture = Some(Gesture::MovingEnd {
+                index,
+                end,
+                from: at,
+            });
+            return;
+        }
         if let Some(grip) = self.grip_at(at).filter(|_| !adding)
             && let Some(frame) = self.frame()
         {
@@ -512,6 +706,15 @@ impl Editor {
                 }
             }
             Gesture::Pen(points) => points.push(to),
+            Gesture::Erasing(last) => {
+                self.erase_along(*last, to);
+                *last = to;
+            }
+            Gesture::MovingEnd { index, end, from } => {
+                if *from != to {
+                    self.move_end(*index, *end, None, to);
+                }
+            }
             Gesture::Moving { from, before, .. } => {
                 if *from != to {
                     move_to(self, before, *from, to);
@@ -541,7 +744,8 @@ impl Editor {
             None => {}
             Some(Gesture::Shape { tool, from }) => {
                 let dragged = drag_box(from, at);
-                let clicked = dragged.width < CLICKED && dragged.height < CLICKED;
+                let least = CLICKED / self.scale;
+                let clicked = dragged.width < least && dragged.height < least;
                 let (width, height) = CLICK_SIZE;
                 let bounds = if clicked {
                     Box {
@@ -556,19 +760,32 @@ impl Editor {
                 self.reshape_last(tool, bounds);
                 self.finish();
             }
-            Some(Gesture::Arrow { from, from_id }) => {
+            Some(Gesture::Arrow { from, held }) => {
                 // The arrow being drawn is under the pointer: it is not what it ends on.
                 let Some(mut arrow) = self.drawing.objects.pop() else {
                     return;
                 };
-                let to_id = self.shape_at(at).filter(|id| Some(id) != from_id.as_ref());
-                arrow.set_bound("to", to_id.as_deref());
+                let kept = held.map(|hold| hold.id);
+                let hold = self
+                    .hold_at(at)
+                    .filter(|hold| Some(&hold.id) != kept.as_ref());
+                End::To.hold(&mut arrow, hold.as_ref());
                 self.drawing.objects.push(arrow);
                 let last = self.drawing.objects.len() - 1;
                 self.bind(last, [from.x, from.y, at.x, at.y]);
                 self.finish();
             }
             Some(Gesture::Pen(points)) => self.adopt_pen(&points),
+            // A click on an end moves nothing.
+            Some(Gesture::MovingEnd { from, .. }) if from == at => {}
+            Some(Gesture::MovingEnd { index, end, .. }) => {
+                let kept = end.other_bound(&self.drawing.objects[index]);
+                let hold = self
+                    .hold_at(at)
+                    .filter(|hold| Some(hold.id.as_str()) != kept);
+                self.move_end(index, end, hold.as_ref(), at);
+                self.keep();
+            }
             Some(Gesture::Marquee { from, to }) => self.select_within(drag_box(from, to)),
             Some(Gesture::Moving {
                 from, reselected, ..
@@ -579,7 +796,9 @@ impl Editor {
                     self.begin_text();
                 }
             }
-            Some(Gesture::Scaling { .. } | Gesture::Rotating { .. }) => self.settle(),
+            Some(Gesture::Scaling { .. } | Gesture::Rotating { .. } | Gesture::Erasing(_)) => {
+                self.settle();
+            }
         }
     }
 
@@ -723,28 +942,57 @@ impl Editor {
         self.revision += 1;
     }
 
-    /// Shapes hold arrows; a text or another arrow does not.
-    fn shape_at(&self, at: Point) -> Option<String> {
-        let object = &self.drawing.objects[self.object_at(at)?];
-        let holds = object.ends().is_none() && object.kind() != Kind::Textbox;
-        object.id().filter(|_| holds).map(str::to_owned)
+    /// The topmost of what holds arrows and is under the point, or has the middle of a side near
+    /// it: a shape does, under the text or the arrow over it.
+    fn holder_at(&self, at: Point) -> Option<(usize, Option<Side>)> {
+        let objects = self.drawing.objects.iter().enumerate().rev();
+        objects
+            .filter(|(_, object)| holds_arrows(object))
+            .find_map(|(index, object)| {
+                let side = self.side_at(object, at);
+                (side.is_some() || object.contains(at)).then_some((index, side))
+            })
     }
 
-    fn box_of(&self, id: Option<&str>) -> Option<Box> {
-        let id = id?;
-        let object = self
-            .drawing
-            .objects
-            .iter()
-            .find(|object| object.id() == Some(id))?;
-        Some(object.bounds())
+    fn side_at(&self, object: &Object, at: Point) -> Option<Side> {
+        let reach = GRIP_REACH / self.scale;
+        let frame = self.frame_of(object);
+        sides_of(object).iter().copied().find(|&side| {
+            let place = frame.side(side);
+            (place.x - at.x).abs() <= reach && (place.y - at.y).abs() <= reach
+        })
     }
 
-    /// Its ends on the edges of the shapes it is bound to, or where they were drawn.
+    fn hold_at(&self, at: Point) -> Option<Hold> {
+        let (index, side) = self.holder_at(at)?;
+        let id = self.drawing.objects[index].id()?.to_owned();
+        Some(Hold { id, side })
+    }
+
+    /// An arrow's end let go at `at`, on a shape or on the paper; the other one keeps what it is
+    /// bound to.
+    fn move_end(&mut self, index: usize, end: End, hold: Option<&Hold>, at: Point) {
+        let arrow = &mut self.drawing.objects[index];
+        let Some(ends) = arrow.ends() else { return };
+        end.hold(arrow, hold);
+        self.bind(index, end.moved(ends, at));
+    }
+
+    fn held_by(&self, arrow: &Object, end: End) -> Option<Held> {
+        let id = end.bound(arrow)?;
+        let mut objects = self.drawing.objects.iter();
+        let object = objects.find(|object| object.id() == Some(id))?;
+        Some(match arrow.anchor(end.field()) {
+            Some(side) => Held::At(self.frame_of(object).side(side)),
+            None => Held::Edge(object.bounds()),
+        })
+    }
+
+    /// Its ends on the shapes it is bound to, or where they were drawn.
     fn bind(&mut self, index: usize, drawn: Ends) {
         let arrow = &self.drawing.objects[index];
-        let from = self.box_of(arrow.from());
-        let to = self.box_of(arrow.to());
+        let from = self.held_by(arrow, End::From);
+        let to = self.held_by(arrow, End::To);
         set_arrow(
             &mut self.drawing.objects[index],
             bound_ends(drawn, from.as_ref(), to.as_ref()),
@@ -766,6 +1014,18 @@ impl Editor {
     fn settle(&mut self) {
         self.follow();
         self.keep();
+    }
+}
+
+fn holds_arrows(object: &Object) -> bool {
+    object.ends().is_none() && object.kind() != Kind::Textbox && object.id().is_some()
+}
+
+/// What an arrow can be held by on it: a pen's line or a group has no side to point at.
+fn sides_of(object: &Object) -> &'static [Side] {
+    match object.kind() {
+        Kind::Rect | Kind::Ellipse | Kind::Polygon => &Side::ALL,
+        _ => &[],
     }
 }
 

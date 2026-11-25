@@ -85,6 +85,30 @@ fn formatting() {
         });
     });
 
+    step(
+        "format on save is named beside its switch, and turns",
+        || {
+            let on = |tree: &Tree| {
+                tree.find("prettier-formatOnSave")
+                    .and_then(egui::accesskit::Node::toggled)
+                    == Some(egui::accesskit::Toggled::True)
+            };
+            app.click("editor-format-settings");
+            app.wait_for("prettier-formatOnSave");
+            let tree = app.tree();
+            assert!(!on(&tree));
+            let label = tree.text("prettier-formatOnSave").unwrap_or_default();
+            assert!(!label.is_empty() && tree.mentions(&label));
+            app.capture("format-settings");
+            app.click("prettier-formatOnSave");
+            app.eventually("on", on);
+            app.click("prettier-formatOnSave");
+            app.eventually("off again", |tree| !on(tree));
+            app.press(Key::Escape, Modifiers::NONE);
+            app.eventually("closed", |tree| !tree.has("prettier-formatOnSave"));
+        },
+    );
+
     step("a syntax error is said, and nothing changes", || {
         app.click("editor-body");
         app.press(Key::End, Modifiers::COMMAND);

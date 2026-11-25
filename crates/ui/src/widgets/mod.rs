@@ -12,8 +12,10 @@ mod in_place;
 mod layout;
 mod list;
 mod menu;
+mod picker;
 mod release_notes;
 mod segmented;
+mod split;
 
 pub mod date;
 pub mod editor;
@@ -21,23 +23,25 @@ pub mod json_explorer;
 pub mod rich;
 
 pub use badge::{Chip, Kbd, hue_badge, priority_dot, spinner};
-pub use button::{Button, IconButton, Kind, SplitButton, SquareButton};
+pub use button::{Button, IconButton, Kind, SquareButton};
 pub use dialog::{
     Cross, DialogStack, Layer, Shown, dialog, dialog_title, framed_dialog, modal_panel,
 };
 pub use empty::{EmptyAction, empty_state};
 pub use field::{Checkbox, SearchField, Searched, TextField, switch};
 pub use in_place::{InPlace, ask_in_place};
-pub use layout::{RailWidth, area_room, split_handle, tooltip};
+pub use layout::{RailWidth, area_room, kept_together, split_handle, tooltip, wrap_before};
 pub use list::{code_viewer, virtual_list};
 pub use menu::{
     ChoiceMenu, FILTER_FROM, MenuItem, Naming, arrows as menu_arrows, entry as menu_entry,
     fitted as fitted_menu, frame as menu_frame, icon_entry, line as menu_line, menu,
-    needs as menu_needs,
+    needs as menu_needs, sub_menu,
 };
+pub use picker::{Lead, Place, place_picker};
 pub use release_notes::release_notes;
 pub use rich::{Read, rich_reader};
 pub use segmented::Segmented;
+pub use split::{SplitButton, SplitKind};
 
 use std::sync::Arc;
 
@@ -76,8 +80,8 @@ pub fn interact(
 }
 
 /// What the pointer says over a control, from what it senses: a hand where it clicks, an open
-/// hand where it drags and a closed one while it moves, the arrow over a disabled one. A later
-/// call in the frame wins: a handle or a link says more.
+/// hand where it only drags and a closed one while it moves, the arrow over a disabled one. A
+/// later call in the frame wins: a handle, a link or a field says more.
 pub fn pointer(ui: &Ui, response: &Response) {
     if !response.enabled() || !(response.hovered() || response.dragged()) {
         return;
@@ -85,14 +89,22 @@ pub fn pointer(ui: &Ui, response: &Response) {
     let sense = response.sense;
     let icon = if sense.senses_drag() && response.dragged() {
         egui::CursorIcon::Grabbing
-    } else if sense.senses_drag() {
-        egui::CursorIcon::Grab
     } else if sense.senses_click() {
         egui::CursorIcon::PointingHand
+    } else if sense.senses_drag() {
+        egui::CursorIcon::Grab
     } else {
         return;
     };
     ui.ctx().set_cursor_icon(icon);
+}
+
+/// The pointer over a grip, whose one use is to be dragged: the open hand, though it takes
+/// clicks for the focus.
+pub fn grip_pointer(ui: &Ui, response: &Response) {
+    if response.hovered() && !response.dragged() {
+        ui.ctx().set_cursor_icon(egui::CursorIcon::Grab);
+    }
 }
 
 /// Whether the keys of the frame are `response`'s to take: the focus egui keeps, as its own

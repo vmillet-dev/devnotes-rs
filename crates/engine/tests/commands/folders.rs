@@ -7,10 +7,13 @@ use engine::folders::board::{
 use engine::folders::model::{FolderColour, FolderDraft};
 use engine::folders::{
     arrange_board, board_view, create_folder, delete_folder, file_notes, file_notes_back,
-    list_folders, move_folder, move_folder_back, recolour_folder, rename_folder, save_board_layout,
+    list_folders, move_folder, move_folder_back, move_notes_into, recolour_folder, rename_folder,
+    save_board_layout,
 };
 use engine::notes::view::{Grouping, NoteFilter, NoteOrder, NotesQuery};
-use engine::notes::{create_note, delete_notes, get_note, query_notes, restore_notes};
+use engine::notes::{
+    create_note, delete_notes, get_note, move_notes, move_notes_back, query_notes, restore_notes,
+};
 
 use super::common::snippet;
 use super::{Session, code};
@@ -121,6 +124,58 @@ fn a_filing_is_undone_by_the_filings_it_answered() {
     assert_eq!(undone, 1);
     assert!(unfiled.zones[0].notes.is_empty());
     assert_eq!(unfiled.loose.len(), 1);
+}
+
+#[test]
+fn notes_of_two_spaces_go_into_one_folder_and_back_where_each_was() {
+    let session = Session::open();
+    let (home, work) = (session.space("Personal"), session.space("Work"));
+    let (scripts, runbooks) = (
+        folder(&session, &home, "Scripts"),
+        folder(&session, &work, "Runbooks"),
+    );
+    let note = |space: &str| {
+        session
+            .call(|e| create_note(e, snippet(space)))
+            .unwrap()
+            .note
+            .id
+    };
+    let (filed, there) = (note(&home), note(&work));
+    let ids = [filed.clone(), there.clone()];
+    let lines = PreviewLines::default();
+    session
+        .call(|e| file_notes(e, std::slice::from_ref(&filed), Some(&scripts), lines))
+        .unwrap();
+    let place = |id: &String| {
+        let note = session.call(|e| get_note(e, id)).unwrap().note;
+        (note.space_id, note.folder_id)
+    };
+
+    let moved = session
+        .call(|e| move_notes_into(e, &ids, &runbooks, lines))
+        .unwrap();
+    assert_eq!(moved.len(), 2);
+    for id in &ids {
+        assert_eq!(place(id), (work.clone(), Some(runbooks.clone())));
+    }
+    let again = session.call(|e| move_notes_into(e, &ids, &runbooks, lines));
+    assert!(again.unwrap().is_empty(), "already there");
+
+    session.call(|e| move_notes_back(e, &moved)).unwrap();
+    assert_eq!(place(&filed), (home.clone(), Some(scripts)));
+    assert_eq!(place(&there), (work.clone(), None));
+    assert!(matches!(
+        code(session.call(|e| move_notes_into(e, &ids, "missing", lines))),
+        ErrorCode::FolderNotFound
+    ));
+
+    // To the space it is in: out of its folder, and back in with the undo.
+    let out = session.call(|e| move_notes(e, &ids, &home)).unwrap();
+    assert_eq!(out.len(), 2);
+    assert_eq!(place(&filed), (home.clone(), None));
+    session.call(|e| move_notes_back(e, &out)).unwrap();
+    assert!(place(&filed).1.is_some() && place(&there).1.is_none());
 }
 
 /// A layout saved by hand is the one a tidy-up answers as `previous`, for its undo.

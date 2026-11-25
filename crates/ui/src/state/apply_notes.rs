@@ -6,6 +6,7 @@ use super::{
 };
 use crate::api;
 use crate::backend::Backend;
+use crate::notes::destinations::Destination;
 use engine::folders::board::PreviewLines;
 
 impl AppState {
@@ -400,20 +401,14 @@ impl AppState {
             }
             Notes::OpenNote(id) => self.open_in_editor(EditorNext::Note(id)),
             Notes::Editor(editing) => self.apply_editing(editing, ctx, backend),
-            Notes::NewNote(kind) => self.new_note_asked(kind, backend),
+            Notes::NewNote(kind) => self.new_note(kind),
             Notes::Pin { id, pinned } => {
                 self.notes.pin(backend, vec![id], pinned);
             }
             Notes::Prioritise { id, priority } => {
                 self.notes.prioritise(backend, vec![id], priority);
             }
-            Notes::File { id, folder } => {
-                self.notes
-                    .file(backend, (vec![id], folder), self.preview_lines);
-            }
-            Notes::MoveTo { id, space } => {
-                self.notes.move_to(backend, vec![id], space);
-            }
+            Notes::MoveTo { id, to } => self.move_notes(vec![id], to, backend),
             Notes::Delete(id) => self.notes.delete(backend, vec![id]),
             Notes::Check(id) => self.selection.toggle(&id),
             Notes::CheckRange { id, anchor } => {
@@ -503,7 +498,7 @@ impl AppState {
                     note.folder_id = None;
                 });
                 if !moved && let Some(id) = id {
-                    self.notes.move_to(backend, vec![id], space);
+                    self.move_notes(vec![id], Destination::Space(space), backend);
                 }
             }
             Editing::File(folder) => {
@@ -513,8 +508,8 @@ impl AppState {
                     .change_draft(backend, |note| note.folder_id = into)
                     && let Some(id) = id
                 {
-                    self.notes
-                        .file(backend, (vec![id], folder), self.preview_lines);
+                    let to = folder.map_or(Destination::NoFolder, Destination::Folder);
+                    self.move_notes(vec![id], to, backend);
                 }
             }
             Editing::Convert {
@@ -539,6 +534,11 @@ impl AppState {
             }
             Editing::Close => self.close_editor(),
             Editing::Step(by) => self.step_in_editor(by),
+            Editing::FocusTitle => {
+                if let Some(view) = &mut self.notes_view.editor {
+                    view.focus_title = true;
+                }
+            }
             Editing::Present { title, markdown } => {
                 self.presentation.ask(backend, title, markdown);
             }
@@ -635,6 +635,13 @@ impl AppState {
             .map(|card| card.pinned)
     }
 
+    fn move_notes(&mut self, ids: Vec<String>, to: Destination, backend: &Backend) {
+        if to != Destination::NoFolder {
+            self.caches.moved_to(to.clone());
+        }
+        self.notes.move_to(backend, (ids, to), self.preview_lines);
+    }
+
     /// The ticked notes still on screen; nothing is asked of the core for none.
     pub(super) fn batch(&mut self, batch: crate::notes::Batch, backend: &Backend) {
         use crate::notes::Batch;
@@ -645,8 +652,7 @@ impl AppState {
             return;
         }
         match batch {
-            Batch::MoveTo(space) => self.notes.move_to(backend, ids, space),
-            Batch::File(folder) => self.notes.file(backend, (ids, folder), self.preview_lines),
+            Batch::MoveTo(to) => self.move_notes(ids, to, backend),
             Batch::Prioritise(priority) => self.notes.prioritise(backend, ids, priority),
             Batch::Tag(tag) => self.notes.tag(backend, ids, tag),
             Batch::Untag(tag) => self.notes.untag(backend, ids, tag),
@@ -829,25 +835,12 @@ impl AppState {
         crate::notes::calc::Format::of(&self.settings, self.language)
     }
 
-    /// In the space shown, or the first one for « all spaces », and the folder shown.
     pub(super) fn set_decimals(&mut self, places: Option<u8>, backend: &Backend) {
         self.settings.calc_decimals = places;
         self.save_settings(backend);
     }
 
-    /// From the menu: a Note made once, its entry stops saying « New ».
-    pub(super) fn new_note_asked(
-        &mut self,
-        kind: Option<engine::notes::kind::NoteKind>,
-        backend: &Backend,
-    ) {
-        self.new_note(kind);
-        if kind == Some(engine::notes::kind::NoteKind::Note) && !self.settings.note_kind_tried {
-            self.settings.note_kind_tried = true;
-            self.save_settings(backend);
-        }
-    }
-
+    /// In the space shown, or the first one for « all spaces », and the folder shown.
     pub(super) fn new_note(&mut self, kind: Option<engine::notes::kind::NoteKind>) {
         self.open_in_editor(EditorNext::Draft(kind));
     }
@@ -859,7 +852,7 @@ impl AppState {
             self.open_now(next);
             return;
         }
-        if let EditorNext::Note(id) | EditorNext::Stepped(id) = &next
+        if let EditorNext::Note(id) = &next
             && self.editor.open_id() == Some(id.as_str())
         {
             return;
@@ -870,7 +863,7 @@ impl AppState {
     pub(super) fn open_now(&mut self, next: EditorNext) {
         match next {
             EditorNext::Note(id) => self.editor.open(id),
-            EditorNext::Stepped(id) => self.editor.step_to(id),
+
             EditorNext::Draft(kind) => {
                 let Some((space, folder)) = self.new_place() else {
                     return;
@@ -897,7 +890,7 @@ impl AppState {
         let Some(next) = at.checked_add_signed(by).and_then(|to| order.get(to)) else {
             return;
         };
-        self.open_in_editor(EditorNext::Stepped(next.clone()));
+        self.open_in_editor(EditorNext::Note(next.clone()));
     }
 
     /// Where the note open sits among the cards shown, and those cards; `None` for a draft or a

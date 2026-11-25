@@ -3,7 +3,7 @@
 //! to go; `AppState` turns it into the space and the folder the canvas shows.
 
 mod row;
-mod tree;
+pub(super) mod tree;
 
 use crate::theme::tokens::{font, gap};
 use std::collections::HashSet;

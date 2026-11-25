@@ -3,6 +3,7 @@
 
 pub mod calc;
 pub mod canvas;
+pub(crate) mod destinations;
 pub(crate) mod header;
 pub mod language;
 mod overlays;
@@ -10,6 +11,9 @@ mod panel;
 pub mod prettier;
 pub mod sidebar;
 pub mod ui;
+
+pub(crate) use overlays::editor::picture_palette;
+pub(crate) use overlays::undo_bar::layer as undo_bar_layer;
 
 use egui::{Rect, Ui, UiBuilder};
 use engine::notes::kind::NoteKind;
@@ -23,6 +27,7 @@ use engine::notes::view::NoteFilter;
 use crate::action::{Action as Asked, Actions, AppAction};
 use crate::state::AppState;
 use crate::state::drawing_pictures::Stamp;
+use destinations::Destination;
 
 /// What the area's controls ask, applied at the end of the frame.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -115,14 +120,9 @@ pub enum Action {
         id: String,
         priority: engine::notes::priority::Priority,
     },
-    /// `None`: out of every folder.
-    File {
-        id: String,
-        folder: Option<String>,
-    },
     MoveTo {
         id: String,
-        space: String,
+        to: Destination,
     },
     /// Into the trash.
     Delete(String),
@@ -242,6 +242,7 @@ pub enum Editing {
     Close,
     /// J or K: the note so many cards after the one open (before, negative).
     Step(isize),
+    FocusTitle,
     Fullscreen(bool),
     FoldHeader(bool),
     /// Expanded: the column of details shown beside the body, or not.
@@ -334,9 +335,7 @@ pub enum BoardGesture {
 /// What the selection bar does to every ticked note at once.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Batch {
-    MoveTo(String),
-    /// `None` takes them out of their folders.
-    File(Option<String>),
+    MoveTo(Destination),
     Prioritise(engine::notes::priority::Priority),
     Tag(String),
     Untag(String),
@@ -355,7 +354,7 @@ pub struct View {
     /// Asked by `Ctrl+K`: the search takes the focus on the next frame.
     pub(crate) focus_search: bool,
     header: header::HeaderView,
-    editor: Option<overlays::editor::EditorView>,
+    pub(crate) editor: Option<overlays::editor::EditorView>,
     presentation: overlays::presentation::PresentationView,
     explorer_layout: overlays::editor::ExplorerLayout,
     trash: overlays::trash_panel::TrashView,
@@ -382,17 +381,12 @@ pub fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut Action
         .beside(ui, region, rail, "library-rail-edge", |ui| {
             sidebar::show(ui, state, &mut view.sidebar, actions);
         });
-    let (cards, editor) = beside_the_cards(rest, state, view.panel_width);
-    let editor = match (cards, editor) {
-        (Some(cards), editor) => {
-            cards_and_header(ui, cards, state, view, actions);
-            editor
-        }
-        // Expanded, the note takes the cards' zone: the header stays above it, its sidebar
-        // toggle in reach.
-        (None, Some(zone)) => Some(header_above(ui, zone, state, view, actions)),
-        (None, None) => None,
-    };
+    // Above the cards and the note, beside each other or the note alone: it never moves.
+    let below = header_above(ui, rest, state, view, actions);
+    let (cards, editor) = beside_the_cards(below, state, view.panel_width);
+    if let Some(cards) = cards {
+        show_cards(ui, cards, state, view, actions);
+    }
     overlays::editor::show(
         ui,
         editor,
@@ -476,15 +470,8 @@ fn panel_edge(ui: &mut Ui, editor: Rect, view: &mut View, actions: &mut Actions)
     }
 }
 
-fn cards_and_header(
-    ui: &mut Ui,
-    room: Rect,
-    state: &AppState,
-    view: &mut View,
-    actions: &mut Actions,
-) {
-    let below = header_above(ui, room, state, view, actions);
-    let mut canvas_ui = ui.new_child(UiBuilder::new().max_rect(below));
+fn show_cards(ui: &mut Ui, room: Rect, state: &AppState, view: &mut View, actions: &mut Actions) {
+    let mut canvas_ui = ui.new_child(UiBuilder::new().max_rect(room));
     // A card dragged on the board can be let go of over a row of the rail, which lights.
     view.canvas.rail = if state.settings.rail_shown {
         view.sidebar.rows().to_vec()

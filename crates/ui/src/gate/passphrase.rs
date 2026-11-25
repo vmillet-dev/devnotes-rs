@@ -76,6 +76,9 @@ impl<'a> PassphraseField<'a> {
             || WidgetInfo::labeled(Role::PasswordInput, true, name),
             CornerRadius::same(radius::MENU),
         );
+        if self.enabled && response.hovered() {
+            ui.ctx().set_cursor_icon(egui::CursorIcon::Text);
+        }
         if response.clicked() {
             response.request_focus();
         }

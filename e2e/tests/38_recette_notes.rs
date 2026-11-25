@@ -82,9 +82,12 @@ fn a_note_of(app: &mut App, title: &str, markdown: &str) {
     app.wait_for("editor-rich");
 }
 
-/// The language menu's filter takes the focus a frame after it opens.
+/// The language menu's filter takes the focus a frame after it opens; a click in it keeps the
+/// menu open.
 fn choose_language(app: &mut App, typed: &str, option: &str) {
     app.click("editor-language");
+    app.wait_for("editor-language-filter");
+    app.click("editor-language-filter");
     app.eventually("the filter has the focus", |tree| {
         tree.focused().starts_with("editor-language-filter")
     });
@@ -303,6 +306,25 @@ fn recette_a_formatted_note() {
     });
 
     step(
+        "RIC-08 a final code block is left by the down arrow",
+        || {
+            app.press(Key::N, SHIFT_COMMAND);
+            app.fill("editor-title", "Bloc final");
+            app.click("editor-rich");
+            app.click("rich-codeBlock");
+            app.type_text("let x = 1;");
+            app.press(Key::ArrowDown, Modifiers::NONE);
+            app.type_text("Suite");
+            app.eventually("the text is under the block", |tree| {
+                tree.find("editor-rich")
+                    .and_then(Node::value)
+                    .is_some_and(|text| text.contains("let x = 1;") && text.contains("\nSuite"))
+            });
+            close_editor(&mut app);
+        },
+    );
+
+    step(
         "RIC-09 what looks like Markdown comes back as typed",
         || {
             app.press(Key::N, SHIFT_COMMAND);
@@ -428,9 +450,32 @@ fn recette_a_sheet_and_a_drawing() {
             app.click("rich-embed-drawing-0");
             app.wait_for("rich-embed");
             app.capture("des-13");
-            close_editor(&mut app);
         },
     );
+
+    step("a drawing in a Note is resized, and stays so", || {
+        let width = |tree: &Tree| {
+            let drawn = tree.find("rich-embed").and_then(Node::bounds);
+            drawn.map_or(0.0, |bounds| bounds.width())
+        };
+        app.click("rich-embed");
+        app.click("rich-embed-size-4");
+        app.wait_for("rich-embed-resize");
+        let whole = width(&app.tree());
+        app.click("rich-embed-size-1");
+        app.eventually("a quarter of the width", |tree| {
+            (width(tree) - whole / 4.0).abs() < 2.0
+        });
+        app.drag_in("rich-embed-resize", (12.0, 12.0), (1_200.0, 12.0));
+        app.eventually("the whole width again", |tree| {
+            (width(tree) - whole).abs() < 2.0
+        });
+        app.capture("des-13-sized");
+        close_editor(&mut app);
+        open_card(&mut app, "Avec dessin");
+        app.eventually("kept", |tree| (width(tree) - whole).abs() < 2.0);
+        close_editor(&mut app);
+    });
 
     app.quit();
 }
@@ -501,7 +546,7 @@ fn recette_on_the_canvas() {
                 app.press(key, Modifiers::NONE);
             }
             app.click("selection-move");
-            app.click("selection-move-1");
+            app.click_where("selection-move-place", |node| node.label() == Some("Perso"));
             app.wait_for("undo-text");
             app.capture("sel-02");
             app.click("undo-restore");

@@ -88,6 +88,25 @@ fn drawings(app: &mut App, exported: &std::path::Path) {
     );
 
     step(
+        "the eraser takes shape after shape and stays in hand",
+        || {
+            app.click("drawing-tool-ellipse");
+            app.drag_in("drawing-stage", (200.0, 40.0), (280.0, 110.0));
+            app.eventually("two shapes", |tree| shapes(tree) == "2");
+            app.click("drawing-tool-eraser");
+            app.drag_in("drawing-stage", (20.0, 75.0), (300.0, 75.0));
+            app.eventually("both gone in one drag", |tree| shapes(tree) == "0");
+            assert!(pressed(&app.tree(), "drawing-tool-eraser"));
+            app.click("drawing-undo");
+            app.eventually("one step back", |tree| shapes(tree) == "2");
+            app.drag_in("drawing-stage", (240.0, 75.0), (240.0, 75.0));
+            app.eventually("one by a click", |tree| shapes(tree) == "1");
+        },
+    );
+
+    arrow_and_look(app);
+
+    step(
         "Escape drops the tool, the selection, then the editor",
         || {
             app.drag_in("drawing-stage", (100.0, 75.0), (100.0, 75.0));
@@ -113,6 +132,48 @@ fn drawings(app: &mut App, exported: &std::path::Path) {
     );
 }
 
+/// The sketch open, a rectangle on it: an arrow bound and let go, then the look moved.
+fn arrow_and_look(app: &mut App) {
+    step(
+        "an arrow drawn from a shape, its end let go elsewhere",
+        || {
+            app.click("drawing-tool-arrow");
+            app.drag_in("drawing-stage", (100.0, 75.0), (320.0, 75.0));
+            app.eventually("the arrow", |tree| shapes(tree) == "2");
+            app.drag_in("drawing-stage", (320.0, 75.0), (320.0, 150.0));
+            app.capture("drawing-arrow-end");
+            assert_eq!(shapes(&app.tree()), "2", "moved, not drawn");
+            app.click("drawing-undo");
+            app.click("drawing-undo");
+            app.eventually("the rectangle alone", |tree| shapes(tree) == "1");
+        },
+    );
+
+    step("the drawing is zoomed, moved and shown whole again", || {
+        let shown = |tree: &Tree| tree.text("drawing-zoom").unwrap_or_default();
+        app.eventually("as drawn", |tree| shown(tree).starts_with("100"));
+        app.click("drawing-zoom-in");
+        app.click("drawing-zoom-in");
+        app.eventually("closer", |tree| shown(tree).starts_with("156"));
+        app.drag(
+            egui::pos2(700.0, 400.0),
+            egui::pos2(640.0, 380.0),
+            egui::PointerButton::Middle,
+        );
+        app.capture("drawing-zoomed");
+        app.click("drawing-fit");
+        app.eventually("whole again", |tree| shown(tree).starts_with("100"));
+        app.click("drawing-zoom-out");
+        app.eventually("further", |tree| shown(tree).starts_with("80"));
+        app.click("drawing-zoom");
+        app.eventually("as drawn again", |tree| shown(tree).starts_with("100"));
+        assert_eq!(shapes(&app.tree()), "1", "nothing was drawn");
+        app.click("editor-close");
+        app.eventually("closed", |tree| !tree.has("editor-title"));
+        open_sketch(app);
+    });
+}
+
 /// The title of the note open, as its field holds it.
 fn open_title(tree: &Tree) -> String {
     tree.find("editor-title")
@@ -133,11 +194,17 @@ fn beside_the_cards(app: &mut App) {
             app.click_nth("note-card-open", 0);
             app.wait_for("editor-title");
             let first = open_title(&app.tree());
-            // The title takes the focus as the note opens: Escape gives it up first.
-            app.press(Key::Escape, Modifiers::NONE);
             app.press(Key::J, Modifiers::NONE);
             app.eventually("the next card open", |tree| {
                 tree.has("editor-title") && open_title(tree) != first
+            });
+            app.press(Key::F2, Modifiers::NONE);
+            app.eventually("F2 goes to the title", |tree| {
+                tree.focused().starts_with("editor-title")
+            });
+            app.press(Key::Escape, Modifiers::NONE);
+            app.eventually("Escape leaves it, the note still open", |tree| {
+                tree.has("editor-title") && !tree.focused().starts_with("editor-title")
             });
             app.capture("editor-beside-the-cards");
         },

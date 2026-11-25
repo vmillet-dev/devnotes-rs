@@ -22,8 +22,9 @@ pub enum Action {
 pub enum AppAction {
     ShowArea(Area),
     SetAppearance(Appearance),
-    DismissError,
-    DismissStatus,
+    /// The failure of that number, as of the report.
+    DismissError(u64),
+    DismissStatus(u64),
     /// The library rail's width, once its edge rests.
     SetRailWidth(u16),
     /// The history list's width, once its edge rests.

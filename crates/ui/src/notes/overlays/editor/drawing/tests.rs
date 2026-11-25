@@ -432,3 +432,215 @@ fn a_colour_is_written_for_a_picture_as_css() {
     assert!(css(soft).starts_with("rgba("), "{}", css(soft));
     assert!(css(soft).ends_with("0.20)"), "{}", css(soft));
 }
+
+fn zoom(harness: &Harness) -> String {
+    harness
+        .get_by(|node| node.author_id() == Some("drawing-zoom"))
+        .accesskit_node()
+        .label()
+        .unwrap_or_default()
+}
+
+fn wheel(harness: &mut Harness, at: Pos2, delta: egui::Vec2, modifiers: Modifiers) {
+    harness.event(Event::PointerMoved(at));
+    harness.run_steps(1);
+    harness.event_modifiers(
+        Event::MouseWheel {
+            unit: egui::MouseWheelUnit::Point,
+            delta,
+            phase: egui::TouchPhase::Move,
+            source: egui::MouseWheelSource::Unknown,
+            modifiers,
+        },
+        modifiers,
+    );
+    settle(harness);
+}
+
+/// Where the one rectangle of the scene stands.
+fn rectangle(harness: &mut Harness, id: &str) -> drawing::Box {
+    harness.run_steps(8);
+    settle(harness);
+    let content = stored(harness, id).content.clone();
+    drawing::Drawing::read(&content).unwrap().bounds().unwrap()
+}
+
+#[test]
+fn the_wheel_moves_the_look_and_with_ctrl_zooms_and_what_is_drawn_lands_under_the_pointer() {
+    let (mut harness, _) = opened("");
+    assert_eq!(zoom(&harness), "100 %");
+
+    let at = point(&harness, 200.0, 150.0);
+    wheel(&mut harness, at, egui::vec2(0.0, 60.0), Modifiers::COMMAND);
+    let closer = zoom(&harness);
+    assert_ne!(closer, "100 %", "Ctrl and the wheel zoom");
+    click_id(&mut harness, "drawing-zoom");
+    assert_eq!(zoom(&harness), "100 %");
+
+    let (mut harness, id) = opened("");
+    let before = point(&harness, 0.0, 0.0);
+    wheel(&mut harness, at, egui::vec2(-30.0, -50.0), Modifiers::NONE);
+    assert_eq!(zoom(&harness), "100 %");
+    assert_eq!(point(&harness, 0.0, 0.0), before, "the stage stays put");
+    click_id(&mut harness, "drawing-tool-rectangle");
+    let (from, to) = (point(&harness, 100.0, 100.0), point(&harness, 200.0, 160.0));
+    drag(&mut harness, from, to);
+    let drawn = rectangle(&mut harness, &id);
+    // The scene moved 30 left and 50 up under the pointer, all of it.
+    assert!((drawn.left - 130.0).abs() < 3.0, "{drawn:?}");
+    assert!((drawn.top - 150.0).abs() < 3.0, "{drawn:?}");
+}
+
+#[test]
+fn at_another_size_a_shape_is_taken_and_drawn_where_it_shows() {
+    let (mut harness, id) = opened("");
+    for _ in 0..4 {
+        click_id(&mut harness, "drawing-zoom-in");
+    }
+    assert_eq!(zoom(&harness), "244 %");
+    click_id(&mut harness, "drawing-tool-rectangle");
+    let (from, to) = (point(&harness, 100.0, 100.0), point(&harness, 344.0, 222.0));
+    drag(&mut harness, from, to);
+    let drawn = rectangle(&mut harness, &id);
+    assert!((drawn.width - 102.0).abs() < 3.0, "{drawn:?}");
+
+    press(&mut harness, Key::Escape, Modifiers::NONE);
+    let inside = point(&harness, 222.0, 160.0);
+    drag(&mut harness, inside, inside);
+    press(&mut harness, Key::Delete, Modifiers::NONE);
+    assert_eq!(shapes(&harness), "0");
+}
+
+#[test]
+fn space_and_a_drag_or_the_middle_button_move_the_look_and_draw_nothing() {
+    let (mut harness, _) = opened("");
+    draw_rectangle(&mut harness);
+    click_id(&mut harness, "drawing-tool-rectangle");
+    let held = |pressed| Event::Key {
+        key: Key::Space,
+        physical_key: None,
+        pressed,
+        repeat: false,
+        modifiers: Modifiers::NONE,
+    };
+    harness.event(held(true));
+    let (from, to) = (point(&harness, 300.0, 200.0), point(&harness, 360.0, 240.0));
+    drag(&mut harness, from, to);
+    harness.event(held(false));
+    harness.run_steps(2);
+    assert_eq!(shapes(&harness), "1");
+
+    for pressed in [true, false] {
+        harness.event(Event::PointerMoved(if pressed { from } else { to }));
+        harness.event(Event::PointerButton {
+            pos: if pressed { from } else { to },
+            button: PointerButton::Middle,
+            pressed,
+            modifiers: Modifiers::NONE,
+        });
+        harness.run_steps(2);
+    }
+    assert_eq!(shapes(&harness), "1");
+
+    press(&mut harness, Key::Escape, Modifiers::NONE);
+    // Moved 60 and 40 twice: the rectangle's corner was at 40, 40.
+    let moved = point(&harness, 40.0 + 120.0 + 50.0, 40.0 + 80.0 + 30.0);
+    drag(&mut harness, moved, moved);
+    press(&mut harness, Key::Delete, Modifiers::NONE);
+    assert_eq!(shapes(&harness), "0", "it moved with the look");
+}
+
+#[test]
+fn a_drawing_larger_than_the_stage_opens_whole_and_f_shows_it_again() {
+    let wide = r#"{"version":1,"scene":{"objects":[{"type":"Rect","left":2000,"top":45,"width":4000,"height":50}]}}"#;
+    let (mut harness, _) = opened(wide);
+    let fitted = zoom(&harness);
+    assert_ne!(fitted, "100 %");
+
+    let at = point(&harness, 300.0, 300.0);
+    drag(&mut harness, at, at);
+    press(&mut harness, Key::Num0, Modifiers::COMMAND);
+    assert_eq!(zoom(&harness), "100 %");
+    press(&mut harness, Key::F, Modifiers::NONE);
+    assert_eq!(zoom(&harness), fitted);
+    press(&mut harness, Key::Plus, Modifiers::COMMAND);
+    assert_ne!(zoom(&harness), fitted);
+    press(&mut harness, Key::Minus, Modifiers::COMMAND);
+    press(&mut harness, Key::ArrowRight, Modifiers::COMMAND);
+    assert_eq!(zoom(&harness), fitted);
+}
+
+#[test]
+fn the_eraser_stays_in_hand_after_an_erase_and_escape_puts_it_down() {
+    let (mut harness, _) = opened("");
+    draw_rectangle(&mut harness);
+    click_id(&mut harness, "drawing-tool-rectangle");
+    let (from, to) = (point(&harness, 200.0, 40.0), point(&harness, 300.0, 100.0));
+    drag(&mut harness, from, to);
+    assert_eq!(shapes(&harness), "2");
+
+    press(&mut harness, Key::E, Modifiers::NONE);
+    for (x, left) in [(90.0, "1"), (250.0, "0")] {
+        let on = point(&harness, x, 70.0);
+        drag(&mut harness, on, on);
+        assert_eq!(shapes(&harness), left);
+        assert!(pressed(&harness, "drawing-tool-eraser"));
+    }
+    press(&mut harness, Key::Escape, Modifiers::NONE);
+    assert!(pressed(&harness, "drawing-tool-select"));
+    press(&mut harness, Key::Z, Modifiers::COMMAND);
+    assert_eq!(shapes(&harness), "1");
+}
+
+#[test]
+fn an_arrow_selected_is_moved_by_its_ends() {
+    let (mut harness, id) = opened("");
+    draw_rectangle(&mut harness);
+    press(&mut harness, Key::A, Modifiers::NONE);
+    let (from, to) = (point(&harness, 90.0, 70.0), point(&harness, 300.0, 70.0));
+    drag(&mut harness, from, to);
+    let bound = |harness: &mut Harness| {
+        harness.run_steps(8);
+        settle(harness);
+        stored(harness, &id).content.contains(r#""from":""#)
+    };
+    assert!(bound(&mut harness));
+
+    // Its start is on the rectangle's right side, 141 from the stage's edge.
+    let (start, away) = (point(&harness, 141.0, 70.0), point(&harness, 200.0, 200.0));
+    drag(&mut harness, start, away);
+    assert!(!bound(&mut harness), "let go on the paper");
+
+    // Back on the middle of that side: the point is the one it keeps.
+    drag(&mut harness, away, start);
+    assert!(bound(&mut harness));
+    assert!(
+        stored(&harness, &id)
+            .content
+            .contains(r#""fromAnchor":"right""#)
+    );
+}
+
+/// The toolbar of a panel: nothing over anything else.
+#[test]
+fn in_a_narrow_panel_the_exports_take_a_line_of_their_own() {
+    let (mut harness, _) = opened("");
+    harness.state_mut().state.settings.editor_fullscreen = false;
+    harness.set_size(egui::vec2(1_220.0, 900.0));
+    settle(&mut harness);
+
+    let rect = |id: &str| harness.get_by(|node| node.author_id() == Some(id)).rect();
+    let tools = [
+        "drawing-tool-select",
+        "drawing-hue-purple",
+        "drawing-undo",
+        "drawing-delete",
+    ];
+    for export in ["drawing-export-png", "drawing-export-svg"] {
+        for tool in tools {
+            assert!(!rect(export).intersects(rect(tool)), "{export} over {tool}");
+        }
+        assert!(rect(export).right() <= 1_220.0);
+    }
+    assert!(rect("drawing-delete").right() <= 1_220.0);
+}

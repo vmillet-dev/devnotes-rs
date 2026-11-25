@@ -1402,14 +1402,19 @@ and exporting write a Note as the Markdown it is, where a snippet is fenced.
 - **A code block is coloured by the code's grammars** (`text::highlight`, → "Syntax
   highlighting"), its language as a label on the block, drawn plain until the grammars have
   loaded. Tab indents as the code does (`indent_unit`). A card and a search read its lines as
-  they are (`notes::markdown::plain`).
+  they are (`notes::markdown::plain`). It is left at its end by a third Enter, after two blank
+  lines, and by ↓ on its last line when nothing follows it: `edit::leave_code` opens a paragraph
+  after it, which is not written while it is empty.
 - **« Présenter » shows the Note full screen, a slide at a time.** Rust cuts the draft on
   screen, not the stored body (`present_note`, `notes::markdown::present`): a slide starts at
   each `#` or `##` heading and after each `---` rule outside any list, quote or fence, each slide
   a slice of the body so it is drawn as written, empty ones dropped; the headings come back as a
   tree, each with the slide it is on. `overlays::presentation` puts the Note's title first as a
   cover and draws each slide with `widgets::rich` read only and larger — the editor's own blocks
-  and colours — centred by the height it took last frame.
+  and colours — from the top and the left margin, so a title is at one place on every slide, a
+  code block centred on the screen, no wider than its code, its lines wrapped. A slide taller than
+  the screen is drawn smaller but for its title, down to 60 %, then scrolls; it is measured out of sight in the pass
+  that first shows it, which egui draws over (`request_discard`).
   ← → (and the keys a clicker sends), Home/End, `M` for the map, Escape out: a modal over
   everything, the editor kept under it. `PresentationState` sends `ViewportCommand::Fullscreen`
   only when the window was not full screen already, and gives back only what it took — on
@@ -1442,6 +1447,9 @@ gives. It has no field (`{{x}}` written on it is words), no revision (a scene co
 text), no copy (a card and the palette offer none: it is exported), and no conversion either
 way — the kind menu names it and offers nothing.
 
+- **An arrow holds on to a shape by its edge, facing its other end, or by the middle of a side**:
+  `from` and `to` are the shapes' ids, `fromAnchor` and `toAnchor` (`top`, `right`, `bottom`,
+  `left`, on the shape's own plane) the side, absent for the edge.
 - **⚠️ Its pictures are not in the body.** A list opens every body it searches, at every
   keystroke; two PNGs are most of a drawing's bytes. They sit in `drawing_pictures`, one row
   per drawing, both sealed as raw bytes, cascaded with the note: a small one for its card, a
@@ -1470,6 +1478,11 @@ way — the kind menu names it and offers nothing.
 - **An arrow started or ended on a shape stays on its edge** (`from`/`to` ids, `ends`,
   `boundEnds`): it follows the shape as it moves, and a shape removed lets go of it. A path's
   box is read when it is made, so an arrow whose ends move is made again in its place.
+- **The look is the view's** (`drawing::camera`, `drawing::look`): zoom between 10 and 800 %, and
+  the pan, never in the scene. Wheel pans, Ctrl+wheel or a pinch zooms under the pointer, the
+  middle button or Space and a drag pans; Ctrl with +, −, 0 and the arrows, `F` for the whole. A
+  drawing larger than the stage opens fitted. `Editor::set_scale` keeps the handles and a click
+  at their size on the screen.
 - **`drawing::Editor` holds every gesture**, in the scene's units, with no egui: `press`, `drag` and
   `release`, a selection framed by its handles, each step read from the objects as they were when
   the gesture began, so nothing drifts. The widget paints `marks`, the scene flattened to lines and
@@ -1486,6 +1499,12 @@ way — the kind menu names it and offers nothing.
   the Note's body carries no picture. Inserted from the toolbar's « Insérer un dessin », whose
   list is `list_drawings` (titles only opened), and which is there with no drawing to say there
   is none. Any other image stays as written: the CSP loads nothing from elsewhere.
+- **Its size is in its reference**: `devnotes:drawing/<id>?w=50`, a percent of the text's width
+  from 10 to 100, read and written by `richtext::picture` alone; without one the drawing is at its
+  own size, and any other query is left as written. In the editor an image is picked by a click
+  or by the arrows, in the caret's place: a drawing's corners, its sizes and `Alt` with an arrow
+  change it, Backspace and Delete take it away (`editor/rich/images.rs`). Read and presented, it
+  obeys.
 
 ### A list sends previews, and the body is read by id
 
@@ -2964,8 +2983,8 @@ about which folder a note is in.
 means "this note is loose", and writing one back would undo what `file_many` just did.
 
 **The keyboard twin is not optional**, and it is the path that already existed: tick cards
-with `X`, then "Ranger dans" in the selection bar — the same batch command the drop uses,
-so the two cannot drift. The gesture adds to it; it does not replace it.
+with `X`, then "Déplacer vers…" in the selection bar. The gesture adds to it; it does not
+replace it.
 
 **A right-button drag sweeps a selection band; the left one still draws a folder.** The
 existing gesture does not move — it is the one that _creates_ something, and it had the
@@ -3340,7 +3359,13 @@ otherwise the arrows would move an outline while the keyboard stayed behind.
 `Ctrl`-click checks a card, `Shift`-click extends the range from the focused one, `X` toggles
 it from the keyboard — the conventions of a file list, which is what the canvas becomes once
 several notes are selected. `SelectionBarComponent` appears only when something is checked and
-offers: move to a space, file, give a priority, add or remove a tag, pin, copy, move to trash.
+offers: move, give a priority, add or remove a tag, pin, copy, move to trash.
+
+**One verb, one picker** (`notes/destinations.rs` over `widgets::place_picker`): the menu of a
+card and the selection bar move a note to any place — a space (`move_notes`: out of its folder,
+in its own space too), a folder of any space (`folders::move_notes_into`), or out of its folder
+(`file_notes`). It keeps its size whatever the library holds: a filter, the tree, its rows drawn
+where they are in view, the last three places used at the top (`LibraryCaches.recent_moves`).
 
 Each action is **one command for the whole batch** (`move_notes`, `tag_notes`,
 `delete_notes`), not a loop of single writes: a stale id in the selection produces a partial
@@ -4179,9 +4204,9 @@ settings, never the draft.
 
 `services::time`: an injectable `Clock` (`SystemClock`, a `FakeClock` in tests) and
 `relative(at, clock)`, which answers the label and **how long it holds**, the next frame asked
-for exactly then. `services::status::StatusNotifier` keeps the toast's last report, numbered so
-the same words said twice show twice; `services::errors::ErrorNotifier` the banner's last
-failure: the sentence its code says (an exhaustive `match` on `ErrorCode`, a code with variants
+for exactly then. `services::status::StatusNotifier` keeps the toasts' last reports, numbered so
+the same words said twice show twice; `services::errors::ErrorNotifier` the last failures, the
+same one once: the sentence its code says (an exhaustive `match` on `ErrorCode`, a code with variants
 choosing its sub-key by one parameter), or the action's own when the code says nothing better.
 ⚠️ The error's `detail` never goes to the screen, and to the log only through `AppError::for_log`:
 the code alone, its detail too where no variant carries a name, a file, a URL or a script's words.
@@ -4265,11 +4290,13 @@ names what it switches **to**, its icon and its label alike, and writes the appe
 preferences panel does. Until the screens arrive, an area is an empty room addressed
 `area-notes`, `area-tools` or `area-http`.
 
-`ui::banners` draws the `ErrorNotifier`'s failure (red, announced assertively, `error-banner`)
-as a top panel under the bar, until its X is pressed (`DismissError`). The `StatusNotifier`'s
-report (green, announced politely, `status-toast`) takes the name's place in the middle of the
-title bar, cut to the room the menus leave: there it moves nothing and covers no control. It goes
-by its X or after `motion::REPORT` seconds away from the pointer (`DismissStatus`).
+`ui::banners::toasts` stacks in the bottom right corner, above every modal and clear of the undo
+bar, what was done and what failed, each whole on as many lines as it takes, the latest on top. The
+`StatusNotifier`'s reports (green, announced politely, `status-toast`) go by their X or after
+`motion::REPORT` seconds, counted while the pointer is away from them (`DismissStatus`). The
+`ErrorNotifier`'s failures (red, announced assertively, `error-banner`) stand under them until
+their X is pressed (`DismissError`), the same one once. Past `notices::KEPT` of a kind the oldest
+makes room.
 
 ### The notes canvas
 
@@ -4352,7 +4379,7 @@ the search gives way first, then the switchers' names. ⚠️ The central panel 
 own, as the reference: egui's 8 px cost the header its one row at the window's default width.
 
 A card's click surface (`note-card-open`, a layer under its controls) opens the note editor
-(`notes::overlays::editor`, `state::editor`) **in a panel beside the cards**, not over them: 45 %
+(`notes::overlays::editor`, `state::editor`) **in a panel beside the cards**, not over them, both under the area’s header, which spans them: 45 %
 of the area right of the rail, between 460 and 760 px (`notes::beside_the_cards`) until its edge is moved (`editor-panel-edge`,
 remembered as `editorPanelWidth`), always leaving at least two columns of cards on its left, drawn
 and clickable, the cards taking the columns their width has room for, the open one lit (amber edge, a tint). Expanded (the
@@ -4364,8 +4391,8 @@ each goes through the closing path first, which writes the drafts, and `Editing:
 what was asked. Opening straight away replaced the view and lost what was being typed. **J and K**
 (`keys::EDITOR`, read while no field has the focus and nothing opens over the editor) step to
 the card after or before, in the order the cards are shown (`AppState::on_screen`: the list's or
-the board's); a note reached that way does not give its title the focus, so the keys go on
-stepping. Expanded, the toolbar says `n / total` between ‹ and ›. **Escape** steps back: it
+the board's). A note that exists opens with no field focused, so the keys step from the first
+press; **F2** goes to its title, and a new note's title takes the focus as it opens. Expanded, the toolbar says `n / total` between ‹ and ›. **Escape** steps back: it
 leaves the field first (egui drops the focus before the frame is drawn, so the editor remembers
 whether a field had it at the last frame), then full screen, then closes; it is read after the
 panel is drawn, so a search bar or a drawing's tool takes it first, and not at all while a
@@ -4492,7 +4519,10 @@ after the folder until something is searched.
 A drawing's picture is never in the list: the card asks for it by `Stamp` (id and `updated_at`, so
 a drawing saved again asks again) the first time it is drawn. `state::drawing_pictures::Thumbnails`
 reads it on the db queue, decodes the PNG on the compute queue, uploads it once and keeps the last
-256; it is library content, so it lives in `LibraryCaches` and goes with the library scope.
+256; it is library content, so it lives in `LibraryCaches` and goes with the library scope. A
+drawing that has no picture, as one that came by import, has its two taken there the first time
+a card or a Note shows it: its scene is read, pictured on the compute queue and the pictures
+written, which moves no date.
 
 ### The board, drawn
 
@@ -5970,7 +6000,8 @@ the widget rather than of each screen (plan § 3.12):
   accessible name (its check, on by default and left on). It also sets the mouse pointer from
   what the control senses (`widgets::pointer`): a hand where it clicks, an open hand where it
   drags and a closed one while it moves, the arrow over a disabled one; text surfaces ask for the
-  I-beam, handles for their resize arrows, after it.
+  I-beam, handles for their resize arrows, after it. The pointers are the system's own: Windows
+  has no grabbing hand, and shows its four arrows while something moves.
 - **An icon-only control draws an icon** (`theme::icons`, stroked in the text's colour), never a
   glyph from the system's emoji font, which looks different on every machine and follows no
   theme; the control names itself, and a decorative picture says nothing.
@@ -6566,8 +6597,11 @@ pixels: the geometry and SSIM scoring the plan describes are postponed (D24).
 `app::screens` replays the reference's own screens, its data, gestures, file names and window
 sizes: `DEVNOTES_SCREENS=<dir> cargo test -p ui --lib app::screens` writes the PNGs to set beside
 the `angular-reference` zip, one profile copy a screen since a board shown or a rail put away is
-remembered. Without the variable it does nothing, and CI does not set it. The three tours of the README (`docs/tour-notes.gif`,
-`docs/tour-tools.gif`, `docs/tour-http.gif`) are frames of those screens, two seconds each.
+remembered. Without the variable it does nothing, and CI does not set it. The three tours of the
+README (`docs/tour-notes.gif`, `docs/tour-tools.gif`, `docs/tour-http.gif`) are frames of those
+screens, two seconds each, assembled by `cargo run -p app --example tours -- <dir>`: in the dark
+theme throughout, with one palette a loop. A frame of another theme, or a file of a megabyte,
+fails `crates/app/tests/tours.rs`.
 
 ### The scenarios, on the assembled window
 

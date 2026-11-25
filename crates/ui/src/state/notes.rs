@@ -11,6 +11,7 @@ use super::Revision;
 use crate::api;
 use crate::api::undo::Reversible;
 use crate::backend::{Backend, Pending};
+use crate::notes::destinations::Destination;
 use crate::services::errors::ErrorNotifier;
 
 #[derive(Default)]
@@ -64,8 +65,17 @@ impl NotesState {
         self.writes.push((keys::errors::NOTE_MOVE_FAILED, pending));
     }
 
-    pub fn move_to(&mut self, backend: &Backend, ids: Vec<String>, space: String) {
-        let pending = api::notes::move_to(backend, ids, space);
+    pub fn move_to(
+        &mut self,
+        backend: &Backend,
+        (ids, to): (Vec<String>, Destination),
+        lines: PreviewLines,
+    ) {
+        let pending = match to {
+            Destination::NoFolder => api::folders::file(backend, ids, None, lines),
+            Destination::Space(space) => api::notes::move_to(backend, ids, space),
+            Destination::Folder(folder) => api::folders::move_into(backend, ids, folder, lines),
+        };
         self.writes.push((keys::errors::NOTE_MOVE_FAILED, pending));
     }
 

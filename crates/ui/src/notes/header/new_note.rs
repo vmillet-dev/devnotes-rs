@@ -2,8 +2,8 @@
 
 use crate::theme::tokens::{font, gap, radius};
 use egui::{
-    Color32, CornerRadius, FontFamily, Popup, PopupCloseBehavior, Rect, RectAlign, Response, Role,
-    Sense, Stroke, Ui, Vec2, WidgetInfo, pos2,
+    CornerRadius, FontFamily, Popup, PopupCloseBehavior, Rect, RectAlign, Response, Role, Sense,
+    Stroke, Ui, Vec2, WidgetInfo, pos2,
 };
 use engine::notes::kind::NoteKind;
 use i18n::{Key, keys};
@@ -11,9 +11,9 @@ use i18n::{Key, keys};
 use crate::action::{Action, Actions};
 use crate::services::shortcuts::{self, Bindings};
 use crate::state::AppState;
-use crate::theme::icons::{self, Icon};
+
 use crate::theme::palette;
-use crate::widgets::{self, interact};
+use crate::widgets::{self, SplitButton, SplitKind, interact};
 
 /// Each kind and its words, in the menu's order.
 const KINDS: [(NoteKind, Key, Key); 5] = [
@@ -53,34 +53,25 @@ const NAME_HEIGHT: f32 = 17.0;
 /// How wide it is drawn, for the row that lays out what comes before it.
 pub(super) fn width(ui: &Ui, language: i18n::Language) -> f32 {
     let label = i18n::translate(language, keys::notes::NEW_NOTE, &[]);
-    widgets::text(
-        ui,
-        &label,
-        font::READING,
-        700.0,
-        FontFamily::Proportional,
-        Color32::WHITE,
+    split(&label, "").width(ui)
+}
+
+fn split<'a>(label: &'a str, kinds: &'a str) -> SplitButton<'a> {
+    SplitButton::new(
+        (label, "new-note"),
+        (kinds, "new-note-kind"),
+        SplitKind::Primary,
     )
-    .size()
-    .x + 26.0
-        + 28.0
 }
 
 pub(super) fn show(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
     let language = state.language;
     let tr = |key| i18n::translate(language, key, &[]);
-    ui.spacing_mut().item_spacing.x = 0.0;
     let label = tr(keys::notes::NEW_NOTE);
-    let main = part(ui, &label, "new-note", Part::Main);
+    let (main, caret) = split(&label, &tr(keys::notes::NEW_NOTE_KIND_LABEL)).show(ui);
     if main.clicked() {
         new_note(actions, None);
     }
-    let caret = part(
-        ui,
-        &tr(keys::notes::NEW_NOTE_KIND_LABEL),
-        "new-note-kind",
-        Part::Caret,
-    );
     Popup::menu(&caret)
         .frame(widgets::menu_frame(ui.ctx()))
         .align(RectAlign::BOTTOM_END)
@@ -102,11 +93,9 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
                 ui.allocate_exact_size(Vec2::new(galley.size().x, 22.0), Sense::hover());
             ui.painter()
                 .galley(pos2(rect.left() + 10.0, rect.top() + 6.0), galley, p.text_2);
-            let fresh = (!state.settings.note_kind_tried).then(|| tr(keys::notes::KIND_NEW));
             for (kind, name, line) in KINDS {
-                let badge = fresh.as_deref().filter(|_| kind == NoteKind::Note);
                 let keys = shortcut(kind, &state.settings.bindings);
-                if kind_item(ui, kind, (&tr(name), &tr(line)), (keys, badge)).clicked() {
+                if kind_item(ui, kind, (&tr(name), &tr(line)), keys).clicked() {
                     new_note(actions, Some(kind));
                 }
             }
@@ -117,93 +106,8 @@ fn new_note(actions: &mut Actions, kind: Option<NoteKind>) {
     actions.push(Action::Notes(crate::notes::Action::NewNote(kind)));
 }
 
-#[derive(Clone, Copy)]
-enum Part {
-    Main,
-    Caret,
-}
-
-/// Amber, both halves: the one primary action of the area.
-fn part(ui: &mut Ui, label: &str, author_id: &str, part: Part) -> Response {
-    let p = palette(ui.ctx());
-    let (size, corner) = match part {
-        Part::Main => {
-            let galley = widgets::text(
-                ui,
-                label,
-                font::READING,
-                700.0,
-                FontFamily::Proportional,
-                p.amber_ink,
-            );
-            (
-                Vec2::new(galley.size().x + 26.0, 32.0),
-                CornerRadius {
-                    nw: 8,
-                    sw: 8,
-                    ne: 0,
-                    se: 0,
-                },
-            )
-        }
-        Part::Caret => (
-            Vec2::new(28.0, 32.0),
-            CornerRadius {
-                nw: 0,
-                sw: 0,
-                ne: 8,
-                se: 8,
-            },
-        ),
-    };
-    let response = interact(
-        ui,
-        size,
-        Sense::click(),
-        author_id,
-        || WidgetInfo::labeled(Role::Button, true, label),
-        corner,
-    );
-    let fill = if response.hovered() {
-        p.amber_fill.gamma_multiply(1.08)
-    } else {
-        p.amber_fill
-    };
-    let rect = response.rect;
-    ui.painter().rect_filled(rect, corner, fill);
-    match part {
-        Part::Main => {
-            let galley = widgets::text(
-                ui,
-                label,
-                font::READING,
-                700.0,
-                FontFamily::Proportional,
-                p.amber_ink,
-            );
-            ui.painter()
-                .galley(rect.center() - galley.size() / 2.0, galley, p.amber_ink);
-        }
-        Part::Caret => {
-            ui.painter().vline(
-                rect.left(),
-                rect.y_range(),
-                Stroke::new(1.0, Color32::BLACK.gamma_multiply(0.22)),
-            );
-            let glyph = Rect::from_center_size(rect.center(), Vec2::splat(12.0));
-            icons::paint(ui, glyph, Icon::ArrowDown, p.amber_ink);
-        }
-    }
-    response
-}
-
 /// A kind of note: its tile, its name, what it is for, the keys that make one.
-fn kind_item(
-    ui: &mut Ui,
-    kind: NoteKind,
-    (name, line): (&str, &str),
-    (keys, badge): (&str, Option<&str>),
-) -> Response {
+fn kind_item(ui: &mut Ui, kind: NoteKind, (name, line): (&str, &str), keys: &str) -> Response {
     let p = palette(ui.ctx());
     let author_id = format!("new-note-{}", kind_id(kind));
     let corner = CornerRadius::same(radius::MENU);
@@ -235,11 +139,7 @@ fn kind_item(
         FontFamily::Proportional,
         p.text_1,
     );
-    let after_name = left + name.size().x + 8.0;
     ui.painter().galley(pos2(left, top), name, p.text_1);
-    if let Some(words) = badge {
-        new_badge(ui, pos2(after_name, top + NAME_HEIGHT / 2.0), words);
-    }
     ui.painter()
         .galley(pos2(left, top + NAME_HEIGHT + 3.0), line, p.text_2);
     key_caps(ui, keys, rect.right() - PADDING, rect.center().y);
@@ -251,28 +151,6 @@ fn kind_item(
 fn tile(ui: &Ui, at: egui::Pos2, kind: NoteKind) {
     let rect = Rect::from_min_size(at, Vec2::splat(TILE));
     crate::notes::ui::kind_tile(ui, rect, kind);
-}
-
-/// « New », until a note of that kind was made.
-fn new_badge(ui: &Ui, left_middle: egui::Pos2, words: &str) {
-    let p = palette(ui.ctx());
-    let galley = widgets::text(
-        ui,
-        words,
-        font::CAPTION,
-        700.0,
-        FontFamily::Proportional,
-        p.text_1,
-    );
-    let size = galley.size() + Vec2::new(12.0, 2.0);
-    let rect = Rect::from_min_size(left_middle - Vec2::new(0.0, size.y / 2.0), size);
-    ui.painter().rect_filled(
-        rect,
-        CornerRadius::same(radius::MENU),
-        p.amber_fill.gamma_multiply(0.15),
-    );
-    ui.painter()
-        .galley(rect.center() - galley.size() / 2.0, galley, p.text_1);
 }
 
 fn key_cap_text(ui: &Ui, word: &str) -> std::sync::Arc<egui::Galley> {

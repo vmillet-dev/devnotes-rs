@@ -66,8 +66,8 @@ pub(crate) struct EditorView {
     /// The attachment whose cross was clicked once.
     removing: Option<String>,
     tag: String,
-    /// The title takes the focus once, as the editor opens.
-    focus: bool,
+    /// The title takes the focus at the next frame: a new note, or F2.
+    pub(crate) focus_title: bool,
     /// Two steps rather than a dialog: the second click deletes.
     confirming_delete: bool,
 }
@@ -92,7 +92,7 @@ impl EditorView {
             format: format::FormatView::default(),
             removing: None,
             tag: String::new(),
-            focus: !open.stepped,
+            focus_title: open.new,
             confirming_delete: false,
         }
     }
@@ -122,6 +122,7 @@ pub(crate) use json_view::Layout as ExplorerLayout;
 
 /// What the history leaves the body, unfolded.
 const BODY_FLOOR: f32 = 96.0;
+pub(crate) use drawing::picture_palette;
 pub(in crate::notes) use rich::embedded;
 
 /// The editor in `room`: beside the cards, or the whole area once expanded. `None` while no
@@ -624,7 +625,7 @@ fn title(
     ui.ctx()
         .accesskit_node_builder(response.id, |node| node.set_label(name.clone()));
     widgets::address(ui, &response, "editor-title");
-    if std::mem::take(&mut editing.focus) {
+    if std::mem::take(&mut editing.focus_title) {
         response.request_focus();
     }
     if response.lost_focus() {

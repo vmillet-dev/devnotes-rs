@@ -9,11 +9,12 @@ use engine::notes::language::Language as Code;
 use i18n::{Language, keys};
 use richtext::edit;
 use richtext::inlines::Mark;
+use richtext::picture::DRAWING_SOURCE;
 use richtext::{Block, Document, ListKind, Marks, table, tree};
 
 use super::{LinkForm, RichEditor, Step};
 use crate::theme::icons::Icon;
-use crate::widgets::rich::DRAWING_SOURCE;
+
 use crate::widgets::{self, Button, ChoiceMenu, IconButton, Kind, Naming, TextField};
 
 #[derive(Clone, Copy)]
@@ -256,6 +257,7 @@ fn drawing_menu(ui: &mut Ui, view: &mut RichEditor, drawings: &[DrawingRef], lan
     let image = Block::Image {
         alt: drawing.title.clone(),
         src: format!("{DRAWING_SOURCE}{}", drawing.id),
+        width: None,
     };
     let pasted = Document {
         blocks: vec![image],

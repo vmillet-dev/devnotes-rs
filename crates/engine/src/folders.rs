@@ -9,6 +9,7 @@ use crate::count::saturating_u32 as count;
 use crate::db::lock;
 use crate::error::AppError;
 use crate::index::Changed;
+use crate::notes::model::NotePlacement;
 
 use board::{
     BoardArrangement, BoardQuery, BoardScope, BoardView, CardPlacement, Occupancy, PreviewLines,
@@ -208,6 +209,23 @@ pub fn file_notes(
             folder_id.map(std::string::String::as_str),
             lines.card_height(),
         )?;
+        let changed = Changed::notes(ids.to_vec());
+        Ok((answer, changed))
+    })
+}
+
+/// Into a folder from whatever space each note is in, the folder's own becoming theirs. Undone
+/// by [`crate::notes::move_notes_back`].
+pub fn move_notes_into(
+    engine: &Engine,
+    ids: &[String],
+    folder_id: &str,
+    lines: PreviewLines,
+) -> Result<Vec<NotePlacement>, AppError> {
+    engine.write(|db| {
+        let mut connection = lock(db)?;
+
+        let answer = store::move_into(&mut connection, ids, folder_id, lines.card_height())?;
         let changed = Changed::notes(ids.to_vec());
         Ok((answer, changed))
     })

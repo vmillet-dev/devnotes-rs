@@ -8,7 +8,7 @@ use egui::{
 };
 use engine::notes::priority::Priority;
 
-use super::{hovered, interact, text, towards};
+use super::{hovered, interact, one_line, text, towards};
 use crate::theme::{motion, palette};
 
 /// A pill a rail toggles: amber edge and label when selected.
@@ -16,6 +16,7 @@ pub struct Chip<'a> {
     label: &'a str,
     author_id: &'a str,
     selected: bool,
+    widest: f32,
 }
 
 impl<'a> Chip<'a> {
@@ -24,7 +25,22 @@ impl<'a> Chip<'a> {
             label,
             author_id,
             selected,
+            widest: f32::INFINITY,
         }
+    }
+
+    /// No wider than this: its label is cut, said whole on hover.
+    #[must_use]
+    pub fn widest(mut self, widest: f32) -> Self {
+        self.widest = widest;
+        self
+    }
+
+    /// What it takes, its label whole.
+    pub fn width(ui: &Ui, label: &str) -> f32 {
+        let ink = palette(ui.ctx()).text_1;
+        let family = FontFamily::Proportional;
+        text(ui, label, font::LABEL, 400.0, family, ink).size().x + 20.0
     }
 
     pub fn show(self, ui: &mut Ui) -> Response {
@@ -39,9 +55,10 @@ impl<'a> Chip<'a> {
         );
         let corner = CornerRadius::same(u8::MAX);
         let (label, selected) = (self.label, self.selected);
+        let width = (probe.size().x + 20.0).min(self.widest);
         let response = interact(
             ui,
-            probe.size() + Vec2::new(20.0, 6.0),
+            Vec2::new(width, probe.size().y + 6.0),
             Sense::click(),
             self.author_id,
             || WidgetInfo::selected(Role::CheckBox, true, selected, label),
@@ -65,16 +82,14 @@ impl<'a> Chip<'a> {
             Stroke::new(1.0, edge),
             StrokeKind::Inside,
         );
-        let galley = text(
-            ui,
-            self.label,
-            font::LABEL,
-            400.0,
-            FontFamily::Proportional,
-            ink,
-        );
+        // The half pixel: a label as wide as its room is whole.
+        let galley = one_line(ui, label, (font::LABEL, 400.0), ink, width - 19.5);
+        let cut = galley.elided;
         let at = response.rect.center() - galley.size() / 2.0;
         ui.painter().galley(at, galley, ink);
+        if cut {
+            return super::tooltip(response, label);
+        }
         response
     }
 }

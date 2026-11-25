@@ -1,12 +1,13 @@
-//! What the error banner says: the last thing that failed, one at a time, so banners do not
-//! stack.
+//! What failed: each failure stands until it is dismissed, the same one once.
 
 use engine::error::{AppError, ErrorCode};
 use i18n::{Key, Message, keys};
 
+use super::notices::Notices;
+
 #[derive(Debug, Default)]
 pub struct ErrorNotifier {
-    notice: Option<Message>,
+    notices: Notices,
 }
 
 impl ErrorNotifier {
@@ -14,27 +15,33 @@ impl ErrorNotifier {
     /// the log's, never the screen's: it is the core's English, a path perhaps.
     pub fn report(&mut self, fallback: Key, error: &AppError) {
         log::warn!("{}: {}", fallback.path(), error.for_log());
-        self.notice = Some(message_of(error).unwrap_or_else(|| Message::new(fallback)));
+        self.notify(message_of(error).unwrap_or_else(|| Message::new(fallback)));
     }
 
     /// The same, the fallback carrying what was typed: « Folder “Runbooks” could not be
     /// created ».
     pub fn report_message(&mut self, fallback: Message, error: &AppError) {
         log::warn!("{}: {}", fallback.key.path(), error.for_log());
-        self.notice = Some(message_of(error).unwrap_or(fallback));
+        self.notify(message_of(error).unwrap_or(fallback));
     }
 
     /// What is refused before the core is asked: nothing to log.
     pub fn notify(&mut self, message: Message) {
-        self.notice = Some(message);
+        self.notices.push_once(message);
     }
 
+    /// The last one.
     pub fn notice(&self) -> Option<&Message> {
-        self.notice.as_ref()
+        self.shown().next().map(|(_, message)| message)
     }
 
-    pub fn dismiss(&mut self) {
-        self.notice = None;
+    /// Those still shown, the latest first.
+    pub fn shown(&self) -> impl Iterator<Item = (u64, &Message)> {
+        self.notices.shown()
+    }
+
+    pub fn dismiss(&mut self, number: u64) {
+        self.notices.dismiss(number);
     }
 }
 
@@ -140,7 +147,7 @@ mod tests {
         errors.report(keys::errors::NOTE_SAVE_FAILED, &error);
 
         assert_eq!(errors.notice().unwrap().key, keys::errors::NOTE_SAVE_FAILED);
-        errors.dismiss();
+        errors.dismiss(1);
         assert!(errors.notice().is_none());
     }
 

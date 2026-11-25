@@ -7,6 +7,7 @@
 pub use files::FileProblem;
 
 pub mod bases;
+pub mod check_numbers;
 pub mod checks;
 pub mod cidr;
 pub mod colour;
@@ -25,6 +26,7 @@ pub mod image;
 pub mod jwt;
 pub(crate) mod numbers;
 pub mod permissions;
+pub mod printed;
 pub mod qr;
 pub mod random;
 pub mod sizes;
@@ -75,6 +77,12 @@ pub fn generate_identifiers(
     request: &identifiers::IdentifiersRequest,
 ) -> Result<Vec<String>, AppError> {
     identifiers::generate(request).map_err(|_| StorageError::Unavailable.into())
+}
+
+pub fn draw_numbers(
+    request: &check_numbers::NumbersRequest,
+) -> Result<check_numbers::NumbersAnswer, AppError> {
+    check_numbers::draw(request).map_err(|_| StorageError::Unavailable.into())
 }
 
 /// A date written without an offset is read in the machine's zone, as the person typing it means.

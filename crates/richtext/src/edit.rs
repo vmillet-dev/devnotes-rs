@@ -244,7 +244,7 @@ fn is_cell(document: &Document, path: &[usize]) -> bool {
 }
 
 /// Every leaf, and every image and rule, in reading order: what a selection can cover.
-fn units(document: &Document) -> Vec<(Vec<usize>, bool)> {
+pub(crate) fn units(document: &Document) -> Vec<(Vec<usize>, bool)> {
     let mut found = Vec::new();
     walk(&document.blocks, &mut Vec::new(), &mut found);
     found
@@ -280,7 +280,7 @@ fn walk(blocks: &[Block], prefix: &mut Vec<usize>, found: &mut Vec<(Vec<usize>, 
 
 /// Items, lists and quotes left with nothing in them go; a document is never left without a
 /// paragraph to type in.
-fn prune(blocks: &mut Vec<Block>) {
+pub(crate) fn prune(blocks: &mut Vec<Block>) {
     prune_in(blocks);
     if blocks.is_empty() {
         blocks.push(Block::Paragraph(Vec::new()));
@@ -304,13 +304,35 @@ fn prune_in(blocks: &mut Vec<Block>) {
     });
 }
 
+/// How many line breaks at the end of a code block the next Enter leaves it by: two blank lines,
+/// as the reference's editor, so that code written to its end may hold one.
+const LEAVING: &str = "\n\n";
+
+/// Out of the code block the caret is in, to an empty paragraph opened after it: the one way to
+/// write under a block nothing follows. `None` out of one.
+pub fn leave_code(document: &mut Document, selection: &Selection) -> Option<Selection> {
+    let mut path = selection.head.path.clone();
+    let Some(Leaf::Code(_)) = tree::leaf(document, &path) else {
+        return None;
+    };
+    let (blocks, index) = tree::siblings_mut(document, &path)?;
+    blocks.insert(index + 1, Block::Paragraph(Vec::new()));
+    *path.last_mut()? += 1;
+    Some(caret(path, 0))
+}
+
 /// Enter: the block split at the caret. An empty item leaves its list, an empty paragraph its
-/// quote; a code block takes a line.
+/// quote; a code block takes a line, and is left at its end after two blank ones.
 pub fn split(document: &mut Document, selection: &Selection) -> Selection {
     let selection = delete_selection(document, selection);
     let Position { path, offset } = selection.head.clone();
     let empty = tree::leaf(document, &path).is_none_or(|leaf| leaf.is_empty());
-    if let Some(Leaf::Code(_)) = tree::leaf(document, &path) {
+    if let Some(LeafMut::Code(code)) = tree::leaf_mut(document, &path) {
+        let at_end = offset == code.chars().count();
+        if at_end && let Some(kept) = code.strip_suffix(LEAVING).map(str::to_owned) {
+            *code = kept;
+            return leave_code(document, &selection).unwrap_or(selection);
+        }
         return insert_text(document, &selection, "\n", &Marks::default());
     }
     if is_cell(document, &path) {

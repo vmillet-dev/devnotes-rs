@@ -93,25 +93,41 @@ pub fn edge_point(bounds: &Box, toward: Point) -> Point {
     }
 }
 
+/// What an end of an arrow holds on to.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Held {
+    /// The edge of a shape, wherever it faces the other end.
+    Edge(Box),
+    /// The point chosen on it.
+    At(Point),
+}
+
+impl Held {
+    /// What the other end faces.
+    fn aim(&self) -> Point {
+        match self {
+            Self::Edge(bounds) => bounds.centre(),
+            Self::At(point) => *point,
+        }
+    }
+
+    fn facing(&self, other: Point) -> Point {
+        match self {
+            Self::Edge(bounds) => edge_point(bounds, other),
+            Self::At(point) => *point,
+        }
+    }
+}
+
 /// An arrow's ends once the shapes it starts or ends on have moved: each bound end on the edge
-/// of its shape, facing the other end — the other shape's centre when both are bound.
-pub fn bound_ends(ends: Ends, from: Option<&Box>, to: Option<&Box>) -> Ends {
-    let start = from.map_or(
-        Point {
-            x: ends[0],
-            y: ends[1],
-        },
-        Box::centre,
-    );
-    let end = to.map_or(
-        Point {
-            x: ends[2],
-            y: ends[3],
-        },
-        Box::centre,
-    );
-    let first = from.map_or(start, |bounds| edge_point(bounds, end));
-    let last = to.map_or(end, |bounds| edge_point(bounds, start));
+/// of its shape, facing the other end — the other shape's centre when both are bound — or on the
+/// point chosen.
+pub fn bound_ends(ends: Ends, from: Option<&Held>, to: Option<&Held>) -> Ends {
+    let [x1, y1, x2, y2] = ends;
+    let start = from.map_or(Point { x: x1, y: y1 }, Held::aim);
+    let end = to.map_or(Point { x: x2, y: y2 }, Held::aim);
+    let first = from.map_or(start, |held| held.facing(end));
+    let last = to.map_or(end, |held| held.facing(start));
     [first.x, first.y, last.x, last.y]
 }
 
@@ -309,13 +325,14 @@ mod tests {
 
     #[test]
     fn each_bound_end_is_on_its_shape_facing_the_other() {
-        let right = Box { left: 200.0, ..BOX };
+        let left = Held::Edge(BOX);
+        let right = Held::Edge(Box { left: 200.0, ..BOX });
         assert_eq!(
-            bound_ends([0.0; 4], Some(&BOX), Some(&right)),
+            bound_ends([0.0; 4], Some(&left), Some(&right)),
             [100.0, 25.0, 200.0, 25.0]
         );
         assert_eq!(
-            bound_ends([0.0, 0.0, 50.0, 300.0], Some(&BOX), None),
+            bound_ends([0.0, 0.0, 50.0, 300.0], Some(&left), None),
             [50.0, 50.0, 50.0, 300.0]
         );
         assert_eq!(
@@ -326,6 +343,15 @@ mod tests {
             bound_ends([1.0, 2.0, 3.0, 4.0], None, None),
             [1.0, 2.0, 3.0, 4.0]
         );
+    }
+
+    #[test]
+    fn an_end_on_a_chosen_point_stays_on_it_and_the_other_faces_it() {
+        let top = Held::At(at(50.0, 0.0));
+        let second = Box { left: 200.0, ..BOX };
+        let [x1, y1, x2, y2] = bound_ends([0.0; 4], Some(&top), Some(&Held::Edge(second)));
+        assert_eq!((x1, y1), (50.0, 0.0));
+        assert_eq!(at(x2, y2), edge_point(&second, at(50.0, 0.0)));
     }
 
     #[test]

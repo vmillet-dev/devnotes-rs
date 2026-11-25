@@ -64,31 +64,21 @@ fn make_folder(app: &mut App, name: &str) {
 }
 
 fn file_into(app: &mut App, name: &str) {
-    app.click("selection-file");
-    app.eventually("the folders are offered", |tree| {
-        tree.has("selection-file-0")
-    });
-    let tree = app.tree();
-    let entry = (0..12)
-        .map(|at| format!("selection-file-{at}"))
-        .find(|id| tree.text(id).as_deref() == Some(name))
-        .unwrap_or_else(|| panic!("no entry {name}"));
-    app.click(&entry);
+    app.click("selection-move");
+    app.click_where("selection-move-place", ends_with(name));
 }
 
-/// The last entry of « File into », whatever the language calls it: out of every folder.
+/// The first place offered, whatever the language calls it: out of every folder.
 fn unfile(app: &mut App) {
-    app.click("selection-file");
-    app.eventually("the folders are offered", |tree| {
-        tree.has("selection-file-0")
-    });
-    let tree = app.tree();
-    let last = (0..12)
-        .map(|at| format!("selection-file-{at}"))
-        .take_while(|id| tree.has(id))
-        .last()
-        .expect("an entry");
-    app.click(&last);
+    app.click("selection-move");
+    app.wait_for("selection-move-place");
+    app.click("selection-move-place");
+}
+
+/// A folder's place: its path ends with its name.
+fn ends_with(name: &str) -> impl Fn(&Node) -> bool {
+    let end = format!(" › {name}");
+    move |node| node.label().is_some_and(|label| label.ends_with(&end))
 }
 
 fn tick_all(app: &mut App) {
@@ -173,7 +163,9 @@ fn filing(app: &mut App) {
     step("a note is filed from its card's menu", || {
         app.hover("note-card");
         app.click("note-card-menu");
-        app.click_where("note-card-file", named("Perf"));
+        app.click("note-card-move");
+        app.fill("note-card-move-filter", "perf");
+        app.press(Key::Enter, Modifiers::NONE);
         app.eventually("one card wears the chip", |tree| {
             tree.count("note-card-folder") == 1
         });

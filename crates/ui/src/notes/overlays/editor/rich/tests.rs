@@ -405,8 +405,8 @@ fn png_uri(side: u32) -> String {
     )
 }
 
-#[test]
-fn an_embedded_drawing_shows_its_picture_and_a_lost_one_says_so() {
+/// A Note of `content`, `{}` its drawing's id, open once the drawing's picture is read.
+fn embedding(content: &str) -> (Harness<'static>, String) {
     let (backend, profile) = testing::unlocked();
     let seed = testing::note(&backend, "seed");
     let space = seed.space_id.clone();
@@ -430,9 +430,8 @@ fn an_embedded_drawing_shows_its_picture_and_a_lost_one_says_so() {
     })
     .unwrap();
     let space = seed.space_id.clone();
-    let content =
-        format!("![le schéma](devnotes:drawing/{drawing})\n\n![perdu](devnotes:drawing/nope)");
-    engine::db::run_here(backend.engine(), move |engine| {
+    let content = content.replace("{}", &drawing);
+    let id = engine::db::run_here(backend.engine(), move |engine| {
         let draft = engine::notes::model::NoteDraft {
             kind: NoteKind::Note,
             language: Language::Txt,
@@ -441,7 +440,9 @@ fn an_embedded_drawing_shows_its_picture_and_a_lost_one_says_so() {
         };
         engine::notes::create_note(engine, draft)
     })
-    .unwrap();
+    .unwrap()
+    .id
+    .clone();
     let mut harness = expanded_area(backend, profile);
     harness
         .get_by(|node| node.author_id() == Some("search-input"))
@@ -454,13 +455,144 @@ fn an_embedded_drawing_shows_its_picture_and_a_lost_one_says_so() {
         crate::notes::bench::cards(harness) == 1
     });
     click_id(&mut harness, "note-card-open");
-    crate::notes::bench::until(&mut harness, "both read", |harness| {
-        let said: Vec<String> = harness
-            .query_all_by(|node| node.author_id() == Some("rich-embed"))
-            .map(|node| node.accesskit_node().label().unwrap_or_default())
-            .collect();
-        said == ["le schéma", "Drawing not found"]
+    crate::notes::bench::until(&mut harness, "the drawing's picture", |harness| {
+        said(harness)
+            .first()
+            .is_some_and(|said| said == "le schéma")
     });
+    settle(&mut harness);
+    (harness, id)
+}
+
+/// What the images of the Note say.
+fn said(harness: &Harness<'_>) -> Vec<String> {
+    harness
+        .query_all_by(|node| node.author_id() == Some("rich-embed"))
+        .map(|node| node.accesskit_node().label().unwrap_or_default())
+        .collect()
+}
+
+#[test]
+fn an_embedded_drawing_shows_its_picture_and_a_lost_one_says_so() {
+    let (mut harness, _) =
+        embedding("![le schéma](devnotes:drawing/{})\n\n![perdu](devnotes:drawing/nope)");
+    crate::notes::bench::until(&mut harness, "both read", |harness| {
+        said(harness) == ["le schéma", "Drawing not found"]
+    });
+}
+
+const EMBEDDING: &str = "avant\n\n![le schéma](devnotes:drawing/{})\n\naprès";
+
+fn drawn(harness: &Harness<'_>) -> egui::Rect {
+    harness
+        .query_all_by(|node| node.author_id() == Some("rich-embed"))
+        .next()
+        .unwrap()
+        .rect()
+}
+
+fn present(harness: &Harness<'_>, author_id: &str) -> bool {
+    harness
+        .query_by(|node| node.author_id() == Some(author_id))
+        .is_some()
+}
+
+/// The Note saved, its drawing's reference.
+fn reference(harness: &mut Harness<'_>, id: &str) -> String {
+    click_id(harness, "editor-close");
+    settle(harness);
+    let content = stored(harness, id);
+    let (_, reference) = content.split_once("devnotes:drawing/").unwrap();
+    reference.split_once(')').unwrap().0.to_owned()
+}
+
+#[test]
+fn a_drawing_picked_takes_the_size_chosen_and_the_note_keeps_it() {
+    let (mut harness, id) = embedding(EMBEDDING);
+    assert!((drawn(&harness).width() - 40.0).abs() < 1.0, "its own size");
+    assert!(!present(&harness, "rich-embed-size-0"));
+
+    click_id(&mut harness, "rich-embed");
+    assert!(present(&harness, "rich-embed-resize"));
+    click_id(&mut harness, "rich-embed-size-2");
+    let half = drawn(&harness);
+    assert!((half.width() - half.height()).abs() < 1.0, "a square still");
+    click_id(&mut harness, "rich-embed-size-4");
+    let whole = drawn(&harness);
+    assert!((whole.width() - 2.0 * half.width()).abs() < 1.0);
+
+    press(&mut harness, Modifiers::COMMAND, Key::Z);
+    assert!((drawn(&harness).width() - half.width()).abs() < 1.0);
+    assert!(reference(&mut harness, &id).ends_with("?w=50"));
+}
+
+#[test]
+fn a_corner_dragged_keeps_the_ratio_and_stops_on_a_quarter() {
+    let (mut harness, id) = embedding(EMBEDDING);
+    click_id(&mut harness, "rich-embed");
+    click_id(&mut harness, "rich-embed-size-4");
+    let whole = drawn(&harness);
+    let corner = harness
+        .get_by(|node| node.author_id() == Some("rich-embed-resize-top"))
+        .rect()
+        .center();
+    let to = egui::pos2(whole.left() + 0.51 * whole.width(), corner.y);
+    harness.drag_at(corner);
+    harness.run_steps(2);
+    harness.hover_at(to);
+    harness.run_steps(2);
+    harness.drop_at(to);
+    settle(&mut harness);
+    assert!((drawn(&harness).width() - 0.5 * whole.width()).abs() < 1.0);
+
+    press(&mut harness, Modifiers::COMMAND, Key::Z);
+    assert!(
+        (drawn(&harness).width() - whole.width()).abs() < 1.0,
+        "the drag is one step"
+    );
+    press(&mut harness, Modifiers::COMMAND, Key::Y);
+    assert!(reference(&mut harness, &id).ends_with("?w=50"));
+}
+
+#[test]
+fn the_arrows_reach_the_drawing_resize_it_with_alt_and_delete_takes_it_away() {
+    let (mut harness, id) = embedding(EMBEDDING);
+    harness
+        .get_by(|node| node.author_id() == Some("editor-rich"))
+        .focus();
+    press(&mut harness, Modifiers::COMMAND, Key::Home);
+    press(&mut harness, Modifiers::NONE, Key::End);
+    press(&mut harness, Modifiers::NONE, Key::ArrowRight);
+    assert!(
+        present(&harness, "rich-embed-resize"),
+        "the drawing is picked"
+    );
+    press(&mut harness, Modifiers::NONE, Key::ArrowRight);
+    assert!(!present(&harness, "rich-embed-resize"));
+    press(&mut harness, Modifiers::NONE, Key::ArrowLeft);
+    click_id(&mut harness, "rich-embed-size-1");
+    press(&mut harness, Modifiers::ALT, Key::ArrowRight);
+    press(&mut harness, Modifiers::ALT, Key::ArrowRight);
+    press(&mut harness, Modifiers::ALT, Key::ArrowLeft);
+    assert!(reference(&mut harness, &id).ends_with("?w=30"));
+
+    let (mut harness, id) = embedding(EMBEDDING);
+    click_id(&mut harness, "rich-embed");
+    press(&mut harness, Modifiers::NONE, Key::Delete);
+    key_by_key(&mut harness, "!");
+    click_id(&mut harness, "editor-close");
+    settle(&mut harness);
+    assert_eq!(stored(&harness, &id), "avant!\n\naprès");
+}
+
+#[test]
+fn what_is_typed_while_a_drawing_is_picked_goes_after_it() {
+    let (mut harness, id) = embedding(EMBEDDING);
+    click_id(&mut harness, "rich-embed");
+    type_in(&mut harness, "et ");
+    click_id(&mut harness, "editor-close");
+    settle(&mut harness);
+    assert!(stored(&harness, &id).ends_with("\n\net après"));
 }
 
 #[test]
@@ -513,4 +645,30 @@ fn a_long_code_block_scrolled_down_paints_nothing_above_the_body() {
         .filter(|seen| seen.is_positive() && seen.top() < body.top() - 0.5)
         .collect();
     assert!(over.is_empty(), "code painted above {body:?}: {over:?}");
+}
+
+#[test]
+fn the_down_arrow_on_the_last_line_of_a_final_code_block_opens_a_paragraph() {
+    let (mut harness, id) = note("```rust\nlet x = 1;\nlet y = 2;\n```");
+    let surface = harness
+        .get_by(|node| node.author_id() == Some("editor-rich"))
+        .rect();
+    harness.drag_at(surface.left_top() + egui::vec2(60.0, 20.0));
+    harness.drop_at(surface.left_top() + egui::vec2(60.0, 20.0));
+    settle(&mut harness);
+
+    for _ in 0..3 {
+        harness.key_press(Key::ArrowDown);
+        settle(&mut harness);
+    }
+    harness
+        .get_by(|node| node.author_id() == Some("editor-rich"))
+        .type_text("Après");
+    settle(&mut harness);
+    click_id(&mut harness, "editor-close");
+
+    assert_eq!(
+        stored(&harness, &id),
+        "```rust\nlet x = 1;\nlet y = 2;\n```\n\nAprès"
+    );
 }

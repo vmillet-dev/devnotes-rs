@@ -45,7 +45,6 @@ fn now_fills_the_field() {
 #[test]
 fn a_gap_and_a_duration_are_measured_and_read_aloud() {
     let mut harness = opened("dates");
-    click(&mut harness, "dates-tab-1");
 
     click(&mut harness, "tool-sample");
     waits_for(&mut harness, "the gap is measured", |harness| {

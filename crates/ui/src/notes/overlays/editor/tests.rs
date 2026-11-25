@@ -464,6 +464,35 @@ fn title_of_open(harness: &egui_kittest::Harness<'_, Bench>) -> String {
     opened.note().unwrap().title.clone()
 }
 
+/// Closed, beside the cards, expanded: the header keeps its place, and the note is under it.
+#[test]
+fn the_header_spans_the_area_whether_the_note_is_beside_the_cards_or_expanded() {
+    let (backend, profile) = testing::unlocked();
+    testing::note(&backend, "psql");
+    let mut harness = wide(area(backend, profile));
+    let controls = |harness: &egui_kittest::Harness<'_, Bench>| {
+        [
+            "new-note",
+            "search-input",
+            "facets-toggle",
+            "library-rail-toggle",
+        ]
+        .map(|id| rect_of(harness, id))
+    };
+    let closed = controls(&harness);
+
+    click_id(&mut harness, "note-card-open");
+    assert_eq!(controls(&harness), closed, "beside the cards");
+    let edge = rect_of(&harness, "editor-panel-edge");
+    let lowest = closed.iter().map(egui::Rect::bottom).fold(0.0, f32::max);
+    assert!(edge.top() >= lowest, "{edge:?} under {lowest}");
+    let close = rect_of(&harness, "editor-close").top();
+    assert!(close >= edge.top());
+
+    click_id(&mut harness, "editor-fullscreen");
+    assert_eq!(controls(&harness), closed, "expanded");
+}
+
 /// The cards stay on screen beside the note open; expanded, the note takes the area, and the
 /// way back brings the cards again.
 #[test]
@@ -539,6 +568,8 @@ fn another_card_opens_once_the_note_open_wrote_its_title() {
     testing::note(&backend, "second");
     let mut harness = wide(area(backend, profile));
     crate::notes::bench::click(&mut harness, "note-card-open", "first");
+    click_id(&mut harness, "editor-title");
+    harness.key_press(egui::Key::End);
     harness
         .get_by(|node| node.author_id() == Some("editor-title"))
         .type_text(" edited");
@@ -548,6 +579,51 @@ fn another_card_opens_once_the_note_open_wrote_its_title() {
 
     assert_eq!(title_of_open(&harness), "second");
     assert_eq!(stored(&harness, &first).title, "first edited");
+}
+
+fn title_has_focus(harness: &egui_kittest::Harness<'_, Bench>) -> bool {
+    harness
+        .get_by(|node| node.author_id() == Some("editor-title"))
+        .accesskit_node()
+        .is_focused()
+}
+
+#[test]
+fn a_note_opened_from_its_card_leaves_the_keys_to_j_and_k() {
+    let (backend, profile) = testing::unlocked();
+    for title in ["one", "two"] {
+        testing::note(&backend, title);
+    }
+    let mut harness = wide(area(backend, profile));
+    let order = harness.state().state.on_screen();
+
+    crate::notes::bench::click(&mut harness, "note-card-open", "two");
+    let first = title_of_open(&harness);
+    assert!(!title_has_focus(&harness));
+    let step = if harness.state().state.editor.open_id() == Some(order[0].as_str()) {
+        egui::Key::J
+    } else {
+        egui::Key::K
+    };
+    harness.key_press(step);
+    settle(&mut harness);
+    assert_ne!(title_of_open(&harness), first);
+    assert!(!title_has_focus(&harness));
+
+    harness.key_press(egui::Key::F2);
+    settle(&mut harness);
+    assert!(title_has_focus(&harness));
+}
+
+#[test]
+fn a_new_note_gives_its_title_the_focus() {
+    let (backend, profile) = testing::unlocked();
+    testing::note(&backend, "one");
+    let mut harness = wide(area(backend, profile));
+
+    click_id(&mut harness, "new-note");
+
+    assert!(title_has_focus(&harness));
 }
 
 /// J and K walk the cards as they are shown, once no field has the focus; expanded, the
@@ -562,9 +638,6 @@ fn j_and_k_step_through_the_cards_and_escape_steps_back() {
     let order = harness.state().state.on_screen();
     let first = order[0].clone();
     harness.state_mut().state.editor.open(first);
-    settle(&mut harness);
-    // The title takes the focus as the note opens: Escape gives it up first.
-    harness.key_press(egui::Key::Escape);
     settle(&mut harness);
     assert!(is_open(&harness));
 
@@ -601,6 +674,103 @@ fn j_and_k_step_through_the_cards_and_escape_steps_back() {
     harness.key_press(egui::Key::Escape);
     settle(&mut harness);
     assert!(!is_open(&harness));
+}
+
+/// A note holding all a header can, its files included, open in a window `width` wide.
+fn full_header(width: f32) -> egui_kittest::Harness<'static, Bench> {
+    use engine::notes::model::{NoteLifecycle, NotePatch};
+    let (backend, profile) = testing::unlocked();
+    let id = testing::note(&backend, "Rotation").id.clone();
+    let mut harness = area(backend, profile);
+    let note = id.clone();
+    engine::db::run_here(harness.state().backend.engine(), move |engine| {
+        let space_id = engine::notes::get_note(engine, &note)?.space_id.clone();
+        let folder = engine::folders::create_folder(
+            engine,
+            &engine::folders::model::FolderDraft {
+                space_id,
+                name: "Certificates and their yearly rotation".to_owned(),
+                parent_id: None,
+            },
+        )?;
+        let lines = engine::folders::board::PreviewLines::default();
+        let ids = std::slice::from_ref(&note);
+        engine::folders::file_notes(engine, ids, Some(&folder.id), lines)?;
+        let at = chrono::DateTime::parse_from_rfc3339("2026-12-24T22:00:00Z")
+            .unwrap()
+            .to_utc();
+        let long = "a-tag-longer-than-a-whole-line-of-the-panel-at-its-narrowest-which-is-cut";
+        let tags = ["infrastructure", "certificates", "staging", "openssl", long];
+        engine::notes::update_note(
+            engine,
+            &note,
+            &NotePatch {
+                source: Some("https://wiki.example.test/runbooks/certificates".to_owned()),
+                tags: Some(tags.map(str::to_owned).to_vec()),
+                lifecycle: Some(NoteLifecycle::Expires { at }),
+                ..NotePatch::default()
+            },
+        )
+    })
+    .unwrap();
+    harness.state_mut().state.editor.open(id);
+    harness.set_size(egui::vec2(width, 800.0));
+    settle(&mut harness);
+    let files = tempfile::tempdir().unwrap();
+    for name in ["first", "second"] {
+        let name = format!("the-{name}-chain-of-the-staging-certificate.pem");
+        let file = files.path().join(name);
+        std::fs::write(&file, b"chain").unwrap();
+        harness.state_mut().state.dialog = std::sync::Arc::new(platform::dialog::Fixed(file));
+        click_id(&mut harness, "attachment-add");
+    }
+    harness
+}
+
+#[test]
+fn everything_of_the_header_is_inside_the_panel_at_its_narrowest() {
+    // Beside the cards, then over them in the narrowest window.
+    for width in [1_220.0, 640.0] {
+        let harness = full_header(width);
+        let count = |id: &str| {
+            harness
+                .query_all_by(|node| node.author_id() == Some(id))
+                .count()
+        };
+        assert_eq!(count("editor-tag"), 5);
+        assert_eq!(count("attachment-remove"), 2);
+        for id in ["editor-lifecycle", "editor-deadline", "editor-folder"] {
+            assert_eq!(count(id), 1, "{id}");
+        }
+        let left = rect_of(&harness, "editor-source").left();
+        for node in harness.query_all_by(|node| {
+            node.author_id()
+                .is_some_and(|id| id.starts_with("editor-") || id.starts_with("attachment-"))
+        }) {
+            let id = node
+                .accesskit_node()
+                .author_id()
+                .unwrap_or_default()
+                .to_owned();
+            let rect = node.rect();
+            assert!(
+                rect.right() <= width && (rect.left() >= left || id == "editor-panel-edge"),
+                "{id} at {rect:?} in {width}"
+            );
+        }
+    }
+}
+
+#[test]
+fn the_folded_header_stays_inside_the_panel() {
+    let mut harness = full_header(1_220.0);
+    harness.state_mut().state.settings.editor_header_folded = true;
+    settle(&mut harness);
+
+    for id in ["editor-header-summary", "editor-lifecycle"] {
+        let rect = rect_of(&harness, id);
+        assert!(rect.right() <= 1_220.0, "{id} at {rect:?}");
+    }
 }
 
 /// Too narrow for both, the note takes the area beside the rail.

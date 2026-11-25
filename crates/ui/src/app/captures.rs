@@ -166,6 +166,8 @@ fn the_title_bar_and_the_banners_over_an_open_library() {
 
     click(&mut harness, "file-menu");
     capture(&mut harness, "file-menu");
+    click(&mut harness, "file-quit");
+    capture(&mut harness, "file-menu-quit-asks");
     harness.state_mut().state.dialog = std::sync::Arc::new(platform::dialog::Fixed(
         profile.path().join("library.devnotes"),
     ));
@@ -666,7 +668,7 @@ fn the_http_area() {
         .click();
     settle(&mut harness);
     click(&mut harness, "http-node-new");
-    capture(&mut harness, "http-node-menu");
+    capture_holding(&mut harness, "http-node-menu");
     click(&mut harness, "http-node-new-http");
     capture(&mut harness, "http-create-request");
     harness.key_press(egui::Key::Escape);
@@ -1208,6 +1210,224 @@ fn the_editor_header_under_the_pointer() {
     }
 }
 
+/// The unfolded header of a note that holds everything, at the panel's narrowest and in the
+/// narrowest window (#1574).
+#[test]
+fn the_editor_header_of_a_full_note_when_narrow() {
+    use engine::notes::model::{NoteLifecycle, NotePatch};
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch_at(profile.path(), egui::vec2(1220.0, 681.0));
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let backend = &harness.state().backend;
+    let id = crate::testing::note(backend, "Rotation of the staging certificate")
+        .id
+        .clone();
+    let note = id.clone();
+    engine::db::run_here(backend.engine(), move |engine| {
+        let space = engine::notes::get_note(engine, &note)?.space_id.clone();
+        let folder = engine::folders::create_folder(
+            engine,
+            &engine::folders::model::FolderDraft {
+                space_id: space,
+                name: "Certificates and their yearly rotation".to_owned(),
+                parent_id: None,
+            },
+        )?;
+        engine::folders::file_notes(
+            engine,
+            std::slice::from_ref(&note),
+            Some(&folder.id),
+            engine::folders::board::PreviewLines::default(),
+        )?;
+        let at = chrono::DateTime::parse_from_rfc3339("2026-12-24T22:00:00Z")
+            .unwrap()
+            .with_timezone(&chrono::Utc);
+        let tags = [
+            "infrastructure",
+            "certificates",
+            "staging",
+            "openssl",
+            "yearly-rotation-runbook",
+        ];
+        engine::notes::update_note(
+            engine,
+            &note,
+            &NotePatch {
+                source: Some("https://wiki.example.test/runbooks/certificates".to_owned()),
+                tags: Some(tags.map(str::to_owned).to_vec()),
+                lifecycle: Some(NoteLifecycle::Expires { at }),
+                ..NotePatch::default()
+            },
+        )
+    })
+    .unwrap();
+    let file = profile
+        .path()
+        .join("the-whole-chain-of-the-staging-certificate-2026.pem");
+    std::fs::write(&file, b"-----BEGIN CERTIFICATE-----").unwrap();
+    harness.state_mut().state.revision.bump();
+    harness.state_mut().state.editor.open(id);
+    settle(&mut harness);
+    harness.state_mut().state.dialog = std::sync::Arc::new(platform::dialog::Fixed(file));
+    click(&mut harness, "attachment-add");
+    for width in [1220.0, 1180.0, 640.0] {
+        harness.set_size(egui::vec2(width, 681.0));
+        settle(&mut harness);
+        capture(&mut harness, &format!("editor-header-full-{width}"));
+    }
+}
+
+/// A Note presented (#1568, #1569): a short slide, a list, a short code, one too long and too
+/// wide for the screen.
+#[test]
+fn the_slides_of_a_presentation() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch_at(profile.path(), egui::vec2(1600.0, 900.0));
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let wide = "let answer = client.get(\"https://api.example.test/v1/certificates\").header(\"Authorization\", token).timeout(Duration::from_secs(30)).send().await?;";
+    let long: String = std::iter::once(wide.to_owned())
+        .chain((1..60).map(|at| format!("let line_{at} = {at};")))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let body = format!(
+        "## A short slide\n\nOne line of text.\n\n## A list\n\n- prepare the backup\n- switch the DNS\n- watch the logs\n\n## A short code\n\n```rust\nlet x = 1;\nlet y = 2;\n```\n\n## A long code\n\n```rust\n{long}\n```\n"
+    );
+    let id = crate::testing::note(&harness.state().backend, "Switch over")
+        .id
+        .clone();
+    let patch = engine::notes::model::NotePatch {
+        kind: Some(engine::notes::kind::NoteKind::Note),
+        content: Some(body),
+        ..engine::notes::model::NotePatch::default()
+    };
+    let engine = harness.state().backend.engine().clone();
+    let note = id.clone();
+    engine::db::run_here(&engine, move |engine| {
+        engine::notes::update_note(engine, &note, &patch)
+    })
+    .unwrap();
+    harness.state_mut().state.revision.bump();
+    harness.state_mut().state.editor.open(id);
+    settle(&mut harness);
+    click(&mut harness, "editor-more");
+    click(&mut harness, "editor-present");
+    settle(&mut harness);
+    for slide in ["short", "list", "code", "long-code"] {
+        harness.key_press(egui::Key::ArrowRight);
+        settle(&mut harness);
+        capture(&mut harness, &format!("slide-{slide}"));
+    }
+}
+
+/// The Format button and its settings (#1594), full screen then beside the cards, on a language
+/// Prettier reads and on one it does not.
+#[test]
+fn the_format_button_and_its_settings() {
+    use engine::notes::language::Language;
+    for (name, language, code) in [
+        ("ts", Language::Ts, "const a = {b:1}"),
+        ("sql", Language::Sql, "SELECT 1;"),
+    ] {
+        let profile = tempfile::tempdir().unwrap();
+        let mut harness = launch_at(profile.path(), egui::vec2(1440.0, 900.0));
+        type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+        type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+        click(&mut harness, "vault-submit");
+        settle(&mut harness);
+        let id = crate::testing::note(&harness.state().backend, "Invoices")
+            .id
+            .clone();
+        let patch = engine::notes::model::NotePatch {
+            content: Some(code.to_owned()),
+            language: Some(language),
+            ..engine::notes::model::NotePatch::default()
+        };
+        let engine = harness.state().backend.engine().clone();
+        let note = id.clone();
+        engine::db::run_here(&engine, move |engine| {
+            engine::notes::update_note(engine, &note, &patch)
+        })
+        .unwrap();
+        harness.state_mut().state.revision.bump();
+        harness.state_mut().state.editor.open(id);
+        settle(&mut harness);
+        click(&mut harness, "editor-format-settings");
+        capture(&mut harness, &format!("format-panel-{name}"));
+        harness.key_press(egui::Key::Escape);
+        settle(&mut harness);
+        click(&mut harness, "editor-fullscreen");
+        capture(&mut harness, &format!("format-full-{name}"));
+    }
+}
+
+/// Three shapes over three thousand points, an arrow between two of them.
+const WIDE_SCENE: &str = r#"{"version":1,"scene":{"objects":[
+{"type":"Rect","left":200,"top":150,"width":240,"height":120,"id":"a","hue":"blue","stroke":"x","strokeWidth":2},
+{"type":"Ellipse","left":1500,"top":700,"width":400,"height":240,"rx":200,"ry":120,"id":"b","hue":"green","strokeWidth":2},
+{"type":"Rect","left":2800,"top":300,"width":300,"height":200,"id":"c","hue":"amber","strokeWidth":2}
+]}}"#;
+
+/// The window, a drawing of that scene open in it.
+fn with_a_drawing(profile: &std::path::Path, scene: &str) -> Harness<'static, DevNotesApp> {
+    let mut harness = launch_at(profile, egui::vec2(1440.0, 900.0));
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let id = crate::testing::note(&harness.state().backend, "Architecture")
+        .id
+        .clone();
+    let patch = engine::notes::model::NotePatch {
+        kind: Some(engine::notes::kind::NoteKind::Drawing),
+        content: Some(scene.to_owned()),
+        ..engine::notes::model::NotePatch::default()
+    };
+    let engine = harness.state().backend.engine().clone();
+    let note = id.clone();
+    engine::db::run_here(&engine, move |engine| {
+        engine::notes::update_note(engine, &note, &patch)
+    })
+    .unwrap();
+    harness.state_mut().state.revision.bump();
+    harness.state_mut().state.editor.open(id);
+    settle(&mut harness);
+    harness
+}
+
+/// A drawing larger than the panel (#1580), as it opens and closer.
+#[test]
+fn a_drawing_larger_than_the_panel() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = with_a_drawing(profile.path(), WIDE_SCENE);
+    capture(&mut harness, "drawing-wide");
+}
+
+/// An arrow dragged to the middle of an ellipse's left side (#1582), the points shown.
+#[test]
+fn an_arrow_near_the_points_of_a_shape() {
+    let profile = tempfile::tempdir().unwrap();
+    let scene = r#"{"version":1,"scene":{"objects":[
+{"type":"Rect","left":160,"top":160,"width":160,"height":90,"id":"a","hue":"blue","strokeWidth":2},
+{"type":"Ellipse","left":460,"top":240,"width":160,"height":100,"rx":80,"ry":50,"id":"b","hue":"green","strokeWidth":2}
+]}}"#;
+    let mut harness = with_a_drawing(profile.path(), scene);
+    click(&mut harness, "drawing-tool-arrow");
+    let stage = harness
+        .get_by(|node| node.author_id() == Some("drawing-stage"))
+        .rect();
+    harness.drag_at(stage.min + egui::vec2(192.0, 165.0));
+    harness.run_steps(2);
+    harness.hover_at(stage.min + egui::vec2(332.0, 246.0));
+    harness.run_steps(2);
+    capture_holding(&mut harness, "drawing-arrow-points");
+}
+
 /// A request in the narrowest window (#1487): its URL, its actions and its tabs.
 #[test]
 fn the_http_request_in_a_narrow_window() {
@@ -1286,6 +1506,37 @@ fn a_selection_and_a_report_at_three_widths() {
 }
 
 /// The samples' tree with a chain of folders four levels deep, at the default rail (#1463).
+#[test]
+fn the_tag_manager_with_two_hundred_tags() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch(profile.path());
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let engine = harness.state().backend.engine().clone();
+    let tags: Vec<String> = (0..200).map(|rank| format!("service-{rank:03}")).collect();
+    for (rank, tags) in tags.chunks(10).enumerate() {
+        let id = crate::testing::note(&harness.state().backend, &format!("note {rank}"))
+            .id
+            .clone();
+        let patch = engine::notes::model::NotePatch {
+            tags: Some(tags.to_vec()),
+            ..engine::notes::model::NotePatch::default()
+        };
+        engine::db::run_here(&engine, move |engine| {
+            engine::notes::update_note(engine, &id, &patch)
+        })
+        .unwrap();
+    }
+    harness.state_mut().state.revision.bump();
+    settle(&mut harness);
+    click(&mut harness, "facets-toggle");
+    click(&mut harness, "tag-manage");
+    settle(&mut harness);
+    capture(&mut harness, "tag-manager-many");
+}
+
 #[test]
 fn the_folders_four_levels_deep() {
     use engine::folders::model::FolderDraft;
@@ -1595,4 +1846,143 @@ fn a_folder_dropped_onto_another_space() {
     harness.event(press(to, false));
     settle(&mut harness);
     capture(&mut harness, "folder-to-space");
+}
+
+/// A drawing embedded in a Note (#1583), as it opens, then picked and at half the width.
+#[test]
+fn a_drawing_in_a_note() {
+    use engine::notes::kind::NoteKind;
+    use engine::notes::model::NotePatch;
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch_at(profile.path(), egui::vec2(1440.0, 900.0));
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let id = |harness: &Harness<'_, DevNotesApp>, title| {
+        crate::testing::note(&harness.state().backend, title)
+            .id
+            .clone()
+    };
+    let scene = id(&harness, "Architecture");
+    let note = id(&harness, "Bienvenue dans DevNotes");
+    let rewrite = |harness: &mut Harness<'_, DevNotesApp>, id: &str, kind, content: String| {
+        let patch = NotePatch {
+            kind: Some(kind),
+            content: Some(content),
+            ..NotePatch::default()
+        };
+        let engine = harness.state().backend.engine().clone();
+        let id = id.to_owned();
+        engine::db::run_here(&engine, move |engine| {
+            engine::notes::update_note(engine, &id, &patch)
+        })
+        .unwrap();
+        harness.state_mut().state.revision.bump();
+    };
+    let shapes = r#"{"version":1,"scene":{"objects":[
+{"type":"Rect","left":160,"top":160,"width":160,"height":90,"id":"a","hue":"blue","strokeWidth":2},
+{"type":"Ellipse","left":460,"top":240,"width":160,"height":100,"rx":80,"ry":50,"id":"b","hue":"green","strokeWidth":2}
+]}}"#;
+    rewrite(&mut harness, &scene, NoteKind::Drawing, shapes.to_owned());
+    // Opened and left: its pictures are taken.
+    harness.state_mut().state.editor.open(scene.clone());
+    settle(&mut harness);
+    click(&mut harness, "editor-close");
+    let words = "Le service lit la file, puis écrit dans le stockage.";
+    let content = format!("{words}\n\n![Architecture](devnotes:drawing/{scene})\n\n{words}");
+    rewrite(&mut harness, &note, NoteKind::Note, content);
+    harness.state_mut().state.editor.open(note);
+    settle(&mut harness);
+    capture(&mut harness, "note-drawing");
+    let sized = harness.query_by(|node| node.author_id() == Some("rich-embed"));
+    sized.unwrap().click();
+    settle(&mut harness);
+    click(&mut harness, "rich-embed-size-2");
+    capture(&mut harness, "note-drawing-half");
+}
+
+/// A note's menu in a library of many folders (#1578), and the places it moves to.
+#[test]
+fn a_note_moved_among_many_folders() {
+    use engine::folders::model::FolderDraft;
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch_at(profile.path(), egui::vec2(1440.0, 900.0));
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let engine = harness.state().backend.engine().clone();
+    let space = crate::testing::note(&harness.state().backend, "Architecture")
+        .space_id
+        .clone();
+    let make = |name: String, parent: Option<String>| {
+        let draft = FolderDraft {
+            space_id: space.clone(),
+            parent_id: parent,
+            name,
+        };
+        engine::db::run_here(&engine, move |engine| {
+            engine::folders::create_folder(engine, &draft)
+        })
+        .unwrap()
+        .id
+    };
+    for project in 1..=14 {
+        let name = format!("Projet {project:02} — migration de la base clients");
+        let parent = make(name, None);
+        make("Incidents".to_owned(), Some(parent.clone()));
+        make("Requêtes d’exploitation".to_owned(), Some(parent));
+    }
+    harness.state_mut().state.revision.bump();
+    settle(&mut harness);
+    let card = harness
+        .query_all_by(|node| node.author_id() == Some("note-card-open"))
+        .nth(1)
+        .unwrap()
+        .rect();
+    harness.hover_at(card.center());
+    settle(&mut harness);
+    click(&mut harness, "note-card-menu");
+    capture(&mut harness, "note-menu");
+    if harness
+        .query_by(|node| node.author_id() == Some("note-card-move"))
+        .is_some()
+    {
+        click(&mut harness, "note-card-move");
+        capture(&mut harness, "note-move");
+    }
+}
+
+/// Three reports at once, over a drawing open beside the cards (#1591).
+#[test]
+fn reports_in_the_corner() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch_at(profile.path(), egui::vec2(1440.0, 900.0));
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let id = crate::testing::note(&harness.state().backend, "Architecture")
+        .id
+        .clone();
+    harness.state_mut().state.revision.bump();
+    harness.state_mut().state.editor.open(id);
+    settle(&mut harness);
+    let status = &mut harness.state_mut().state.status;
+    status
+        .report(i18n::Message::new(i18n::keys::notes::COPIED_NOTE).with("title", "Connexion psql"));
+    let path = r"C:\Utilisateurs\moi\Documents\captures\schéma-de-la-base.pdf";
+    status.report(i18n::Message::new(i18n::keys::attachments::SAVED).with("path", path));
+    status.report(
+        i18n::Message::new(i18n::keys::file::EXPORTED)
+            .with("notes", 12_u32)
+            .with("path", "export-2026.json"),
+    );
+    settle(&mut harness);
+    capture(&mut harness, "status-toasts");
+    let failed = i18n::Message::new(i18n::keys::errors::ATTACHMENTS_LOAD_FAILED);
+    harness.state_mut().state.errors.notify(failed);
+    settle(&mut harness);
+    capture(&mut harness, "error-toast");
 }

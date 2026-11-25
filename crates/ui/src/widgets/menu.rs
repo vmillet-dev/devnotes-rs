@@ -10,7 +10,7 @@ use egui::{
 use engine::notes::view::fold;
 use i18n::{Language, keys};
 
-use super::{TextField, hovered, interact, text, towards};
+use super::{TextField, hovered, interact, one_line, text, tooltip, towards};
 use crate::theme::icons::Icon;
 use crate::theme::palette;
 
@@ -138,38 +138,120 @@ fn entries<'a>(ui: &mut Ui, items: &'a [MenuItem<'a>]) -> Option<&'a str> {
             }
             continue;
         }
-        let opens = response.clicked()
-            || response.hovered()
-            || (super::takes_keys(ui, &response)
-                && ui.input_mut(|input| input.consume_key(Modifiers::NONE, Key::ArrowRight)));
-        // Its own open state: egui keeps one popup in its memory, and the parent is that one.
-        let open_id = response.id.with("children");
-        let mut open = opens || ui.data(|data| data.get_temp(open_id)).unwrap_or(false);
-        let sub = Popup::from_response(&response)
-            .id(open_id)
-            .align(RectAlign::RIGHT_START)
-            .frame(frame(ui.ctx()))
-            .open_bool(&mut open)
-            .show(|ui| {
-                let inner = fitted(ui, 0.0, |ui| entries(ui, item.children));
-                let back = ui.input_mut(|input| input.consume_key(Modifiers::NONE, Key::ArrowLeft));
-                (inner, back)
-            });
-        let sub = sub.map(|shown| {
-            let (inner, back) = shown.inner;
-            if back {
-                open = false;
-                ui.memory_mut(|memory| memory.request_focus(response.id));
-            }
-            egui::InnerResponse::new(inner, shown.response)
-        });
-        ui.data_mut(|data| data.insert_temp(open_id, open));
-        if let Some(chosen) = sub.and_then(|shown| shown.inner) {
-            picked = Some(chosen);
+        let chosen = sub_menu(ui, &response, |ui| entries(ui, item.children)).flatten();
+        if chosen.is_some() {
+            picked = chosen;
+            ui.close();
         }
     }
     arrows(ui, &ids);
     picked
+}
+
+/// How a sub-menu stands from a pass to the next. Its own state, not egui's memory: egui keeps
+/// one popup there, and the parent is that one.
+#[derive(Clone, Copy, Default)]
+struct SubMenu {
+    open: bool,
+    /// The last pass its entry was drawn in: the menu was closed since, if not the one before.
+    pass: u64,
+    rect: Option<egui::Rect>,
+    layer: Option<egui::LayerId>,
+    /// Opened with the keys: open while the focus is in it, wherever the pointer is.
+    by_keys: bool,
+    /// Closed under a pointer that has not moved since.
+    dismissed: bool,
+    focused: Option<Id>,
+}
+
+/// The menu to the side of `parent`, open while the pointer is on either or the focus is in it.
+/// → opens it and walks in, ← closes it.
+pub fn sub_menu<R>(
+    ui: &mut Ui,
+    parent: &Response,
+    content: impl FnOnce(&mut Ui) -> R,
+) -> Option<R> {
+    let id = parent.id.with("children");
+    let pass = ui.ctx().cumulative_pass_nr();
+    let mut held: SubMenu = ui
+        .data(|data| data.get_temp(id))
+        .filter(|held: &SubMenu| held.pass + 1 >= pass)
+        .unwrap_or_default();
+    held.pass = pass;
+    let entered = (parent.clicked() && !parent.contains_pointer())
+        || (super::takes_keys(ui, parent)
+            && ui.input_mut(|input| input.consume_key(Modifiers::NONE, Key::ArrowRight)));
+    let focused = ui.memory(egui::Memory::focused);
+    let elsewhere = focused
+        .and_then(|focused| ui.ctx().read_response(focused))
+        .is_some_and(|response| Some(response.layer_id) != held.layer);
+    held.by_keys = entered || (held.by_keys && !elsewhere);
+    if entered || ui.input(|input| input.pointer.delta() != Vec2::ZERO) {
+        held.dismissed = false;
+    } else if focused != held.focused && elsewhere && focused != Some(parent.id) {
+        held.dismissed = true;
+    }
+    held.focused = focused;
+    if entered {
+        // The first entry takes it, as of any menu that opens.
+        ui.memory_mut(|memory| {
+            memory.surrender_focus(parent.id);
+            memory.move_focus(egui::FocusDirection::None);
+        });
+    }
+
+    let mut open = held.by_keys || (!held.dismissed && pointed_at(ui, parent, &held));
+    let shown = Popup::from_response(parent)
+        .id(id)
+        .align(RectAlign::RIGHT_START)
+        .frame(frame(ui.ctx()))
+        // A click outside closes the menu it belongs to, one on its entry keeps it.
+        .close_behavior(PopupCloseBehavior::IgnoreClicks)
+        .open_bool(&mut open)
+        .show(|ui| {
+            let inner = egui::ScrollArea::vertical()
+                .max_height(SUB_MENU_HEIGHT)
+                .show(ui, |ui| fitted(ui, 0.0, content))
+                .inner;
+            let back = ui.input_mut(|input| input.consume_key(Modifiers::NONE, Key::ArrowLeft));
+            (inner, back)
+        });
+    let inner = shown.map(|shown| {
+        held.rect = Some(shown.response.rect);
+        held.layer = Some(shown.response.layer_id);
+        let (inner, back) = shown.inner;
+        if back {
+            open = false;
+            ui.memory_mut(|memory| {
+                memory.request_focus(parent.id);
+                // egui walks the focus left as well, off the entry it was just given to.
+                memory.move_focus(egui::FocusDirection::None);
+            });
+        }
+        // Closed by a key or a click, not by the pointer leaving it.
+        held.dismissed |= !open;
+        inner
+    });
+    held.open = open;
+    held.by_keys &= open;
+    ui.data_mut(|data| data.insert_temp(id, held));
+    inner
+}
+
+/// On the entry, in its sub-menu, or on the way from one to the other.
+fn pointed_at(ui: &Ui, parent: &Response, held: &SubMenu) -> bool {
+    if parent.contains_pointer() {
+        return true;
+    }
+    let (Some(rect), true) = (held.rect, held.open) else {
+        return false;
+    };
+    let Some(at) = ui.input(|input| input.pointer.hover_pos()) else {
+        return false;
+    };
+    let towards = rect.center().x - parent.rect.center().x;
+    let moving = ui.input(|input| input.pointer.velocity().x);
+    rect.contains(at) || (towards * moving > 0.0 && parent.rect.union(rect).contains(at))
 }
 
 /// The first entry takes the focus when the menu opens; egui's own arrow navigation moves it
@@ -195,7 +277,7 @@ pub fn entry(
     on: bool,
     opens: bool,
 ) -> Response {
-    drawn(ui, None, label, author_id, (destructive, on, opens))
+    drawn(ui, None, label, author_id, (destructive, on, opens), 0.0)
 }
 
 /// An entry after its icon, drawn in `colour`, or in the entry's own ink without one.
@@ -207,15 +289,17 @@ pub fn icon_entry(
     (destructive, opens): (bool, bool),
 ) -> Response {
     let lead = Some((icon, colour));
-    drawn(ui, lead, label, author_id, (destructive, false, opens))
+    drawn(ui, lead, label, author_id, (destructive, false, opens), 0.0)
 }
 
+/// `tail` is the room kept at the right of the label for what the caller paints there.
 fn drawn(
     ui: &mut Ui,
     lead: Option<(Icon, Option<Color32>)>,
     label: &str,
     author_id: &str,
     (destructive, on, opens): (bool, bool, bool),
+    tail: f32,
 ) -> Response {
     let p = palette(ui.ctx());
     let probe = text(
@@ -260,7 +344,10 @@ fn drawn(
         crate::theme::icons::paint(ui, glyph, icon, colour.unwrap_or(ink));
         left += 22.0;
     }
-    let galley = text(ui, label, font::LABEL, 400.0, FontFamily::Proportional, ink);
+    let room = response.rect.right() - 8.0 - chevron_room - tail - left;
+    // The half pixel: a label as wide as its room is whole.
+    let galley = one_line(ui, label, (font::LABEL, 400.0), ink, room + 0.5);
+    let cut = galley.elided;
     let at = egui::pos2(left, response.rect.center().y - galley.size().y / 2.0);
     ui.painter().galley(at, galley, Color32::TRANSPARENT);
     if opens {
@@ -269,6 +356,9 @@ fn drawn(
             Vec2::splat(12.0),
         );
         crate::theme::icons::paint(ui, glyph, Icon::ChevronRight, p.text_2);
+    }
+    if cut {
+        return tooltip(response, label);
     }
     response
 }
@@ -293,7 +383,79 @@ pub enum Naming {
 pub const FILTER_FROM: usize = 9;
 /// A filtered menu keeps its size whatever it holds: the entries scroll under the field.
 const FILTERED_WIDTH: f32 = 240.0;
-const FILTERED_HEIGHT: f32 = 240.0;
+pub(super) const FILTERED_HEIGHT: f32 = 240.0;
+/// A sub-menu scrolls past this: a library can hold hundreds of tags.
+const SUB_MENU_HEIGHT: f32 = 320.0;
+
+/// What a menu's filter holds, and what its keys asked of the entries under it.
+pub(super) struct Filter {
+    pub(super) query: String,
+    pub(super) step: isize,
+    pub(super) entered: bool,
+    height: f32,
+}
+
+/// The field stays put and keeps the focus: the arrows walk the entries from it, Enter picks
+/// the one walked to, Escape empties the field before it closes the menu.
+pub(super) fn filter_field(
+    ui: &mut Ui,
+    query_id: Id,
+    (label, author_id, placeholder): (&str, &str, &str),
+) -> Filter {
+    let mut query: String = ui.data(|data| data.get_temp(query_id)).unwrap_or_default();
+    let emptied =
+        !query.is_empty() && ui.input_mut(|input| input.consume_key(Modifiers::NONE, Key::Escape));
+    if emptied {
+        query.clear();
+    }
+    // Read before the field: it would lose the focus to Enter, and walk its caret.
+    let (step, entered) = ui.input_mut(|input| {
+        let down = input.consume_key(Modifiers::NONE, Key::ArrowDown);
+        let up = input.consume_key(Modifiers::NONE, Key::ArrowUp);
+        let enter = input.consume_key(Modifiers::NONE, Key::Enter);
+        (isize::from(down) - isize::from(up), enter)
+    });
+    let field = TextField::new(&mut query, label, author_id)
+        .hint(placeholder)
+        .compact()
+        .show(ui);
+    if !field.has_focus() && ui.memory(|memory| memory.focused().is_none()) {
+        field.request_focus();
+    }
+    ui.data_mut(|data| data.insert_temp(query_id, query.clone()));
+    Filter {
+        query,
+        step,
+        entered,
+        height: field.rect.height(),
+    }
+}
+
+/// The entry the arrows stand on: the one they left, or the current one, or the first.
+pub(super) fn walk(
+    ui: &Ui,
+    walked_id: Id,
+    shown: &[usize],
+    step: isize,
+    current: Option<usize>,
+) -> Option<usize> {
+    let held: Option<usize> = ui.data(|data| data.get_temp(walked_id));
+    let place = |entry: usize| shown.iter().position(|index| *index == entry);
+    let start = held
+        .and_then(place)
+        .or_else(|| current.and_then(place))
+        .unwrap_or(0);
+    let last = shown.len().saturating_sub(1);
+    let walked = shown
+        .get(start.saturating_add_signed(step).min(last))
+        .copied();
+    ui.data_mut(|data| {
+        if let Some(walked) = walked {
+            data.insert_temp(walked_id, walked);
+        }
+    });
+    walked
+}
 
 pub struct ChoiceMenu<'a, T> {
     label: &'a str,
@@ -384,14 +546,11 @@ impl<'a, T: PartialEq + Copy> ChoiceMenu<'a, T> {
             egui::StrokeKind::Inside,
         );
         let ink = towards(p.text_1, p.amber_text, hover);
-        let galley = text(
-            ui,
-            shown,
-            font::CONTROL,
-            400.0,
-            FontFamily::Proportional,
-            ink,
-        );
+        let room = response.rect.width() - 30.0;
+        let galley = one_line(ui, shown, (font::CONTROL, 400.0), ink, room + 0.5);
+        if galley.elided {
+            response = tooltip(response, shown);
+        }
         let at = egui::pos2(
             response.rect.left() + 8.0,
             response.rect.center().y - galley.size().y / 2.0,
@@ -406,9 +565,15 @@ impl<'a, T: PartialEq + Copy> ChoiceMenu<'a, T> {
         let query_id = response.id.with("query");
         let filtering = self.options.len() >= FILTER_FROM;
         let trigger = response.rect.width();
+        // A click in the filter is a click in the popup: only a pick closes a filtered menu.
+        let close = if filtering {
+            PopupCloseBehavior::CloseOnClickOutside
+        } else {
+            PopupCloseBehavior::CloseOnClick
+        };
         let picked = Popup::menu(&response)
             .frame(frame(ui.ctx()))
-            .close_behavior(PopupCloseBehavior::CloseOnClick)
+            .close_behavior(close)
             .show(|ui| {
                 if filtering {
                     self.filtered(ui, query_id, current)
@@ -442,44 +607,23 @@ impl<'a, T: PartialEq + Copy> ChoiceMenu<'a, T> {
         picked
     }
 
-    /// The field stays put and keeps the focus: the arrows walk the entries from it, Enter picks
-    /// the one walked to, Escape empties the field before it closes the menu.
     fn filtered(&self, ui: &mut Ui, query_id: Id, current: Option<&str>) -> Option<T> {
         ui.set_width(FILTERED_WIDTH);
         ui.spacing_mut().item_spacing.y = gap::TIGHT;
-        let walked_id = query_id.with("walked");
-        let mut query: String = ui.data(|data| data.get_temp(query_id)).unwrap_or_default();
-        let emptied = !query.is_empty()
-            && ui.input_mut(|input| input.consume_key(Modifiers::NONE, Key::Escape));
-        if emptied {
-            query.clear();
-        }
-        // Read before the field: it would lose the focus to Enter, and walk its caret.
-        let (step, entered) = ui.input_mut(|input| {
-            let down = input.consume_key(Modifiers::NONE, Key::ArrowDown);
-            let up = input.consume_key(Modifiers::NONE, Key::ArrowUp);
-            let enter = input.consume_key(Modifiers::NONE, Key::Enter);
-            (isize::from(down) - isize::from(up), enter)
-        });
         let filter_id = format!("{}-filter", self.author_id);
         let placeholder = self.words(keys::choice_menu::FILTER_PLACEHOLDER);
-        let field = TextField::new(&mut query, self.label, &filter_id)
-            .hint(&placeholder)
-            .compact()
-            .show(ui);
-        if !field.has_focus() && ui.memory(|memory| memory.focused().is_none()) {
-            field.request_focus();
-        }
-        let shown = self.matching(&query);
-        let walked = self.walk(ui, walked_id, &shown, step, current);
-        ui.data_mut(|data| data.insert_temp(query_id, query));
+        let filter = filter_field(ui, query_id, (self.label, &filter_id, &placeholder));
+        let shown = self.matching(&filter.query);
+        let step = filter.step;
+        let on = current.and_then(|name| self.options.iter().position(|(_, one)| *one == name));
+        let walked = walk(ui, query_id.with("walked"), &shown, step, on);
         if shown.is_empty() {
             let none = self.words(keys::choice_menu::NO_RESULTS);
             let ink = palette(ui.ctx()).text_2;
             ui.label(egui::RichText::new(none).size(font::LABEL).color(ink));
         }
         let picked = egui::ScrollArea::vertical()
-            .max_height(FILTERED_HEIGHT - field.rect.height() - 4.0)
+            .max_height(FILTERED_HEIGHT - filter.height - 4.0)
             .auto_shrink([false, true])
             .show(ui, |ui| {
                 ui.spacing_mut().item_spacing.y = 0.0;
@@ -487,9 +631,10 @@ impl<'a, T: PartialEq + Copy> ChoiceMenu<'a, T> {
             })
             .inner;
         if picked.is_some() {
+            ui.close();
             return picked;
         }
-        if entered {
+        if filter.entered {
             ui.close();
             return walked.map(|index| self.options[index].0);
         }
@@ -508,36 +653,6 @@ impl<'a, T: PartialEq + Copy> ChoiceMenu<'a, T> {
             .collect()
     }
 
-    /// The entry the arrows stand on: the one they left, or the current value, or the first.
-    fn walk(
-        &self,
-        ui: &mut Ui,
-        walked_id: Id,
-        shown: &[usize],
-        step: isize,
-        current: Option<&str>,
-    ) -> Option<usize> {
-        let held: Option<usize> = ui.data(|data| data.get_temp(walked_id));
-        let start = held
-            .and_then(|walked| shown.iter().position(|index| *index == walked))
-            .or_else(|| {
-                shown
-                    .iter()
-                    .position(|index| Some(self.options[*index].1) == current)
-            })
-            .unwrap_or(0);
-        let last = shown.len().saturating_sub(1);
-        let walked = shown
-            .get(start.saturating_add_signed(step).min(last))
-            .copied();
-        ui.data_mut(|data| {
-            if let Some(walked) = walked {
-                data.insert_temp(walked_id, walked);
-            }
-        });
-        walked
-    }
-
     fn rows(
         &self,
         ui: &mut Ui,
@@ -550,8 +665,17 @@ impl<'a, T: PartialEq + Copy> ChoiceMenu<'a, T> {
             let (value, name) = self.options[*index];
             let id = format!("{}-{index}", self.author_id);
             let here = Some(*index) == walked;
-            let row = entry(ui, name, &id, false, here || Some(name) == current, false);
-            self.paint_hint(ui, row.rect, *index);
+            let hint = self.hint_of(ui, *index);
+            let tail = hint.as_ref().map_or(0.0, |hint| hint.size().x + 8.0);
+            let on = here || Some(name) == current;
+            let row = drawn(ui, None, name, &id, (false, on, false), tail);
+            if let Some(hint) = hint {
+                let at = egui::pos2(
+                    row.rect.right() - 8.0 - hint.size().x,
+                    row.rect.center().y - hint.size().y / 2.0,
+                );
+                ui.painter().galley(at, hint, Color32::TRANSPARENT);
+            }
             if here {
                 walked_ring(ui, row.rect);
                 if moved {
@@ -570,23 +694,15 @@ impl<'a, T: PartialEq + Copy> ChoiceMenu<'a, T> {
             .map_or_else(String::new, |language| i18n::translate(language, key, &[]))
     }
 
-    fn paint_hint(&self, ui: &Ui, row: egui::Rect, index: usize) {
+    fn hint_of(&self, ui: &Ui, index: usize) -> Option<std::sync::Arc<egui::Galley>> {
         let hint = self.hint(index);
-        if hint.is_empty() {
-            return;
-        }
         let ink = palette(ui.ctx()).text_2;
-        let galley = text(ui, hint, font::META, 400.0, FontFamily::Proportional, ink);
-        let at = egui::pos2(
-            row.right() - 8.0 - galley.size().x,
-            row.center().y - galley.size().y / 2.0,
-        );
-        ui.painter().galley(at, galley, Color32::TRANSPARENT);
+        (!hint.is_empty()).then(|| text(ui, hint, font::META, 400.0, FontFamily::Proportional, ink))
     }
 }
 
 /// The entry walked to: the focus stays in the field, so its ring is drawn by hand.
-fn walked_ring(ui: &Ui, row: egui::Rect) {
+pub(super) fn walked_ring(ui: &Ui, row: egui::Rect) {
     ui.painter().rect_stroke(
         row,
         CornerRadius::same(radius::CONTROL),
@@ -710,6 +826,86 @@ mod tests {
                 .query_by(|node| node.author_id() == Some("export-json"))
                 .is_some()
         );
+    }
+
+    fn point(harness: &mut egui_kittest::Harness<'static, Option<String>>, author_id: &str) {
+        let centre = harness
+            .get_by(|node| node.author_id() == Some(author_id))
+            .rect()
+            .center();
+        harness.event(egui::Event::PointerMoved(centre));
+        harness.run();
+        harness.run();
+    }
+
+    fn sub_menu_shown(harness: &egui_kittest::Harness<'static, Option<String>>) -> bool {
+        harness
+            .query_by(|node| node.author_id() == Some("export-json"))
+            .is_some()
+    }
+
+    #[test]
+    fn a_sub_menu_is_open_while_the_pointer_is_on_its_entry_or_in_it() {
+        let mut harness = harness();
+        open(&mut harness);
+
+        point(&mut harness, "export");
+        assert!(sub_menu_shown(&harness));
+        point(&mut harness, "export-json");
+        assert!(sub_menu_shown(&harness));
+        point(&mut harness, "rename");
+        assert!(!sub_menu_shown(&harness), "it outlived the pointer");
+    }
+
+    #[test]
+    fn a_sub_menu_closes_when_another_entry_takes_the_focus() {
+        let mut harness = harness();
+        open(&mut harness);
+
+        point(&mut harness, "export");
+        assert!(sub_menu_shown(&harness));
+        harness.key_press(Key::ArrowDown);
+        harness.run();
+        harness.key_press(Key::ArrowDown);
+        harness.run();
+
+        assert!(!sub_menu_shown(&harness));
+    }
+
+    #[test]
+    fn the_left_arrow_gives_the_focus_back_to_the_entry() {
+        let mut harness = harness();
+        open(&mut harness);
+        harness.key_press(Key::ArrowDown);
+        harness.run();
+        harness.key_press(Key::ArrowRight);
+        harness.run();
+        harness.key_press(Key::ArrowLeft);
+        harness.run();
+
+        assert!(!sub_menu_shown(&harness));
+        harness.key_press(Key::ArrowDown);
+        harness.run();
+        harness.key_press(Key::Enter);
+        harness.run();
+        assert_eq!(harness.state().as_deref(), Some("delete"));
+    }
+
+    #[test]
+    fn an_entry_of_a_sub_menu_is_picked_with_the_keys() {
+        let mut harness = harness();
+        open(&mut harness);
+        harness.key_press(Key::ArrowDown);
+        harness.run();
+        harness.key_press(Key::ArrowRight);
+        harness.run();
+        harness.run();
+        harness.key_press(Key::ArrowDown);
+        harness.run();
+        harness.key_press(Key::Enter);
+        harness.run();
+
+        assert_eq!(harness.state().as_deref(), Some("export-json"));
     }
 
     #[test]
@@ -873,6 +1069,90 @@ mod tests {
                 .is_none(),
             "the menu closed"
         );
+    }
+
+    #[test]
+    fn a_click_in_the_filter_keeps_the_menu_open_and_a_click_on_an_entry_closes_it() {
+        let shown = |harness: &egui_kittest::Harness<'static, usize>| {
+            harness
+                .query_by(|node| node.author_id() == Some("format-filter"))
+                .is_some()
+        };
+        let mut harness = opened();
+        harness
+            .get_by(|node| node.author_id() == Some("format-filter"))
+            .click();
+        harness.run();
+        assert!(shown(&harness), "the click closed the menu");
+
+        harness
+            .get_by(|node| node.author_id() == Some("format-filter"))
+            .type_text("rus");
+        harness.run();
+        harness
+            .get_by(|node| node.author_id() == Some("format-4"))
+            .click();
+        harness.run();
+        assert_eq!(*harness.state(), 4);
+        assert!(!shown(&harness));
+    }
+
+    /// Every text painted in the rows of a menu, with the right edge of what it covers.
+    fn rights(harness: &egui_kittest::Harness<'static, usize>, words: &str) -> Vec<f32> {
+        harness
+            .output()
+            .shapes
+            .iter()
+            .filter_map(|clipped| match &clipped.shape {
+                egui::Shape::Text(text) if text.galley.job.text.starts_with(words) => {
+                    Some(text.pos.x + text.galley.size().x)
+                }
+                _ => None,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn a_long_name_is_cut_at_the_edge_of_the_menu_and_said_whole_on_hover() {
+        let long = format!("Drawing {}", "of the whole architecture ".repeat(8));
+        let names: Vec<String> = (0..12).map(|rank| format!("{long}{rank}")).collect();
+        let mut harness = crate::testing::harness()
+            .with_size(egui::vec2(900.0, 500.0))
+            .build_ui_state(
+                move |ui, selected: &mut usize| {
+                    let options: Vec<(usize, &str)> =
+                        names.iter().map(String::as_str).enumerate().collect();
+                    ChoiceMenu::new("Insert", "drawings", &options).show(ui, selected);
+                },
+                0,
+            );
+        harness.run();
+        harness
+            .get_by(|node| node.author_id() == Some("drawings"))
+            .click();
+        harness.run();
+        harness.run();
+
+        let row = harness
+            .get_by(|node| node.author_id() == Some("drawings-1"))
+            .rect();
+        let control = harness
+            .get_by(|node| node.author_id() == Some("drawings"))
+            .rect();
+        let edge = row.right().max(control.right());
+        for right in rights(&harness, "Drawing") {
+            assert!(right <= edge, "a name ends at {right}, past {edge}");
+        }
+        let whole = |harness: &egui_kittest::Harness<'static, usize>| {
+            harness.output().shapes.iter().any(|clipped| {
+                matches!(&clipped.shape, egui::Shape::Text(text)
+                    if text.galley.job.text.ends_with("architecture 1") && !text.galley.elided)
+            })
+        };
+        assert!(!whole(&harness));
+        harness.event(egui::Event::PointerMoved(row.center()));
+        harness.run();
+        assert!(whole(&harness), "no tooltip says the name whole");
     }
 
     #[test]

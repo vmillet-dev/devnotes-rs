@@ -197,3 +197,47 @@ fn a_page_pasted_keeps_its_marks_in_a_line_and_its_blocks_between_two_halves() {
     insert_document(&mut document, &caret_at(&[0], 1), pasted);
     assert_eq!(write(&document), "a\n\n## Titre\n\n- un\n\nb");
 }
+
+#[test]
+fn a_third_enter_at_the_end_of_a_code_block_leaves_it_for_a_paragraph() {
+    let mut document = read("```rust\nlet x = 1;\n```");
+    let mut selection = caret_at(&[0], 10);
+    for _ in 0..2 {
+        selection = split(&mut document, &selection);
+        assert_eq!(selection.head.path, [0], "a blank line is code's");
+    }
+    selection = split(&mut document, &selection);
+    assert_eq!(selection, caret_at(&[1], 0));
+
+    insert_text(&mut document, &selection, "Après", &Marks::default());
+    assert_eq!(write(&document), "```rust\nlet x = 1;\n```\n\nAprès");
+}
+
+#[test]
+fn blank_lines_inside_a_code_block_stay_in_it() {
+    let mut document = read("```\na\n\n\nb\n```");
+    let after = split(&mut document, &caret_at(&[0], 4));
+    assert_eq!(after.head.path, [0]);
+    assert_eq!(write(&document), "```\na\n\n\n\nb\n```");
+}
+
+#[test]
+fn a_code_block_left_opens_a_paragraph_beside_it_in_its_item_or_its_quote() {
+    for (markdown, path, left) in [
+        ("```\na\n```", vec![0], vec![1]),
+        ("- un\n\n  ```\n  a\n  ```", vec![0, 0, 1], vec![0, 0, 2]),
+        ("> ```\n> a\n> ```", vec![0, 0], vec![0, 1]),
+    ] {
+        let mut document = read(markdown);
+        let after = leave_code(&mut document, &caret_at(&path, 1)).unwrap();
+        assert_eq!(after, caret_at(&left, 0), "{markdown}");
+    }
+    assert_eq!(leave_code(&mut read("text"), &caret_at(&[0], 1)), None);
+}
+
+#[test]
+fn a_paragraph_left_empty_after_a_code_block_is_not_written() {
+    let mut document = read("```\na\n```");
+    leave_code(&mut document, &caret_at(&[0], 1));
+    assert_eq!(read(&write(&document)), read("```\na\n```"));
+}

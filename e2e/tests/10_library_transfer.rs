@@ -14,7 +14,8 @@ const CARDS: usize = 6;
 const TITLE: &str = "Worth exporting";
 const FILE: &str = "library.devnotes";
 const PHRASE: &str = "an export passphrase";
-/// What an export before the archive looks like, from a version with a language unknown here.
+/// What an export before the archive looks like, from a version with a language unknown here;
+/// its drawing carries a scene and no picture, as every export's.
 const NEWER: &str = r#"{
   "version": 1,
   "exportedAt": "2026-11-06T09:00:00Z",
@@ -25,6 +26,19 @@ const NEWER: &str = r#"{
     "title": "Ahead of this build",
     "language": "from-the-future",
     "content": "echo later",
+    "source": "",
+    "tags": [],
+    "pinned": false,
+    "createdAt": "2026-11-06T09:00:00Z",
+    "updatedAt": "2026-11-06T09:00:00Z",
+    "lifecycle": { "kind": "permanent" }
+  }, {
+    "id": "a-drawing-imported",
+    "spaceId": "elsewhere",
+    "title": "Imported sketch",
+    "kind": "drawing",
+    "language": "txt",
+    "content": "{\"version\":1,\"scene\":{\"objects\":[{\"type\":\"Rect\",\"left\":60,\"top\":45,\"width\":100,\"height\":50}]}}",
     "source": "",
     "tags": [],
     "pinned": false,
@@ -183,6 +197,9 @@ fn library_transfer() {
             app.eventually("the note from the future is drawn", |tree| {
                 tree.texts("note-card-title")
                     .contains(&"Ahead of this build".to_owned())
+            });
+            app.eventually("the drawing imported shows its picture", |tree| {
+                tree.has("note-card-drawing") && !tree.has("note-card-drawing-empty")
             });
         },
     );
