@@ -131,7 +131,7 @@ jobs:
           elif [ "$RUNNER_OS" = macOS ]; then
             # Copied from the image, as a person drags it.
             mkdir -p "$RUNNER_TEMP/installed"
-            yes | PAGER=cat hdiutil attach -nobrowse -readonly -mountpoint "$RUNNER_TEMP/image" "$(ls old/*.dmg)" > /dev/null
+            { yes 2> /dev/null || true; } | PAGER=cat hdiutil attach -nobrowse -readonly -mountpoint "$RUNNER_TEMP/image" "$(ls old/*.dmg)" > /dev/null
             ditto "$RUNNER_TEMP/image/DevNotes.app" "$RUNNER_TEMP/installed/DevNotes.app"
             hdiutil detach "$RUNNER_TEMP/image" > /dev/null
           else

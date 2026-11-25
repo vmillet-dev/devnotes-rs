@@ -92,8 +92,8 @@ runs:
           archive=$(ls "$packages"/*.app.tar.gz)
           check archive "$(tar -tzf "$archive" | grep '/Contents/MacOS/[^/]' | xargs -n1 basename)" devnotes
           mounted="$RUNNER_TEMP/dmg-check"
-          # The image shows the licence first.
-          yes | PAGER=cat hdiutil attach -nobrowse -readonly -mountpoint "$mounted" "$(ls "$packages"/*.dmg)" > /dev/null
+          # The image shows the licence first; `yes` ends on a closed pipe.
+          { yes 2> /dev/null || true; } | PAGER=cat hdiutil attach -nobrowse -readonly -mountpoint "$mounted" "$(ls "$packages"/*.dmg)" > /dev/null
           check dmg "$(ls "$mounted/DevNotes.app/Contents/MacOS")" devnotes
           hdiutil detach "$mounted" > /dev/null
         else
