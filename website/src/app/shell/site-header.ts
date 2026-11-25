@@ -21,7 +21,7 @@ const FR = {
   toDark: 'Passer au thème sombre',
   menu: 'Menu',
   source: 'Le code source sur GitHub',
-  switchTo: 'Read this page in English',
+  switchTo: 'EN: read this page in English',
 };
 
 const EN: typeof FR = {
@@ -34,7 +34,7 @@ const EN: typeof FR = {
   toDark: 'Switch to the dark theme',
   menu: 'Menu',
   source: 'Source code on GitHub',
-  switchTo: 'Lire cette page en français',
+  switchTo: 'FR : lire cette page en français',
 };
 
 const TEXT: Readonly<Record<Lang, typeof FR>> = { fr: FR, en: EN };

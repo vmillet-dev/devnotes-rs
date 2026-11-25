@@ -31,7 +31,7 @@
       {{ copied() === i ? words().copied : words().copy }}
     </button>
   </figcaption>
-  <pre #source tabindex="0" [attr.aria-label]="words().code + block.title">{{ block.code }}</pre>
+  <pre #source role="group" tabindex="0" [attr.aria-label]="words().code + block.title">{{ block.code }}</pre>
 </figure>
 } @case ('note') {
 <div class="note" [class.warn]="block.tone === 'warn'" [attr.role]="block.tone === 'warn' ? 'note' : null">
@@ -39,7 +39,7 @@
   <p><app-doc-text [text]="block.text" /></p>
 </div>
 } @case ('keys') {
-<div class="scroll" tabindex="0" [attr.aria-label]="block.caption">
+<div class="scroll" role="group" tabindex="0" [attr.aria-label]="block.caption">
   <table class="shortcuts">
     <caption>
       {{ block.caption }}
@@ -67,7 +67,7 @@
   </table>
 </div>
 } @case ('table') {
-<div class="scroll" tabindex="0" [attr.aria-label]="block.caption">
+<div class="scroll" role="group" tabindex="0" [attr.aria-label]="block.caption">
   <table class="grid">
     <caption>
       {{ block.caption }}
