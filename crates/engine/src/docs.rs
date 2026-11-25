@@ -1,8 +1,9 @@
 //! The documentation, compiled in: the Markdown of `docs/content`, which devnotes.fr shows too.
 
 pub mod model;
+pub mod search;
 
-use std::sync::LazyLock;
+use std::sync::{LazyLock, OnceLock};
 
 use model::{Index, Page};
 
@@ -17,13 +18,9 @@ const INDEX: &str = include_str!(concat!(
 static READ_INDEX: LazyLock<Index> =
     LazyLock::new(|| serde_json::from_str(INDEX).expect("compiled in, and held by a test"));
 
-/// Each page read, with its language.
-static PAGES: LazyLock<Vec<(&str, Page)>> = LazyLock::new(|| {
-    SOURCES
-        .iter()
-        .filter_map(|&(language, id, markdown)| Some((language, model::read(id, markdown).ok()?)))
-        .collect()
-});
+/// Each page of `SOURCES`, read the first time it is asked for: one at a time, it costs a frame
+/// nothing.
+static PAGES: [OnceLock<Option<Page>>; SOURCES.len()] = [const { OnceLock::new() }; SOURCES.len()];
 
 /// The pages, in reading order.
 pub fn docs_index() -> &'static Index {
@@ -32,10 +29,12 @@ pub fn docs_index() -> &'static Index {
 
 /// A page in a language, by its name in the index.
 pub fn docs_page(language: &str, id: &str) -> Option<&'static Page> {
-    PAGES
+    let at = SOURCES
         .iter()
-        .find(|(spoken, page)| *spoken == language && page.id == id)
-        .map(|(_, page)| page)
+        .position(|source| source.0 == language && source.1 == id)?;
+    PAGES[at]
+        .get_or_init(|| model::read(id, SOURCES[at].2).ok())
+        .as_ref()
 }
 
 #[cfg(test)]

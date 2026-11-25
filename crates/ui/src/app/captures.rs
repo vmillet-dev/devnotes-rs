@@ -148,10 +148,26 @@ fn the_title_bar_and_the_banners_over_an_open_library() {
     capture(&mut harness, "about-card");
     click(&mut harness, "about-close");
     click(&mut harness, "about-open");
-    click(&mut harness, "about-getting-started");
+    click(&mut harness, "about-documentation");
     settle(&mut harness);
-    capture(&mut harness, "getting-started");
-    click(&mut harness, "guide-close");
+    capture(&mut harness, "docs-overview");
+    // A section is addressed by its text: the pages are read in one language.
+    let language = harness.state().state.language;
+    harness.state_mut().state.language = i18n::Language::Fr;
+    for (page, section) in [
+        ("start", "choisir-sa-phrase-de-passe"),
+        ("paste", "la-palette"),
+        ("writing", "les-notes-mises-en-forme"),
+    ] {
+        click(&mut harness, &format!("docs-page-{page}"));
+        capture(&mut harness, &format!("docs-{page}"));
+        click(&mut harness, &format!("docs-section-{section}"));
+        capture(&mut harness, &format!("docs-{page}-{section}"));
+    }
+    type_into(&mut harness, "docs-search", "json");
+    capture(&mut harness, "docs-search");
+    harness.state_mut().state.language = language;
+    click(&mut harness, "docs-close");
     click(&mut harness, "about-open");
     click(&mut harness, "about-shortcuts");
     settle(&mut harness);

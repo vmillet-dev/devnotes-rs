@@ -22,7 +22,7 @@ use super::language as languages;
 use crate::action::{Action, Actions, GlobalAction};
 use crate::state::AppState;
 use crate::theme::{palette, spacing};
-use crate::titlebar::about_menu::Panel;
+use crate::titlebar::about_menu::{Panel, docs};
 use crate::widgets::{self, Button, address, interact, priority_dot};
 use rows::{HEADING_HEIGHT, Row, Rows};
 
@@ -78,9 +78,9 @@ pub fn show(ui: &mut Ui, state: &AppState, canvas_view: &mut CanvasView, actions
     };
     if view.matched == 0 {
         let filtered = query.has_user_filters();
-        // The chapter that explains this screen, not the top of the guide.
+        // The page that explains this screen, not the top of the documentation.
         let (label, author_id) = if !filtered {
-            (tr(keys::getting_started::OPEN_CHAPTER), "canvas-guide")
+            (tr(keys::docs::HOW_IT_WORKS), "canvas-guide")
         } else if query.facets().count() > 0 {
             (tr(keys::notes::CLEAR_FILTERS), "canvas-clear-filters")
         } else {
@@ -97,7 +97,7 @@ pub fn show(ui: &mut Ui, state: &AppState, canvas_view: &mut CanvasView, actions
             actions.push(if filtered {
                 Action::Notes(super::Action::ClearFilters)
             } else {
-                let guide = Panel::Guide(crate::services::guide::NOTES);
+                let guide = Panel::Docs(docs::WRITING);
                 Action::Menu(crate::titlebar::Action::OpenHelp(guide))
             });
         }

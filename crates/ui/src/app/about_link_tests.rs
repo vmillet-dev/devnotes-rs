@@ -8,7 +8,7 @@ use engine::app_info::METADATA;
 use super::tests::{click, open_library};
 
 #[derive(Default)]
-struct Opened(Mutex<Vec<PathBuf>>);
+pub(super) struct Opened(pub(super) Mutex<Vec<PathBuf>>);
 
 impl platform::desktop::Opener for Opened {
     fn open(&self, path: &std::path::Path) -> std::io::Result<()> {

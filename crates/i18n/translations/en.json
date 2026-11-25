@@ -691,7 +691,7 @@
     "builtWith": "Built with",
     "close": "Close",
     "whatsNew": "What's new",
-    "gettingStarted": "Getting started",
+    "documentation": "Documentation",
     "shortcuts": "Keyboard shortcuts",
     "updateWaiting": "An update is available"
   },
@@ -1186,72 +1186,18 @@
     "closeWithout": "Close without applying",
     "applyAndClose": "Apply and close"
   },
-  "gettingStarted": {
-    "title": "Getting started",
-    "subtitle": "What {{app}} can do, in the order you meet it.",
-    "close": "Close",
-    "chapters": {
-      "notes": {
-        "title": "Snippets, Notes and lists",
-        "body": "A note is a snippet — code, coloured by its language —, a Note — formatted text, stored as Markdown —, a todo list or a drawing — boxes, arrows and text; the editor's \"Kind\" menu turns one into another, but for a drawing, which exports as PNG or SVG and is inserted in a Note. \"Present\" shows a Note full screen, one section a slide. Click a card to open it, or copy it without opening, from its own button."
-      },
-      "spaces": {
-        "title": "Spaces to file things in",
-        "body": "Every note lives in a space: “Personal”, “Work”, whatever you like. Deleting one always asks where its notes should go — they never leave with it."
-      },
-      "folders": {
-        "title": "Folders, and a board",
-        "body": "A folder cuts a space into named, coloured regions, and can hold others. The “Board” view shows one level at a time: drag a card onto a zone or a row of the sidebar to file it, drop it on the background to bring it back to the board’s own level, and click a zone to open its board. A folder dragged onto another in the sidebar goes inside it, or Alt+← and Alt+→. Without a mouse: {{check}} to tick, then “File into”."
-      },
-      "organise": {
-        "title": "Finding things: search, tags, filters",
-        "body": "Search runs through titles, bodies, sources and list items, accents included. The quick filters isolate the pinned ones or the ones carrying a deadline; tags and formats sit behind the button beside them."
-      },
-      "fields": {
-        "title": "Fields to fill in",
-        "body": "Write a field in double braces inside a snippet and its value will be asked for at the moment you copy. What you type stays with the note, and a global variable proposes one for the whole library."
-      },
-      "checklists": {
-        "title": "Lists to tick",
-        "body": "A note is a snippet, a formatted note or a todo list — and a list is ticked from the card, without opening it. In the editor, Enter adds an item and Alt with an arrow moves it."
-      },
-      "explorer": {
-        "title": "A JSON seen as a tree or a graph",
-        "body": "A JSON, YAML, TOML or XML snippet is explored without leaving the editor: the tabs above the code show it as a tree or a graph, side by side with the text when the window allows. Clicking a node selects its lines in the code, and the other way round."
-      },
-      "history": {
-        "title": "The history, and searching the text",
-        "body": "Every edit keeps the body as it was: the last twenty versions open under \"History\", at the foot of the editor, compared with the current text before they are restored. In a snippet as in a Note, Ctrl+F finds and Ctrl+H replaces."
-      },
-      "palette": {
-        "title": "Pasting without leaving what you are doing",
-        "body": "{{palette}} opens the paste palette over any application: type, choose, it is on the clipboard. {{capture}} does the reverse and {{newNote}} opens an empty note, closed window included."
-      },
-      "attachments": {
-        "title": "Attachments",
-        "body": "Drop a file on the window while a note is open, or paste an image: it is copied beside the database and attached to the note. The card shows the count, and the preview grows on a click."
-      },
-      "trash": {
-        "title": "A trash, and Ctrl+Z",
-        "body": "A deleted note goes to the trash and stays there for thirty days. The banner that follows offers to undo, and Ctrl+Z still does it once the banner is gone."
-      },
-      "transfer": {
-        "title": "In and out",
-        "body": "The File menu exports everything, one space or the selection to a file it can read back, and re-imports it without ever making a duplicate. “Copy as Markdown” puts the selection on the clipboard."
-      },
-      "tools": {
-        "title": "Tools, offline",
-        "body": "The Tools area gathers some thirty utilities — encode, hash, convert dates or sizes, generate identifiers, read a JWT — without sending anything over the network. Ctrl+Shift+T opens their search, and \"Save as note\" keeps a result among your notes."
-      },
-      "http": {
-        "title": "Requests: HTTP, GraphQL, WebSocket",
-        "body": "The HTTP area keeps your requests in collections, sealed like your notes. What you begin is chosen as you create it — an HTTP request, a GraphQL request or a WebSocket — from “New request”, at the end of the tabs, or a collection's menu."
-      }
-    },
-    "chaptersLabel": "Guide chapters",
-    "previous": "Previous",
-    "next": "Next",
-    "openChapter": "How this works"
+  "docs": {
+    "title": "Documentation",
+    "close": "Close the documentation",
+    "search": "Search the documentation",
+    "searchHint": "Search",
+    "clear": "Clear the search",
+    "none": "No section mentions “{{query}}”.",
+    "tip": "Tip",
+    "warning": "Warning",
+    "copy": "Copy the example",
+    "copied": "Example copied.",
+    "howItWorks": "How this works"
   },
   "whatsNew": {
     "title": "What's new",

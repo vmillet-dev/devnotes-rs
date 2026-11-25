@@ -27,7 +27,7 @@ use crate::notes::sidebar::RailRow;
 use crate::state::AppState;
 use crate::state::board::BoardState;
 use crate::theme::{palette, spacing};
-use crate::titlebar::about_menu::Panel;
+use crate::titlebar::about_menu::{Panel, docs};
 use crate::widgets::{self, Button, address};
 use gesture::{Gesture, Kind};
 
@@ -710,8 +710,8 @@ fn empty(ui: &mut Ui, seen: Rect, language: i18n::Language, actions: &mut Action
     response.widget_info(|| WidgetInfo::labeled(Role::Label, true, &words));
     address(ui, &response, "board-empty");
     ui.painter().galley(rect.min, galley, p.text_2);
-    // The chapter about folders and the board, not the top of the guide.
-    let label = i18n::translate(language, keys::getting_started::OPEN_CHAPTER, &[]);
+    // The page about folders and the board, not the top of the documentation.
+    let label = i18n::translate(language, keys::docs::HOW_IT_WORKS, &[]);
     let under = Rect::from_center_size(
         rect.center_bottom() + vec2(0.0, 24.0),
         vec2(widgets::Button::width(ui, &label), 28.0),
@@ -721,7 +721,7 @@ fn empty(ui: &mut Ui, seen: Rect, language: i18n::Language, actions: &mut Action
         .show(&mut room)
         .clicked()
     {
-        let guide = Panel::Guide(crate::services::guide::FOLDERS);
+        let guide = Panel::Docs(docs::ORGANISING);
         actions.push(crate::action::Action::Menu(
             crate::titlebar::Action::OpenHelp(guide),
         ));

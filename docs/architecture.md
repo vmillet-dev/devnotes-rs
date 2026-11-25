@@ -3921,11 +3921,15 @@ the loser keeps the keyboard.
   the release notes the updater hands over: one changelog, written once, rather than two that
   drift apart. The panel marks the release the running binary is, and its footer opens the
   repository's releases page through the `opener` plugin.
-- **"Prise en main"** is nine chapters of prose, keyed by translation
-  (`gettingStarted.chapters.<id>`). The list of chapters lives in the component. The bodies are
-  handed the live key bindings as
-  interpolation parameters — a guide quoting the combination that shipped would be wrong for
-  anyone who changed it.
+- **"Documentation"** reads the pages of `docs/content` (→ "The website"), compiled in
+  (`engine::docs`): their list, a search answered by the core section by section, and the page,
+  drawn block by block (`about_menu/docs`). It is not drawn by the Note's reader
+  (`widgets::rich`): a page holds what a Note cannot — key caps, notes, captions, links between
+  pages — and a Note holds what a page cannot. A page is read the first time it is asked for, on
+  the frame: a few kilobytes. ⚠️ A combination of several keys is drawn as it is **really bound**:
+  a page quoting the one that shipped would be wrong for anyone who changed it. A letter alone is
+  left as it is written, for it means something else in another place. The canvas and the board
+  with nothing to show open the page that explains them.
 - **"Raccourcis clavier"** is a read-only sheet. Read-only because the one shortcut that can be
   changed is changed in the preferences, and a second editor for it would be a second place to
   keep in step.

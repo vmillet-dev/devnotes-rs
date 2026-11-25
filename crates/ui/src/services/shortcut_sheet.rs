@@ -1,72 +1,11 @@
-//! What the help says, as data: the guide's chapters and their schematics, and the shortcut
-//! sheet. A figure is decorative — each chapter says in words what it shows — and is drawn from
-//! a handful of shapes in the reference's own 320 × 120 space.
+//! The shortcut sheet, as data: every key by where it is live, and what it does.
 
-use std::collections::BTreeMap;
 use std::sync::LazyLock;
 
 use i18n::{Key, keys};
 use serde::Deserialize;
 
 use super::shortcuts::{self, Bindings};
-
-/// In the order they are met. One list: the canvas and the board link straight into a chapter.
-pub const CHAPTERS: [&str; 14] = [
-    "notes",
-    "spaces",
-    "folders",
-    "organise",
-    "fields",
-    "checklists",
-    "explorer",
-    "history",
-    "palette",
-    "attachments",
-    "trash",
-    "transfer",
-    "tools",
-    "http",
-];
-
-pub const NOTES: usize = 0;
-pub const FOLDERS: usize = 2;
-
-/// The three inks and their stroked twins, as the reference's classes name them.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum Ink {
-    Panel,
-    Line,
-    Ink,
-    Accent,
-    AccentLine,
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-pub struct Shape {
-    pub class: Ink,
-    pub opacity: Option<f32>,
-    /// x, y, width, height, corner.
-    pub rect: Option<[f32; 5]>,
-    /// x, y, radius.
-    pub circle: Option<[f32; 3]>,
-    pub lines: Option<Vec<Vec<[f32; 2]>>>,
-}
-
-static FIGURES: LazyLock<BTreeMap<String, Vec<Shape>>> = LazyLock::new(|| {
-    serde_json::from_str(include_str!("guide_figures.json"))
-        .expect("the figures are compiled in, and held by a test")
-});
-
-pub fn figure(chapter: &str) -> &'static [Shape] {
-    FIGURES.get(chapter).map_or(&[], Vec::as_slice)
-}
-
-/// The chapter's title and its body, by the keys the translations give them.
-pub fn words(chapter: &str) -> Option<(Key, Key)> {
-    let key = |part| Key::find(&format!("gettingStarted.chapters.{chapter}.{part}"));
-    Some((key("title")?, key("body")?))
-}
 
 /// A row of the sheet: its keys, or the action whose key is really bound.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -118,14 +57,6 @@ pub fn sheet() -> &'static [SheetGroup] {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn every_chapter_has_its_words_and_a_figure() {
-        for chapter in CHAPTERS {
-            assert!(words(chapter).is_some(), "{chapter}");
-            assert!(!figure(chapter).is_empty(), "{chapter}");
-        }
-    }
 
     #[test]
     fn every_row_of_the_sheet_says_something() {

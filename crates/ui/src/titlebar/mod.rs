@@ -44,6 +44,8 @@ pub enum Action {
     OpenHelp(about_menu::Panel),
     CloseHelp,
     OpenLink(String),
+    /// A code block of the documentation.
+    CopyExample(String),
     Update(crate::banners::update_prompt::Ask),
 }
 

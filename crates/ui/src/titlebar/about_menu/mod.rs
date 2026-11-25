@@ -2,7 +2,7 @@
 //! at the gate too.
 
 mod card;
-mod guide;
+pub(crate) mod docs;
 mod sheet;
 mod whats_new;
 
@@ -26,8 +26,8 @@ const FOOTER: f32 = 56.0;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Panel {
     WhatsNew,
-    /// At a chapter: the canvas and the board link straight into the one that explains them.
-    Guide(usize),
+    /// At a page: the canvas and the board link straight to the one that explains them.
+    Docs(&'static str),
     Sheet,
     About,
 }
@@ -35,12 +35,14 @@ pub enum Panel {
 #[derive(Default)]
 pub(super) struct View {
     panel: Option<Panel>,
+    docs: docs::View,
     pub(super) anchor: Option<Id>,
 }
 
 impl View {
     pub(super) fn show_panel(&mut self, panel: Panel) {
         self.panel = Some(panel);
+        self.docs = docs::View::default();
     }
 
     pub(super) fn close_panel(&mut self) {
@@ -96,9 +98,9 @@ fn entries(ui: &mut Ui, state: &AppState, actions: &mut Actions) {
     );
     entry(
         ui,
-        &tr(keys::about::GETTING_STARTED),
-        "about-getting-started",
-        Panel::Guide(0),
+        &tr(keys::about::DOCUMENTATION),
+        "about-documentation",
+        Panel::Docs(docs::FIRST),
     );
     entry(
         ui,
@@ -168,7 +170,10 @@ pub(super) fn panels(
     };
     let close = match panel {
         Panel::WhatsNew => whats_new::show(ctx, state, actions),
-        Panel::Guide(chapter) => guide::show(ctx, state, chapter, actions, &mut view.panel),
+        Panel::Docs(page) => {
+            let view = (&mut view.docs, &mut view.panel);
+            docs::show(ctx, state, page, view, actions)
+        }
         Panel::Sheet => sheet::show(ctx, state, actions),
         Panel::About => card::show(ctx, state, actions),
     };

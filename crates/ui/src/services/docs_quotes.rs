@@ -7,7 +7,7 @@ use engine::docs::model::{Block, Inline, Page};
 use engine::docs::{docs_index, docs_page};
 use serde_json::Value;
 
-use super::guide;
+use super::shortcut_sheet;
 use super::shortcuts::Bindings;
 
 const LANGUAGES: [(&str, &str); 2] = [
@@ -127,7 +127,7 @@ fn every_label_the_pages_quote_is_the_application_s() {
 fn combinations() -> BTreeSet<String> {
     let bindings = Bindings::default();
     let mut known = BTreeSet::new();
-    for row in guide::sheet().iter().flat_map(|group| &group.rows) {
+    for row in shortcut_sheet::sheet().iter().flat_map(|group| &group.rows) {
         let caps = row.caps(&bindings);
         known.insert(caps.join(" "));
         // `Alt ↑ ↓` is two combinations, quoted together or apart.
