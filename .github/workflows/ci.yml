@@ -50,7 +50,7 @@ jobs:
           fi
           changed=$(git diff --name-only "$BASE" HEAD)
           # The site reads the documentation and copies the application's palette.
-          if echo "$changed" | grep -qE '^website/|^docs/content/|^crates/ui/src/theme/tokens\.rs$|^\.github/workflows/ci\.yml$'; then
+          if echo "$changed" | grep -qE '^website/|^docs/content/|^crates/ui/src/theme/tokens\.rs$|^\.github/workflows/(ci|website)\.yml$'; then
             echo "website=true" >> "$GITHUB_OUTPUT"
           else
             echo "website=false" >> "$GITHUB_OUTPUT"

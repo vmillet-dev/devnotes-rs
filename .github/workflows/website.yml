@@ -1,0 +1,125 @@
+name: Website
+
+# devnotes.fr: the site built from `website/` and `docs/content/`, pushed as the whole content of
+# one commit to the `main` of `vmillet-dev/devnotes-website`, whose webhook deploys it
+# (docs/architecture.md → "The website"). Two things change what it shows: a push to `main` that
+# touches its sources, and a release, whose files the download page names. The second needs the
+# run that follows `Release`: what that workflow pushes with its own token triggers nothing.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'website/**'
+      - 'docs/content/**'
+      - 'crates/ui/src/theme/tokens.rs'
+      - '.github/workflows/website.yml'
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Build and check, then show what would change without pushing.'
+        type: boolean
+        default: false
+
+# One publication at a time, none cancelled: two pushes to the target would race, and a cancelled
+# one would leave it half written.
+concurrency:
+  group: website
+  cancel-in-progress: false
+
+# Read-only: the write to the other repository goes through its deploy key.
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Build and publish
+    # A release that failed published no file the site could name.
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      # The head of main: after a release, the commit holding its changelog.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: main
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+
+      - run: npm ci
+        working-directory: website
+
+      - run: npm run test:scripts
+        working-directory: website
+
+      - run: npm test
+        working-directory: website
+
+      # Reads the latest release, then refuses a build whose download links do not answer 200.
+      - name: Build and check
+        run: npm run build
+        working-directory: website
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          # One page at a time: the ids of the hydration data follow the order the pages are rendered in.
+          NG_BUILD_MAX_WORKERS: 1
+
+      - name: Publish
+        env:
+          DEPLOY_KEY: ${{ secrets.WEBSITE_DEPLOY_KEY }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$DRY_RUN" != true ] && [ -z "$DEPLOY_KEY" ]; then
+            echo "::error::the secret WEBSITE_DEPLOY_KEY is not set: no write access to devnotes-website"
+            exit 1
+          fi
+          source=$(git rev-parse --short=8 HEAD)
+          site="$RUNNER_TEMP/site"
+
+          if [ "$DRY_RUN" = true ]; then
+            # The clone is public: a dry run never holds the key.
+            git clone --quiet --depth 1 https://github.com/vmillet-dev/devnotes-website.git "$site"
+          else
+            umask 077
+            printf '%s\n' "$DEPLOY_KEY" > "$RUNNER_TEMP/deploy_key"
+            # GitHub's host keys, read over HTTPS: nothing is trusted on first use.
+            gh api meta --jq '.ssh_keys[] | "github.com " + .' > "$RUNNER_TEMP/known_hosts"
+            export GIT_SSH_COMMAND="ssh -i $RUNNER_TEMP/deploy_key -o IdentitiesOnly=yes -o UserKnownHostsFile=$RUNNER_TEMP/known_hosts"
+            git clone --quiet --depth 1 git@github.com:vmillet-dev/devnotes-website.git "$site"
+            umask 022
+          fi
+
+          # The target becomes the build, nothing more: the previous site's leftovers go.
+          rsync -a --delete --exclude .git website/dist/ "$site/"
+
+          cd "$site"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "The site is already what this build writes: nothing to push."
+            exit 0
+          fi
+          git diff --cached --stat | tail -15
+
+          if [ "$DRY_RUN" = true ]; then
+            echo "::notice::dry run: nothing was pushed"
+            exit 0
+          fi
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -q -m "Build devnotes.fr from devnotes-rs $source"
+          # No force: a rejected push rebases once and tries again.
+          git push origin HEAD:main || { git pull --rebase origin main && git push origin HEAD:main; }
+
+      - name: Forget the key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/deploy_key"

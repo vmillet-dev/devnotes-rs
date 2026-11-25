@@ -6719,3 +6719,11 @@ specs, `npm run lint` ESLint, `npm run test:scripts` the Node tests of the token
   stored choice, else the system's), then followed by `ThemeStore`.
 - **Checked by `ci.yml`**, which builds, lints and tests the site on a pull request that touches
   it, and runs nothing of the Rust side for a change to `website/` alone.
+- **Published by `website.yml`**, on a push to `main` that touches its sources (`website/`,
+  `docs/content/`, the palette it copies) and at the end of a `Release` run: the build becomes the
+  whole content of a commit on the `main` of `vmillet-dev/devnotes-website`, whose webhook deploys
+  it. Pushed only if something changed, so the build holds no date: two builds of the same sources
+  and release are the same files. The write goes through the deploy key kept in the secret
+  `WEBSITE_DEPLOY_KEY`; the workflow's own token stays read-only. `dry_run` builds and shows what
+  would change. ⚠️ The documentation published is `main`'s: it can speak of what is not yet
+  released.
