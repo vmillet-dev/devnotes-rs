@@ -366,7 +366,7 @@ jobs:
                 for (i = 1; i <= n; i++) {
                   k = order[i]
                   sub(/\.$/, "", result[k])
-                  printf "| `%s` | %d | %s | %s |\n", k, steps[k], result[k] == "" ? "not run" : result[k], time[k]
+                  printf "| `%s` | %d | %s | %s |\n", k, steps[k], (result[k] == "" ? "not run" : result[k]), time[k]
                 }
               }'
           } >> "$GITHUB_STEP_SUMMARY"
