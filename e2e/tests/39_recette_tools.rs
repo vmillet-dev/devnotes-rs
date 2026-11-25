@@ -177,7 +177,7 @@ const CASES: &[Case] = &[
     ),
 ];
 
-/// From the home, its search emptied: the window is tall enough for every tool.
+/// From the home, its search emptied: the window is wide enough for every tool to be in view.
 fn open_tool(app: &mut App, tool: &str) {
     if app.has("tool-back") {
         app.click("tool-back");
@@ -216,7 +216,7 @@ fn the_tools(scenario: &'static str, profile: &std::path::Path) -> App {
     let mut app = App::launch(scenario, profile);
     app.create_library();
     in_french(&mut app);
-    app.resize(1100, 1400);
+    app.resize(1800, 1000);
     app.press(Key::Num2, Modifiers::COMMAND);
     app.wait_for("area-tools");
     app
