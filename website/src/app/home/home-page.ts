@@ -235,19 +235,22 @@ export class HomePage {
       description: t.description,
       path: homePath(lang),
       lang,
-      data: {
-        '@type': 'SoftwareApplication',
-        name: 'DevNotes',
-        applicationCategory: 'DeveloperApplication',
-        operatingSystem: 'Windows, Linux',
-        softwareVersion: VERSION,
-        url: absolute(homePath(lang)),
-        downloadUrl: absolute(downloadPath(lang)),
-        inLanguage: lang,
-        license: 'https://www.gnu.org/licenses/gpl-3.0.html',
-        codeRepository: REPOSITORY,
-        offers: { '@type': 'Offer', price: '0', priceCurrency: 'EUR' },
-      },
+      data: [
+        {
+          '@type': 'SoftwareApplication',
+          name: 'DevNotes',
+          applicationCategory: 'DeveloperApplication',
+          operatingSystem: 'Windows, Linux',
+          softwareVersion: VERSION,
+          url: absolute(homePath(lang)),
+          downloadUrl: absolute(downloadPath(lang)),
+          inLanguage: lang,
+          license: 'https://www.gnu.org/licenses/gpl-3.0.html',
+          codeRepository: REPOSITORY,
+          offers: { '@type': 'Offer', price: '0', priceCurrency: 'EUR' },
+        },
+        { '@type': 'WebSite', name: 'DevNotes', url: absolute(homePath(lang)), inLanguage: lang },
+      ],
     });
 
     progress.show(SECTIONS.map((section, i) => ({ ...section, name: t.sections[i] ?? '' })));

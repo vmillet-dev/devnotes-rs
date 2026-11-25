@@ -6693,7 +6693,10 @@ specs, `npm run lint` ESLint, `npm run test:scripts` the Node tests of the token
   `https://devnotes.fr`; `--define` overrides it): the canonical links and the social tags are
   built from it. `scripts/finish-build.mjs` runs after the build, reads the address back from the
   home page's canonical link, checks every page (one `h1`, a title, a canonical, no local
-  address, download links that answer), and writes `sitemap.xml`, `robots.txt` and `404.html`.
+  address, download links that answer, languages that name each other, structured data that
+  parses, a social image of 1200 × 630), and writes `sitemap.xml`, with each page's languages,
+  `robots.txt` and `404.html`. The two social images, `public/social-{fr,en}.png`, are captures of
+  the home page's window under its headline, made by hand in a browser: made again when it changes.
   `public/.htaccess` serves `/docs/x` from `docs/x/index.html` without a redirect on the Apache
   host.
 - **The home page redraws the application in HTML** rather than showing screenshots. Each

@@ -14,10 +14,16 @@ export interface PageMeta {
   /** False for a page that has no twin in the other language. */
   readonly translated?: boolean;
   /** Structured data for what the page shows, written as one JSON-LD script. */
-  readonly data?: object;
+  readonly data?: readonly object[];
 }
 
 const SITE_NAME = 'DevNotes';
+
+/** The image of a shared link: the home page's window under its headline, one per language. */
+const SOCIAL: Readonly<Record<Lang, { readonly file: string; readonly alt: string }>> = {
+  fr: { file: '/social-fr.png', alt: 'La fenêtre de DevNotes : un espace et ses dossiers, en tableau.' },
+  en: { file: '/social-en.png', alt: 'The DevNotes window: a space and its folders, on a board.' },
+};
 
 /**
  * What a crawler and a link preview read, set by each page while it renders — at build
@@ -43,7 +49,11 @@ export class Seo {
     this.meta.updateTag({ property: 'og:title', content: page.title });
     this.meta.updateTag({ property: 'og:description', content: page.description });
     this.meta.updateTag({ property: 'og:url', content: url });
-    this.meta.updateTag({ name: 'twitter:card', content: 'summary' });
+    this.meta.updateTag({ property: 'og:image', content: absolute(SOCIAL[page.lang].file) });
+    this.meta.updateTag({ property: 'og:image:width', content: '1200' });
+    this.meta.updateTag({ property: 'og:image:height', content: '630' });
+    this.meta.updateTag({ property: 'og:image:alt', content: SOCIAL[page.lang].alt });
+    this.meta.updateTag({ name: 'twitter:card', content: 'summary_large_image' });
 
     this.link('canonical').setAttribute('href', url);
     this.alternates(page);
@@ -81,14 +91,14 @@ export class Seo {
     }
   }
 
-  private structuredData(data: object | undefined): void {
+  private structuredData(data: readonly object[] | undefined): void {
     const head = this.document.head;
     head.querySelector('script[type="application/ld+json"]')?.remove();
-    if (!data) return;
+    if (!data?.length) return;
 
     const script = this.document.createElement('script');
     script.setAttribute('type', 'application/ld+json');
-    script.textContent = JSON.stringify({ '@context': 'https://schema.org', ...data });
+    script.textContent = JSON.stringify({ '@context': 'https://schema.org', '@graph': data });
     head.appendChild(script);
   }
 }

@@ -21,6 +21,7 @@ import { Seo } from '../core/seo';
 import { absolute } from '../core/site';
 import { CHECKED_ON, DOC_INDEX, docGroups, docPath } from './doc-index';
 import { search, searchIndex } from './doc-search';
+import { questions } from './faq';
 import { DocPage } from './doc.model';
 import { DocBlocks } from './doc-blocks';
 import { DOC_PAGES } from './generated/pages';
@@ -154,13 +155,18 @@ export class DocsPage implements OnInit {
       description: page.summary,
       path,
       lang,
-      data: {
-        '@type': 'BreadcrumbList',
-        itemListElement: [
-          { '@type': 'ListItem', position: 1, name: text.docs, item: absolute(docPath('overview', lang)) },
-          ...(overview ? [] : [{ '@type': 'ListItem', position: 2, name: page.title, item: absolute(path) }]),
-        ],
-      },
+      data: [
+        {
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: text.docs, item: absolute(docPath('overview', lang)) },
+            ...(overview
+              ? []
+              : [{ '@type': 'ListItem', position: 2, name: page.title, item: absolute(path) }]),
+          ],
+        },
+        ...(page.id === 'faq' ? [questions(page)] : []),
+      ],
     });
   }
 
