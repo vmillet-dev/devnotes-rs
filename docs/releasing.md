@@ -6,7 +6,7 @@ A release is a `workflow_dispatch`. One run writes the changelog, commits it, ta
 every bundle and publishes — there is no step to do by hand between them, and no partial
 state to clean up if it stops.
 
-## The three steps
+## The steps
 
 1. **Bump the version.** One place holds it (D27): `version` under `[workspace.package]` in
    the root `Cargo.toml`, which every crate inherits. Edit it, then `cargo update --workspace`
@@ -26,6 +26,12 @@ state to clean up if it stops.
 3. **Run it again unchecked.** It writes the `CHANGELOG.md` section, commits it, tags,
    builds the packages and publishes the release.
 
+4. **Nothing to do for the website.** `website.yml` runs when the release run completes and
+   publishes the site again: its download page offers the files of the latest release, whose
+   version, sizes and SHA-256 `website/scripts/fetch-release.mjs` reads at build time. A dry run
+   publishes nothing new: the latest release is still the same. → "The website" in
+   `docs/architecture.md`.
+
 ## A version on a branch of its own
 
 A version that takes weeks lives on `dev/x.y.z`, while `main` goes on releasing.
@@ -37,7 +43,7 @@ A version that takes weeks lives on `dev/x.y.z`, while `main` goes on releasing.
 - The branch reaches `main` by **a merge commit, never a squash**:
   `git merge --no-ff dev/x.y.z`. The notes read what that merge brings. Squashed, the version
   is one commit and one line, and the dry run says so.
-- Then the three steps above, from `main`.
+- Then the steps above, from `main`.
 
 To read what a version holds so far, run this from its branch — it prints the section and
 writes nothing:
