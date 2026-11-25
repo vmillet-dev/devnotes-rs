@@ -12,6 +12,57 @@ Keep the shape — a `## ` heading per release, `### ` headings for the categori
 bullet per entry — or the entry will not be rendered. It is deliberately untranslated, like
 the release notes the updater hands over.
 
+## [1.1.0] - 2026-11-25
+
+### ✨ Added
+
+- Tabs: a dragged tab is raised and outlined (#1632)
+- Note menu: filing into folders stays usable with many folders (#1631)
+- Notes: a drawing inserted in a Note can be resized (#1629)
+- Drawing: an arrow is attached to the middle of a side (#1628)
+- Drawing: an arrow's ends are moved, attached and detached (#1627)
+- Drawing: zoom and pan the canvas (#1625)
+- Tools: copy offers the raw value or the formatted value (#1623)
+- Presentation: fixed title position, content aligned left (#1613)
+
+### 🔧 Changed
+
+- Notifications: messages shown in a corner of the window, not the title bar (#1633)
+- Drawing: the eraser stays active until another tool is chosen (#1626)
+- Luhn, IBAN: generate valid numbers and validate a number (#1622)
+- Tools: Dates and Size modes shown together on one page (#1621)
+- Code editor: Format is one amber split button with labelled settings (#1617)
+- Notes: the side panel opens under the header bar, as full screen does (#1615)
+- Notes list: j and k keep working after opening a note in the sidebar (#1607)
+
+### 🐛 Fixed
+
+- Note editor: a way out of a final code block (#1624)
+- Tools: a block shown by a button appears in place, without moving (#1620)
+- Unix permissions: a checkbox changes once when clicked (#1618)
+- Presentation: a code block is shown whole, whatever its length (#1614)
+- Buttons: New request has the same shape as New note (#1616)
+- Presentation: slides no longer shift when moving between them (#1612)
+- Drawings: previews load in lists instead of saying there is none (#1611)
+- Sidebar editor: the unfolded header keeps all its information when narrow (#1610)
+- Tags: the manage popup has a fixed height and a scrollbar (#1609)
+- Title bar: Notes, Tools and Http buttons keep one size on every page (#1608)
+- Note menu: the Priority submenu closes when the pointer leaves it (#1606)
+- Filtered dropdowns: a click in the filter keeps them open (#1605)
+- File menu: the Quit confirmation is red and visible (#1604)
+- New note: the New badge beside Note in the menu is removed (#1603)
+- Pointer: I-beam over the passphrase field, hand over folder rows (#1602)
+
+### 🔒 Security
+
+- Dependencies: url updated to 2.5.9 (RUSTSEC-2026-0592) (#1636)
+
+### 🧰 Under the hood
+
+- README: the animated captures are redone in a single theme (#1634)
+- Tabs: a dragged tab keeps the system's pointer (#1635)
+- E2E: passphrase typed once the unlock panel is at rest (#1619)
+
 ## [1.0.3] - 2026-11-18
 
 ### ✨ Added
