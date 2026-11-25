@@ -16,7 +16,9 @@ import {
   kindOf,
   LEAD_HEADING,
   leadItems,
+  NOTHING_TO_SEE,
   parsePrNumber,
+  promptNotes,
   publishedNumbers,
   renderSections,
   sectionFor,
@@ -424,5 +426,69 @@ describe('a summary written by hand', () => {
 
   it('renders as a section the changelog grammar reads', () => {
     assert.equal(renderSections(withLead([], ['Faster'])), `### ${LEAD_HEADING}\n\n- Faster\n`);
+  });
+});
+
+describe('promptNotes', () => {
+  const body = [
+    `### ${LEAD_HEADING}`,
+    '',
+    '- A native application.',
+    '',
+    '### ✨ Added',
+    '',
+    '- Tabs: a dragged tab is raised (#1)',
+    '',
+    '### 🧰 Under the hood',
+    '',
+    '- E2E: passphrase typed once the panel rests (#2)',
+    '',
+    '### 🔒 Security',
+    '',
+    '- Log: errors no longer write what the user typed (#3)',
+    '',
+    '### 📦 Dependencies',
+    '',
+    '- Bump serde (#4)',
+    '',
+  ].join('\n');
+
+  it('leaves out the technical work and the dependencies, wherever they stand', () => {
+    assert.equal(
+      promptNotes(body),
+      [
+        `### ${LEAD_HEADING}`,
+        '',
+        '- A native application.',
+        '',
+        '### ✨ Added',
+        '',
+        '- Tabs: a dragged tab is raised (#1)',
+        '',
+        '### 🔒 Security',
+        '',
+        '- Log: errors no longer write what the user typed (#3)',
+        '',
+      ].join('\n'),
+    );
+  });
+
+  it('keeps every section a user can see, and a heading written by hand', () => {
+    const seen = ['✨ Added', '🔧 Changed', '🐛 Fixed', '🗑️ Removed', '🔒 Security', 'By hand'];
+    const all = seen.map((heading) => `### ${heading}\n\n- One (#1)\n`).join('\n');
+
+    assert.equal(promptNotes(all), all);
+  });
+
+  it('says so when nothing is left to show', () => {
+    const internal = '### 🧰 Under the hood\n\n- E2E: faster (#2)\n';
+
+    assert.equal(promptNotes(internal), `${NOTHING_TO_SEE}\n`);
+  });
+
+  it('takes nothing from the changelog, whose section stays whole', () => {
+    const changelog = `# Changelog\n\n## [1.2.0] - 2026-12-01\n\n${body}`;
+
+    assert.equal(extractSection(changelog, '1.2.0'), body);
   });
 });

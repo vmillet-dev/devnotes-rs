@@ -1677,11 +1677,13 @@ one-click action.
 carried the key — so the block was dead markup that looked like a shipped feature, and
 `update.body` was `undefined` at every release.
 
-The text already exists at that point in the release job: `scripts/release-notes.mjs extract`
-writes it to `$RUNNER_TEMP/release-notes.md` for the GitHub release body, and the manifest
-step reads the same file. ⚠️ `generate_release_notes` appends the raw pull-request list
-inside `action-gh-release` and does not touch that file, so the manifest carries the
-hand-written section alone.
+`scripts/release-notes.mjs extract` writes two files from the section at the tag: the whole of it,
+for the GitHub release body, and the prompt's (`--prompt-out`), for the manifest. **The prompt keeps
+what the user will notice**: the summary, additions, changes, fixes, removals and security. The
+technical work (the tests, the documentation and the site with it) and the dependencies stay in
+`CHANGELOG.md`, on the release page and in "What's new". Which section is shown is said beside its
+labels, in `SECTIONS`. ⚠️ It is filtered in the manifest, not in the application: the prompt is drawn
+by the version already installed. A release with nothing left to show says so in one line.
 
 ⚠️ **Shown open, at a fixed height.** Behind a `<details>` it was installed without being
 read — and worse, opening it _changed the dialog's height_: the body is bounded at 160px but
@@ -6211,8 +6213,8 @@ key can produce an installable update. It is the key the Tauri releases were sig
   answers.
 - **The dot on the About menu** says « an update exists and is not installed », and outlives the
   prompt it was raised with.
-- **The notes the prompt shows** are the release's changelog section, carried by `latest.json`
-  (→ "The update prompt shows the release's notes").
+- **The notes the prompt shows** are the release's changelog section less what the user cannot see,
+  carried by `latest.json` (→ "The update prompt shows the release's notes").
 - **The manifest** (`latest.json`, `scripts/latest-json.mjs`) carries the NSIS installer and the
   AppImage, each with its `format` (`nsis`, `appimage`), which the client requires. Windows is the
   one platform whose absence fails the release; a missing Linux artefact only warns. It is
