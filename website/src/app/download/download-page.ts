@@ -136,12 +136,6 @@ export class DownloadPage {
   /** A phone cannot run it: say so rather than offer a file it cannot open. */
   protected readonly onPhone = signal(false);
 
-  /** What the first launch asks. */
-  protected headsUp(system: System): string {
-    const { unsigned, opening, executable } = this.text();
-    return { windows: unsigned, macos: opening, linux: executable }[system];
-  }
-
   constructor() {
     const lang = this.lang();
     const text = TEXT[lang];
@@ -155,5 +149,11 @@ export class DownloadPage {
       this.yours.set(visitorSystem());
       this.onPhone.set(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
     });
+  }
+
+  /** What the first launch asks. */
+  protected headsUp(system: System): string {
+    const { unsigned, opening, executable } = this.text();
+    return { windows: unsigned, macos: opening, linux: executable }[system];
   }
 }
