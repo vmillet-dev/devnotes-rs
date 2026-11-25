@@ -16,19 +16,20 @@ import { pathToFileURL } from 'node:url';
  * when a pull request wears two mapped labels: the first section that claims one of them
  * wins, so `dependencies` + `enhancement` is an addition. Only the `dependencies` label
  * (Dependabot sets it itself) reaches the last section, so a month of bumps no longer
- * buries the refactors.
+ * buries the refactors. `prompt`: the update prompt shows it.
  */
 export const SECTIONS = [
-  { id: 'added', heading: '✨ Added', labels: ['enhancement', 'feature'], kinds: ['feat'] },
+  { id: 'added', heading: '✨ Added', labels: ['enhancement', 'feature'], kinds: ['feat'], prompt: true },
   {
     id: 'changed',
     heading: '🔧 Changed',
     labels: ['change', 'performance'],
     kinds: ['change', 'perf'],
+    prompt: true,
   },
-  { id: 'fixed', heading: '🐛 Fixed', labels: ['bug'], kinds: ['fix'] },
-  { id: 'removed', heading: '🗑️ Removed', labels: ['removal'], kinds: ['remove'] },
-  { id: 'security', heading: '🔒 Security', labels: ['security'], kinds: ['security'] },
+  { id: 'fixed', heading: '🐛 Fixed', labels: ['bug'], kinds: ['fix'], prompt: true },
+  { id: 'removed', heading: '🗑️ Removed', labels: ['removal'], kinds: ['remove'], prompt: true },
+  { id: 'security', heading: '🔒 Security', labels: ['security'], kinds: ['security'], prompt: true },
   {
     id: 'internal',
     heading: '🧰 Under the hood',
@@ -307,6 +308,28 @@ export function extractSection(markdown, version) {
   return `${(end === -1 ? rest : rest.slice(0, end)).join('\n').trim()}\n`;
 }
 
+/** What the prompt says of a release whose every change is one the user cannot see. */
+export const NOTHING_TO_SEE = '- Maintenance release: nothing changes in how the application is used.';
+
+/**
+ * A section as the update prompt shows it: without the headings kept for the changelog. Read from
+ * the section rather than from the pull requests, so a heading edited by hand is shown.
+ */
+export function promptNotes(body) {
+  const hidden = new Set(
+    SECTIONS.filter((section) => !section.prompt).map((section) => `### ${section.heading}`),
+  );
+  let shown = true;
+  const kept = body.split('\n').filter((line) => {
+    if (line.startsWith('### ')) {
+      shown = !hidden.has(line.trim());
+    }
+    return shown;
+  });
+  const notes = kept.join('\n').trim();
+  return `${notes || NOTHING_TO_SEE}\n`;
+}
+
 // Everything below talks to git and to GitHub; nothing above does, which is what makes the
 // table, the chain and the splice testable without a network.
 
@@ -431,7 +454,10 @@ function namedIssues(index) {
 /** What the dry run is for: every entry, where it landed, and what put it there. */
 function renderSummary({ version, date, since, section, entries, skipped }) {
   const rows = entries
-    .map((entry) => `| ${entry.number ? `#${entry.number}` : '—'} | ${entry.text} | ${entry.via} |`)
+    .map((entry) => {
+      const shown = SECTIONS.find((section) => section.id === entry.section).prompt ? 'oui' : 'non';
+      return `| ${entry.number ? `#${entry.number}` : '—'} | ${entry.text} | ${entry.via} | ${shown} |`;
+    })
     .join('\n');
   const number = (value) => `#${value}`;
   const squashed = entries.filter((entry) => entry.squashed);
@@ -450,8 +476,8 @@ function renderSummary({ version, date, since, section, entries, skipped }) {
     '',
     '### Traçabilité',
     '',
-    '| PR | Entrée | Classée par |',
-    '|---|---|---|',
+    '| PR | Entrée | Classée par | Fiche de mise à jour |',
+    '|---|---|---|---|',
     rows,
     '',
   ].join('\n');
@@ -491,6 +517,10 @@ function main() {
     const out = options.get('out');
     if (typeof out === 'string') {
       writeFileSync(out, body);
+    }
+    const prompt = options.get('prompt-out');
+    if (typeof prompt === 'string') {
+      writeFileSync(prompt, promptNotes(body));
     }
     process.stdout.write(body);
     return;

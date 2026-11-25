@@ -88,6 +88,12 @@ entry — so a surprise in the summary tells you which of the four fired.
 Beyond GitHub's defaults, the labels worth reaching for are `change` (behaviour that already
 existed and now differs), `security` and `removal`.
 
+**The update prompt shows the sections a user can see**, so `enhancement`, `change`, `bug` and
+`removal` are for what someone using the application notices. A fix to the CI, the tests, the
+scripts, the release or the site wears `test`, `refactor`, `documentation` or `website`: filed
+under « Under the hood », it is in `CHANGELOG.md` and on the release page, and out of the prompt.
+The dry run says, entry by entry, whether the prompt shows it.
+
 The sections, in their order: ✨ Added, 🔧 Changed, 🐛 Fixed, 🗑️ Removed, 🔒 Security,
 🧰 Under the hood, 📦 Dependencies. The last one holds the pull requests labelled
 `dependencies` — Dependabot applies that label itself — and nothing else. When a pull request
