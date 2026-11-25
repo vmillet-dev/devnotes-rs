@@ -6703,12 +6703,18 @@ specs, `npm run lint` ESLint, `npm run test:scripts` the Node tests of the token
   board, which stays centred while its cards are filed; a phone gets a window drawn for its
   width. Code inside a scene is data (`home/code-view.ts`): the template compiler drops the
   whitespace between two elements, and a formatter would reflow it.
-- **The documentation is typed data** (`docs/content/{fr,en}/*.ts`, written with the helpers of
-  `docs/doc.model.ts`), rendered by `DocBlocks` without `innerHTML`, grouped in the sidebar
-  (`docs/doc-index.ts`) and searched in the browser section by section, accents aside
-  (`docs/doc-search.ts`). `CHECKED_ON` names the version the pages were last checked against in
-  the application, by hand; the labels they quote (`ui(…)`) are the application's own, in
-  `crates/i18n/translations/`.
+- **The documentation is the Markdown of `docs/content/`**, one file per page and per language,
+  under one `index.json` (the pages in reading order, their group, colour, address and name);
+  `docs/content/README.md` says how to write a page, add one, add a language. Nothing is generated
+  beside it and no formatter runs over it. `scripts/docs.mjs` reads it before each `start`, `build`,
+  `test` and `lint` (parsed by `marked`, a build-time dependency) into the blocks of
+  `docs/doc.model.ts`, written to `docs/generated/`, which is not committed. ⚠️ It reads the
+  conventions and refuses the rest by file and line: a construct it would guess at is one the two
+  readers, the site and the application, could draw differently. `DocBlocks` draws the blocks
+  without `innerHTML`; the sidebar reads the index (`docs/doc-index.ts`), and the search runs in the
+  browser section by section, accents aside (`docs/doc-search.ts`). A section's address is its text's
+  (`slug`), so it differs per language. `checkedOn` names the version the pages were last checked
+  against in the application, by hand.
 - **The theme** is applied before the first paint by an inline script in `src/index.html` (a
   stored choice, else the system's), then followed by `ThemeStore`.
 - **Checked by `ci.yml`**, which builds, lints and tests the site on a pull request that touches

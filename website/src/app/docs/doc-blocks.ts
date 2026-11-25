@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 
 import { Lang } from '../core/lang';
 import { Language } from '../core/language';
-import { DOC_INDEX, docPath } from './doc-index';
+import { DOC_INDEX, DocEntry, docPath } from './doc-index';
 import { Block, ShortcutRow, Text } from './doc.model';
 import { DocText } from './doc-text';
 
@@ -23,6 +23,7 @@ interface View {
   readonly shortcuts: readonly ShortcutRow[];
   readonly head: readonly string[];
   readonly rows: readonly (readonly Text[])[];
+  readonly guides: readonly DocEntry[];
 }
 
 const EMPTY: Omit<View, 'kind'> = {
@@ -39,6 +40,7 @@ const EMPTY: Omit<View, 'kind'> = {
   shortcuts: [],
   head: [],
   rows: [],
+  guides: [],
 };
 
 function view(block: Block): View {
@@ -59,7 +61,7 @@ function view(block: Block): View {
     case 'table':
       return { ...EMPTY, kind: block.kind, caption: block.caption, head: block.head, rows: block.rows };
     case 'guides':
-      return { ...EMPTY, kind: block.kind };
+      return { ...EMPTY, kind: block.kind, guides: DOC_INDEX.filter(({ id }) => block.pages.includes(id)) };
   }
 }
 
@@ -87,7 +89,6 @@ export class DocBlocks {
   protected readonly views = computed(() => this.blocks().map(view));
   protected readonly lang = inject(Language).lang;
   protected readonly words = computed(() => WORDS[this.lang()]);
-  protected readonly guides = DOC_INDEX.filter(({ id }) => id !== 'overview');
   /** The code block whose copy was just taken, by position. */
   protected readonly copied = signal<number | null>(null);
 

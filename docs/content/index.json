@@ -1,0 +1,96 @@
+{
+  "checkedOn": "1.1",
+  "groups": [
+    {
+      "name": { "fr": "Démarrer", "en": "Getting started" },
+      "pages": [
+        {
+          "id": "overview",
+          "colour": "grey",
+          "path": { "fr": "", "en": "" },
+          "name": { "fr": "Vue d’ensemble", "en": "Overview" }
+        },
+        {
+          "id": "start",
+          "colour": "amber",
+          "path": { "fr": "prise-en-main", "en": "getting-started" },
+          "name": { "fr": "Prise en main", "en": "Getting started" }
+        }
+      ]
+    },
+    {
+      "name": { "fr": "Au quotidien", "en": "Every day" },
+      "pages": [
+        {
+          "id": "writing",
+          "colour": "green",
+          "path": { "fr": "ecrire", "en": "writing" },
+          "name": { "fr": "Écrire", "en": "Writing" }
+        },
+        {
+          "id": "organising",
+          "colour": "blue",
+          "path": { "fr": "ranger", "en": "organising" },
+          "name": { "fr": "Ranger et retrouver", "en": "Organising and finding" }
+        },
+        {
+          "id": "paste",
+          "colour": "green",
+          "path": { "fr": "collage-rapide", "en": "quick-paste" },
+          "name": { "fr": "Collage rapide et raccourcis", "en": "Quick paste and shortcuts" }
+        }
+      ]
+    },
+    {
+      "name": { "fr": "Les outils et l’API", "en": "Tools and the API" },
+      "pages": [
+        {
+          "id": "tools",
+          "colour": "teal",
+          "path": { "fr": "outils", "en": "tools" },
+          "name": { "fr": "Les outils", "en": "The tools" }
+        },
+        {
+          "id": "api",
+          "colour": "olive",
+          "path": { "fr": "client-api", "en": "api-client" },
+          "name": { "fr": "Le client API", "en": "The API client" }
+        }
+      ]
+    },
+    {
+      "name": { "fr": "Vos données", "en": "Your data" },
+      "pages": [
+        {
+          "id": "safety",
+          "colour": "pink",
+          "path": { "fr": "securite", "en": "security" },
+          "name": { "fr": "Sécurité et sauvegardes", "en": "Security and backups" }
+        },
+        {
+          "id": "transfer",
+          "colour": "purple",
+          "path": { "fr": "import-export", "en": "import-export" },
+          "name": { "fr": "Importer et exporter", "en": "Import and export" }
+        }
+      ]
+    },
+    {
+      "name": { "fr": "Réglages et aide", "en": "Settings and help" },
+      "pages": [
+        {
+          "id": "settings",
+          "colour": "grey",
+          "path": { "fr": "preferences", "en": "settings" },
+          "name": { "fr": "Préférences", "en": "Settings" }
+        },
+        {
+          "id": "faq",
+          "colour": "grey",
+          "path": { "fr": "faq", "en": "faq" },
+          "name": { "fr": "Questions fréquentes", "en": "Questions" }
+        }
+      ]
+    }
+  ]
+}

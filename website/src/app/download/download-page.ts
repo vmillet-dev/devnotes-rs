@@ -8,7 +8,9 @@ import { Seo } from '../core/seo';
 import { CHANGELOG } from '../core/site';
 import { DocBlocks } from '../docs/doc-blocks';
 import { docPath } from '../docs/doc-index';
-import { snippet } from '../docs/doc.model';
+import { Block } from '../docs/doc.model';
+
+const shell = (title: string, code: string): Block => ({ kind: 'code', title, lang: 'sh', code });
 
 const LINUX_COMMANDS = `chmod +x devnotes_${VERSION}_x86_64.AppImage && ./devnotes_${VERSION}_x86_64.AppImage
 sudo apt install ./devnotes_${VERSION}_amd64.deb      # Debian, Ubuntu
@@ -115,8 +117,8 @@ export class DownloadPage {
     this.offers().flatMap((offer) => [offer.primary, ...offer.others]),
   );
   protected readonly startPath = computed(() => docPath('start', this.lang()));
-  protected readonly linuxInstall = computed(() => [snippet(this.text().linuxTitle, 'sh', LINUX_COMMANDS)]);
-  protected readonly check = computed(() => [snippet(this.text().checkTitle, 'sh', CHECK_COMMANDS)]);
+  protected readonly linuxInstall = computed(() => [shell(this.text().linuxTitle, LINUX_COMMANDS)]);
+  protected readonly check = computed(() => [shell(this.text().checkTitle, CHECK_COMMANDS)]);
   protected readonly version = VERSION;
   protected readonly checksums = CHECKSUMS;
   protected readonly releasePage = RELEASE_PAGE;

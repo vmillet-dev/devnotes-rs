@@ -1,65 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import { renderPage } from '../../testing/render-page';
-import { Lang, downloadPath, homePath } from '../core/lang';
-import { DOC_PAGES } from './content/pages';
-import { Block, Inline } from './doc.model';
 import { DOC_INDEX, docPath } from './doc-index';
 import { DocsPage } from './docs-page';
-
-function inlines(block: Block): readonly Inline[] {
-  switch (block.kind) {
-    case 'p':
-    case 'note':
-      return block.text;
-    case 'list':
-      return block.items.flat();
-    case 'table':
-      return block.rows.flat(2);
-    case 'h2':
-    case 'h3':
-    case 'code':
-    case 'keys':
-    case 'guides':
-      return [];
-  }
-}
-
-const LANGS: readonly Lang[] = ['fr', 'en'];
+import { DOC_PAGES } from './generated/pages';
 
 describe('the documentation', () => {
-  for (const lang of LANGS) {
-    describe(lang, () => {
-      it('has a text for every page of the index, in its order', () => {
-        expect(DOC_PAGES[lang].map(({ id }) => id)).toEqual(DOC_INDEX.map(({ id }) => id));
-      });
-
-      it('links only to pages that exist in its own language', () => {
-        const paths = new Set([
-          homePath(lang),
-          downloadPath(lang),
-          ...DOC_INDEX.map(({ id }) => docPath(id, lang)),
-        ]);
-        for (const page of DOC_PAGES[lang]) {
-          for (const inline of page.body.flatMap(inlines)) {
-            if (typeof inline === 'object' && 'link' in inline && inline.to.startsWith('/')) {
-              expect(paths, `${page.id}: ${inline.to}`).toContain(inline.to);
-            }
-          }
-        }
-      });
-
-      it('gives every heading of a page its own anchor', () => {
-        for (const page of DOC_PAGES[lang]) {
-          const ids = page.body.flatMap((block) =>
-            block.kind === 'h2' || block.kind === 'h3' ? [block.id] : [],
-          );
-          expect(new Set(ids).size, page.id).toBe(ids.length);
-        }
-      });
-    });
-  }
-
   for (const [index, entry] of DOC_INDEX.entries()) {
     describe(docPath(entry.id, 'fr'), () => {
       it('has one h1, its title, and the contents beside it match its sections', async () => {

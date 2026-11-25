@@ -9,6 +9,10 @@ docs/mockups/*
 # La feuille de recette : une page autonome, ses cas sur une ligne de données.
 docs/recette/*
 docs/egui-migration/*
+# The documentation is written by hand, without a formatter: its own checks read it.
+docs/content/fr
+docs/content/en
+website/src/app/docs/generated
 # Vendored skills (.claude/skills/PROVENANCE.md): kept byte-identical to their source.
 .claude/skills/frontend-design
 .claude/skills/webapp-testing
