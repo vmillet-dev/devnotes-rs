@@ -1,0 +1,323 @@
+.head {
+  display: grid;
+  gap: 18px;
+  padding-top: clamp(40px, 6vw, 80px);
+}
+
+.phone {
+  color: var(--amber-text);
+}
+
+// One window per system; the visitor's put first and outlined, once the browser has said which.
+.systems {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(16px, 2vw, 28px);
+  margin-top: clamp(32px, 4vw, 56px);
+}
+
+.system {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  box-shadow: var(--shadow-soft);
+}
+
+.system.yours {
+  order: -1;
+  border-color: var(--amber-edge);
+}
+
+.system .win-head {
+  min-height: 58px;
+  padding: 0 20px;
+}
+
+.system h2 {
+  font-size: 1.25rem;
+}
+
+.mine {
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--amber-edge);
+  color: var(--amber-text);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.arch {
+  margin-left: auto;
+  color: var(--text-2);
+  font-size: 13px;
+}
+
+.body {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  justify-items: start;
+  padding: 22px 20px 24px;
+}
+
+.body .btn {
+  min-height: 52px;
+  padding: 0 1.4rem;
+  font-size: 16px;
+  white-space: normal;
+}
+
+.file {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: baseline;
+}
+
+.file code {
+  font-size: 13px;
+  color: var(--text-1);
+  overflow-wrap: anywhere;
+}
+
+.size {
+  color: var(--text-2);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+// What the first launch will ask, said beside the button rather than found later.
+.heads-up {
+  padding-left: 12px;
+  border-left: 2px solid var(--amber-edge);
+  color: var(--text-1);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.who {
+  color: var(--text-1);
+  font-size: 14.5px;
+}
+
+.body h3 {
+  margin-top: 14px;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--text-2);
+}
+
+.others {
+  width: 100%;
+}
+
+.others li {
+  display: grid;
+  grid-template-columns: minmax(9rem, max-content) minmax(0, 1fr);
+  gap: 2px 16px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line-soft);
+}
+
+.others a {
+  font-weight: 620;
+  color: var(--text-0);
+  text-underline-offset: 3px;
+}
+
+.others code {
+  font-size: 12.5px;
+  color: var(--text-2);
+  overflow-wrap: anywhere;
+}
+
+.others span {
+  grid-column: 2;
+  color: var(--text-1);
+  font-size: 14px;
+}
+
+.beside {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 32px;
+  align-items: baseline;
+  margin-top: 20px;
+}
+
+.notes {
+  color: var(--amber-text);
+  font-weight: 620;
+  text-underline-offset: 3px;
+}
+
+.mac {
+  color: var(--text-2);
+  font-size: 14.5px;
+}
+
+.install,
+.verify,
+.after {
+  display: grid;
+  gap: 24px;
+  padding-top: clamp(72px, 9vw, 120px);
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(24px, 4vw, 64px);
+  align-items: start;
+}
+
+.column {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.column p,
+.facts p {
+  color: var(--text-1);
+  line-height: 1.7;
+}
+
+.column b {
+  color: var(--text-0);
+  font-weight: 620;
+}
+
+.verify-lede {
+  color: var(--text-1);
+}
+
+.verify-lede a {
+  color: var(--amber-text);
+  text-underline-offset: 3px;
+}
+
+.sums {
+  overflow-x: auto;
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+}
+
+.sums table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.sums th,
+.sums td {
+  padding: 10px 14px;
+  text-align: left;
+  vertical-align: baseline;
+  border-top: 1px solid var(--line-soft);
+}
+
+.sums thead th {
+  border-top: 0;
+  color: var(--text-2);
+  font-size: 12.5px;
+  font-weight: 650;
+}
+
+.sums tbody th {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.sums td {
+  color: var(--text-1);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.hash {
+  font-size: 12px;
+  color: var(--text-2);
+  user-select: all;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(20px, 3vw, 40px) clamp(24px, 4vw, 64px);
+}
+
+.facts li {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  min-width: 0;
+}
+
+.facts a,
+.column a {
+  color: var(--amber-text);
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 860px) {
+  .systems,
+  .columns,
+  .facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+// A phone: each file on two lines, its fingerprint wrapped under its name rather than off-screen.
+@media (max-width: 640px) {
+  .sums table,
+  .sums tbody {
+    display: block;
+  }
+
+  .sums thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .sums tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .sums tr + tr {
+    border-top: 1px solid var(--line-soft);
+  }
+
+  .sums th,
+  .sums td {
+    border-top: 0;
+  }
+
+  .sums tbody th {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .sums td:last-child {
+    grid-column: 1 / -1;
+    padding-top: 0;
+    white-space: normal;
+  }
+
+  .hash {
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 520px) {
+  .others li {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .others span {
+    grid-column: auto;
+  }
+}

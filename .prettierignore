@@ -2,6 +2,7 @@ dist
 node_modules
 coverage
 target
+.angular
 package-lock.json
 # Maquette statique de référence : conservée telle quelle, hors périmètre du formatage.
 docs/mockups/*

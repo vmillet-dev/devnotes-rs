@@ -1,0 +1,89 @@
+.hero {
+  padding-top: clamp(40px, 7vw, 88px);
+}
+
+.hero-text {
+  display: grid;
+  gap: 22px;
+}
+
+.hero-text h1 {
+  max-width: 13em;
+}
+
+.hero-side {
+  display: grid;
+  gap: 22px;
+}
+
+// A wide screen sets the promise beside the headline rather than under it, and shows more of
+// the window in the first screen.
+@media (min-width: 1200px) {
+  .hero-text {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+    column-gap: clamp(48px, 5vw, 112px);
+    align-items: end;
+  }
+
+  .hero-text h1 {
+    max-width: none;
+  }
+}
+
+// The end of the page: no frame, the two ways on.
+.closing {
+  display: grid;
+  gap: 20px;
+  justify-items: start;
+  padding-top: clamp(110px, 16vh, 190px);
+}
+
+.get {
+  gap: 10px;
+}
+
+.ver {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(var(--black-rgb), 0.14);
+  font: 600 12px var(--font-mono);
+}
+
+// What makes it worth a try, said where the eye already is.
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.facts li {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text-1);
+  font-size: 14px;
+  font-weight: 560;
+}
+
+.facts li:not(.more)::before {
+  content: '';
+  width: 9px;
+  height: 5px;
+  margin-top: -3px;
+  border-left: 2px solid var(--green);
+  border-bottom: 2px solid var(--green);
+  transform: rotate(-45deg);
+}
+
+.facts a {
+  color: var(--text-0);
+  text-underline-offset: 3px;
+}
+
+.facts .more {
+  border-style: dashed;
+}

@@ -24,13 +24,15 @@ env:
 jobs:
   # A pull request that touches documentation alone builds and runs nothing: a README cannot
   # break the application, and a flaky scenario must not block it. Lint docs still runs, as
-  # Prettier checks the Markdown. A push, to main or a milestone branch, checks everything.
+  # Prettier checks the Markdown. The Rust side is skipped too when only `website/` changes: the
+  # site has a job of its own. A push, to main or a milestone branch, checks everything.
   changes:
     name: Changes
     runs-on: ubuntu-22.04
     timeout-minutes: 5
     outputs:
       code: ${{ steps.diff.outputs.code }}
+      website: ${{ steps.diff.outputs.website }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         if: github.event_name == 'pull_request'
@@ -43,9 +45,17 @@ jobs:
         run: |
           if [ -z "$BASE" ]; then
             echo "code=true" >> "$GITHUB_OUTPUT"
+            echo "website=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          code=$(git diff --name-only "$BASE" HEAD | grep -vE '\.md$|^docs/|^LICENSE$' || true)
+          changed=$(git diff --name-only "$BASE" HEAD)
+          # The site copies the application's palette, and a test holds the copy to it.
+          if echo "$changed" | grep -qE '^website/|^crates/ui/src/theme/tokens\.rs$|^\.github/workflows/ci\.yml$'; then
+            echo "website=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "website=false" >> "$GITHUB_OUTPUT"
+          fi
+          code=$(echo "$changed" | grep -vE '\.md$|^docs/|^LICENSE$|^website/' || true)
           if [ -n "$code" ]; then
             echo "code=true" >> "$GITHUB_OUTPUT"
           else
@@ -85,6 +95,40 @@ jobs:
 
       # The release scripts run on Node's own test runner.
       - run: npm run test:scripts
+
+      - *stop-the-run
+
+  # The showcase site (docs/architecture.md → "The website"): its own project and lockfile. The
+  # build fetches the latest release and asks GitHub for every download link.
+  website:
+    name: Website
+    needs: changes
+    if: needs.changes.outputs.website == 'true'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: website
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+
+      - run: npm ci
+
+      - run: npm run lint
+
+      - run: npm run test:scripts
+
+      - run: npm test
+
+      - run: npm run build
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
 
       - *stop-the-run
 

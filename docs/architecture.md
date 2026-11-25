@@ -6657,3 +6657,59 @@ worth paying.
 scenario fixed), the tray menu, a global accelerator pressed on the machine (a second launch's
 `--action` stands for it), and the packages themselves — installed and updated by
 `packages.yml` (→ "Releasing").
+
+## The website
+
+The showcase site, devnotes.fr, lives in `website/`: an Angular project of its own, outside the
+Cargo workspace, with its own `package.json` and lockfile (`npm ci` from `website/`). The root
+`package.json` stays the repository's build tool and carries none of it. From `website/`:
+`npm start` serves it on port 4300, `npm run build` writes `website/dist/`, `npm test` runs the
+specs, `npm run lint` ESLint, `npm run test:scripts` the Node tests of the tokens.
+
+- **It shares the application's look and no code.** `src/styles/_tokens.scss` is a copy of the
+  palette of `crates/ui/src/theme/tokens.rs` (both themes), the motion and the fonts;
+  `scripts/tokens.test.mjs` fails when the two differ, `scripts/palette.test.mjs` holds the
+  contrast (text ≥ 4.5:1). The site adds the few tokens it draws alone (`_site-tokens.scss`).
+- **Every page is prerendered** (`outputMode: "static"`, `app.routes.server.ts` →
+  `RenderMode.Prerender`): one `index.html` per route, at the root of the output for `/`, and
+  hydrated in the browser. The routes are the home page, the download page, one per
+  documentation page (`docs/doc-index.ts`, kept apart from the text so the first download does
+  not carry it), in each language (`core/pages.ts`), and `404`. Anything that measures or animates
+  runs in `afterNextRender` and asks `core/browser.ts` first: neither the build's Node nor jsdom
+  has `matchMedia` or `IntersectionObserver`.
+- **Two languages, French at `/` and English under `/en/`.** The language is the address's
+  (`core/language.ts`), read at `ResolveEnd` so a page's constructor already writes its title in
+  it; each component holds its words as a typed `FR` and an `EN: typeof FR`, so a missing
+  string fails the build. `Seo` sets `<html lang>` and the `hreflang` pair (`x-default` is
+  French); the globe in the header leads to the same page in the other language
+  (`translatedPath`). The documentation is two sets of pages under one index of ids.
+- **The download page follows the latest release.** `npm run build` first runs
+  `scripts/fetch-release.mjs`, which reads the latest published release (its version, each
+  file's size and its SHA-256 from `SHA256SUMS.txt`) into `core/release-files.json`;
+  `core/release.ts` names the files as `release.yml` writes them. The post-build check asks
+  GitHub for every download link and stops on anything but a 200: a name that drifts from the
+  packaging fails the build rather than the visitor.
+- **The address is one build setting**, `SITE_URL` (`define` in `angular.json`,
+  `https://devnotes.fr`; `--define` overrides it): the canonical links and the social tags are
+  built from it. `scripts/finish-build.mjs` runs after the build, reads the address back from the
+  home page's canonical link, checks every page (one `h1`, a title, a canonical, no local
+  address, download links that answer), and writes `sitemap.xml`, `robots.txt` and `404.html`.
+  `public/.htaccess` serves `/docs/x` from `docs/x/index.html` without a redirect on the Apache
+  host.
+- **The home page redraws the application in HTML** rather than showing screenshots. Each
+  feature (`home/feature.ts`) is a section whose scene is a pure function of a step and its
+  progress `t` (`ScenePlayer`): it plays once well in view, rests when it leaves the
+  screen, and a step clicked shows that step. The scroll is never held, except by the hero
+  board, which stays centred while its cards are filed; a phone gets a window drawn for its
+  width. Code inside a scene is data (`home/code-view.ts`): the template compiler drops the
+  whitespace between two elements, and a formatter would reflow it.
+- **The documentation is typed data** (`docs/content/{fr,en}/*.ts`, written with the helpers of
+  `docs/doc.model.ts`), rendered by `DocBlocks` without `innerHTML`, grouped in the sidebar
+  (`docs/doc-index.ts`) and searched in the browser section by section, accents aside
+  (`docs/doc-search.ts`). `CHECKED_ON` names the version the pages were last checked against in
+  the application, by hand; the labels they quote (`ui(…)`) are the application's own, in
+  `crates/i18n/translations/`.
+- **The theme** is applied before the first paint by an inline script in `src/index.html` (a
+  stored choice, else the system's), then followed by `ThemeStore`.
+- **Checked by `ci.yml`**, which builds, lints and tests the site on a pull request that touches
+  it, and runs nothing of the Rust side for a change to `website/` alone.
