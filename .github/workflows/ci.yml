@@ -25,13 +25,15 @@ jobs:
   # A pull request that touches documentation alone builds and runs nothing: a README cannot
   # break the application, and a flaky scenario must not block it. Lint docs still runs, as
   # Prettier checks the Markdown. The Rust side is skipped too when only `website/` changes: the
-  # site has a job of its own. A push, to main or a milestone branch, checks everything.
+  # site has a job of its own. The pages of `docs/content` are compiled in and held by Rust tests:
+  # they run on them, without the scenarios. A push, to main or a milestone branch, checks everything.
   changes:
     name: Changes
     runs-on: ubuntu-22.04
     timeout-minutes: 5
     outputs:
       code: ${{ steps.diff.outputs.code }}
+      pages: ${{ steps.diff.outputs.pages }}
       website: ${{ steps.diff.outputs.website }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -45,6 +47,7 @@ jobs:
         run: |
           if [ -z "$BASE" ]; then
             echo "code=true" >> "$GITHUB_OUTPUT"
+            echo "pages=true" >> "$GITHUB_OUTPUT"
             echo "website=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -55,11 +58,16 @@ jobs:
           else
             echo "website=false" >> "$GITHUB_OUTPUT"
           fi
+          if echo "$changed" | grep -q '^docs/content/'; then
+            echo "pages=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "pages=false" >> "$GITHUB_OUTPUT"
+          fi
           code=$(echo "$changed" | grep -vE '\.md$|^docs/|^LICENSE$|^website/' || true)
           if [ -n "$code" ]; then
             echo "code=true" >> "$GITHUB_OUTPUT"
           else
-            echo "Documentation only: the build, the tests and the scenarios are skipped."
+            echo "No code: the build and the scenarios are skipped."
             echo "code=false" >> "$GITHUB_OUTPUT"
           fi
 
@@ -169,7 +177,7 @@ jobs:
   test-rust:
     name: Test Rust (${{ matrix.os }})
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.code == 'true' || needs.changes.outputs.pages == 'true'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
 

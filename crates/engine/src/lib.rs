@@ -3,6 +3,7 @@ pub mod attachments;
 pub mod backup;
 pub mod changelog;
 pub mod db;
+pub mod docs;
 pub mod error;
 pub mod folders;
 pub mod host;

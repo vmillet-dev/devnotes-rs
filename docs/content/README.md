@@ -41,6 +41,15 @@ Two shapes are drawn in a way of their own: a table headed `Touches | Action` (`
 
 A paragraph, an item and a note hold one line, however long. Anything else (an image, HTML, a list inside a list) is refused by the site's build, with its file and its line.
 
+## What is checked
+
+Run by CI on every change, and by `cargo test -p engine docs`, `cargo test -p ui docs_quotes` and `npm run docs` in `website/`:
+
+- a label is word for word a text of the application, in the page's language;
+- a shortcut with Ctrl, Alt or Shift is one the application answers to by default;
+- a link leads to a page and a section that exist;
+- the two languages have the same pages, with the same sections, lists, notes, tables and code blocks, in the same order.
+
 ## Adding a page
 
 Write its two files, then name it in `index.json`, in the group it is read in: its colour, its address and its name in the sidebar, in each language. Add it to the list of the overview.
