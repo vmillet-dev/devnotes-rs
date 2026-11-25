@@ -24,6 +24,7 @@
     <a
       class="icon-btn lang"
       [routerLink]="language.switchTo()"
+      [fragment]="section()"
       [attr.hreflang]="language.other()"
       [attr.lang]="language.other()"
       [attr.aria-label]="t().switchTo"

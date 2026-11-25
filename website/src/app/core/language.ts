@@ -1,5 +1,5 @@
 import { PlatformLocation } from '@angular/common';
-import { Injectable, computed, inject } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, ResolveEnd, Router } from '@angular/router';
 import { filter, map } from 'rxjs';
@@ -29,4 +29,6 @@ export class Language {
   readonly other = computed(() => OTHER[this.lang()]);
   /** The same page in the other language. */
   readonly switchTo = computed(() => translatedPath(this.path(), this.other()));
+  /** The section being read, as the other language addresses it; its page says which. */
+  readonly section = signal<string | null>(null);
 }

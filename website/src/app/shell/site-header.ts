@@ -62,6 +62,9 @@ export class SiteHeader {
   /** The section the visitor is reading, named beside the logo. */
   protected readonly here = computed(() => this.progress.segments()[this.progress.reading().current] ?? null);
 
+  /** Where the switch lands in the other language: the home page's sections share one address. */
+  protected readonly section = computed(() => this.language.section() ?? this.here()?.anchor);
+
   constructor() {
     inject(Router)
       .events.pipe(

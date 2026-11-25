@@ -1,3 +1,4 @@
+import { ViewportScroller } from '@angular/common';
 import { ChangeDetectionStrategy, Component, afterNextRender, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 
@@ -52,6 +53,14 @@ export class App {
 
   constructor() {
     const theme = inject(ThemeStore);
-    afterNextRender(() => theme.connect());
+    const scroller = inject(ViewportScroller);
+    afterNextRender(() => {
+      theme.connect();
+      // The router scrolls to a section by itself: told of the header the browser's own scroll knows.
+      scroller.setOffset(() => [
+        0,
+        parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0,
+      ]);
+    });
   }
 }
