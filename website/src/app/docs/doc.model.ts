@@ -1,7 +1,6 @@
 /**
- * A page of the documentation as typed data, drawn by one renderer that never writes
- * markup from a string: what the page says can hold `{{field}}` or `<T>` without a single
- * escape, and nothing in it is ever parsed as HTML.
+ * A page of the documentation, as `scripts/docs.mjs` reads it from `docs/content`: typed data,
+ * drawn by one renderer that never writes markup from a string.
  */
 export type Inline =
   | string
@@ -33,8 +32,8 @@ export type Block =
       readonly head: readonly string[];
       readonly rows: readonly (readonly Text[])[];
     }
-  /** The overview's list of every other page. */
-  | { readonly kind: 'guides' };
+  /** A list of pages, as the overview's. */
+  | { readonly kind: 'guides'; readonly pages: readonly string[] };
 
 export interface DocPage {
   /** Its entry in `DOC_INDEX`, the same in every language. */
@@ -45,44 +44,3 @@ export interface DocPage {
   readonly summary: string;
   readonly body: readonly Block[];
 }
-
-// Writers, so a page reads as prose rather than as object literals.
-
-export const p = (...text: Inline[]): Block => ({ kind: 'p', text });
-export const h2 = (id: string, text: string): Block => ({ kind: 'h2', id, text });
-export const h3 = (id: string, text: string): Block => ({ kind: 'h3', id, text });
-export const ul = (...items: Text[]): Block => ({ kind: 'list', ordered: false, items });
-export const ol = (...items: Text[]): Block => ({ kind: 'list', ordered: true, items });
-export const tip = (...text: Inline[]): Block => ({ kind: 'note', tone: 'tip', text });
-export const warn = (...text: Inline[]): Block => ({ kind: 'note', tone: 'warn', text });
-export const snippet = (title: string, lang: string, code: string): Block => ({
-  kind: 'code',
-  title,
-  lang,
-  code,
-});
-export const shortcuts = (caption: string, ...rows: [keys: string, does: string][]): Block => ({
-  kind: 'keys',
-  caption,
-  rows: rows.map(([keys, does]) => ({ keys: keys.split(' '), does })),
-});
-/** A cell is one inline, or several. */
-export const table = (
-  caption: string,
-  head: readonly string[],
-  ...rows: (readonly (Inline | Text)[])[]
-): Block => ({
-  kind: 'table',
-  caption,
-  head,
-  rows: rows.map((row) => row.map((cell) => (Array.isArray(cell) ? (cell as Text) : [cell as Inline]))),
-});
-
-export const code = (text: string): Inline => ({ code: text });
-export const keys = (combination: string): Inline => ({ keys: combination.split(' ') });
-export const b = (text: string): Inline => ({ strong: text });
-export const ui = (label: string): Inline => ({ ui: label });
-export const link = (text: string, to: string): Inline => ({ link: text, to });
-
-/** A snippet's `{{field}}`, spelled once so the braces are never typed by hand. */
-export const field = (name: string): Inline => ({ code: `{{${name}}}` });

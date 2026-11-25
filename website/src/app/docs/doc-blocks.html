@@ -40,7 +40,7 @@
 </div>
 } @case ('keys') {
 <div class="scroll" tabindex="0" [attr.aria-label]="block.caption">
-  <table class="keys">
+  <table class="shortcuts">
     <caption>
       {{ block.caption }}
     </caption>
@@ -92,7 +92,7 @@
 </div>
 } @case ('guides') {
 <ul class="guides">
-  @for (guide of guides; track guide.id) {
+  @for (guide of block.guides; track guide.id) {
   <li [style.--c]="rgb(guide.tone)">
     <a [routerLink]="path(guide.id)">
       <span class="sw"></span><span class="name">{{ guide.nav[lang()] }}</span>

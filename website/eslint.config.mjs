@@ -5,7 +5,14 @@ import angular from 'angular-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['dist/**', 'out-tsc/**', 'node_modules/**', '.angular/**', 'coverage/**'],
+    ignores: [
+      'dist/**',
+      'out-tsc/**',
+      'node_modules/**',
+      '.angular/**',
+      'coverage/**',
+      'src/app/docs/generated/**',
+    ],
   },
   {
     files: ['**/*.ts'],

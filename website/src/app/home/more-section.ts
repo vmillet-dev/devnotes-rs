@@ -53,7 +53,7 @@ const FR = {
     title: 'La sélection multiple',
     line: "Déplacez, étiquetez ou supprimez vingt notes d'un coup.",
     count: '20 sélectionnées',
-    actions: ['Déplacer vers', 'Priorité', '+ tag'],
+    actions: ['Déplacer vers…', 'Priorité', '+ tag'],
   },
   transfer: {
     title: 'Import et export',
@@ -71,9 +71,9 @@ const FR = {
     ] as readonly (readonly [string, string])[],
   },
   diagrams: {
-    title: 'Des schémas',
-    line: 'Mermaid et dessins dans une Note, présentée en plein écran.',
-    items: ['Diagramme Mermaid', 'Dessin, en PNG ou SVG', 'Présentation plein écran'],
+    title: 'Des dessins',
+    line: 'Boîtes, flèches et texte, seuls ou dans une Note présentée en plein écran.',
+    items: ['Flèches attachées aux formes', 'Export en PNG ou SVG', 'Présentation plein écran'],
   },
   scripts: {
     title: 'Des scripts et des tests',
@@ -127,7 +127,7 @@ const EN: typeof FR = {
     title: 'Multiple selection',
     line: 'Move, tag or delete twenty notes at once.',
     count: '20 selected',
-    actions: ['Move to', 'Priority', '+ tag'],
+    actions: ['Move to…', 'Priority', '+ tag'],
   },
   transfer: {
     title: 'Import and export',
@@ -145,9 +145,9 @@ const EN: typeof FR = {
     ] as readonly (readonly [string, string])[],
   },
   diagrams: {
-    title: 'Diagrams',
-    line: 'Mermaid and drawings in a Note, presented full screen.',
-    items: ['Mermaid diagram', 'Drawing, as PNG or SVG', 'Full-screen presentation'],
+    title: 'Drawings',
+    line: 'Boxes, arrows and text, alone or in a Note presented full screen.',
+    items: ['Arrows attached to shapes', 'Exported as PNG or SVG', 'Full-screen presentation'],
   },
   scripts: {
     title: 'Scripts and tests',

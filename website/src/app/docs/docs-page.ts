@@ -18,10 +18,10 @@ import { Language } from '../core/language';
 import { ScrollFrame } from '../core/scroll-frame';
 import { Seo } from '../core/seo';
 import { absolute } from '../core/site';
-import { CHECKED_ON, DOC_PAGES } from './content/pages';
-import { DOC_INDEX, docGroups, docPath } from './doc-index';
+import { CHECKED_ON, DOC_INDEX, docGroups, docPath } from './doc-index';
 import { search, searchIndex } from './doc-search';
 import { DocBlocks } from './doc-blocks';
+import { DOC_PAGES } from './generated/pages';
 
 /** A heading counts as read once it has passed this far below the header. */
 const READ_LINE = 140;

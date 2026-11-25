@@ -2,3 +2,5 @@
 /node_modules
 /.angular
 /out-tsc
+# The pages of docs/content, read by scripts/docs.mjs.
+/src/app/docs/generated
