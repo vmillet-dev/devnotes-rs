@@ -12,6 +12,32 @@ Keep the shape — a `## ` heading per release, `### ` headings for the categori
 bullet per entry — or the entry will not be rendered. It is deliberately untranslated, like
 the release notes the updater hands over.
 
+## [1.2.0] - 2026-11-26
+
+### ✨ Added
+
+- macOS: DevNotes installs on Apple Silicon and Intel Macs (#1660)
+- About: Documentation replaces the Getting started walk (#1648)
+
+### 🔧 Changed
+
+- Update prompt: notes keep to additions, changes and fixes (#1658)
+
+### 🧰 Under the hood
+
+- Website: new design with the app's capture and a developer's day (#1662)
+- Screens: the documentation window drawn in place of Getting started (#1661)
+- Release workflow: a dry run shows what changes and builds nothing (#1659)
+- Repository: migration plan and mockups removed, golden data reduced (#1657)
+- Website: language button and scrollable blocks named in full (#1652)
+- Website: accessibility statement, and every page checked (#1651)
+- Documentation: labels, shortcuts and links are checked (#1647)
+- Website: social image, language pairs in the sitemap, stable build (#1650)
+- Website: changing language keeps the section being read (#1649)
+- Website: published when its sources change and after each release (#1640)
+- Documentation: pages written once in Markdown, in both languages (#1639)
+- Website: sources live in the repository, under website/ (#1638)
+
 ## [1.1.0] - 2026-11-25
 
 ### ✨ Added
