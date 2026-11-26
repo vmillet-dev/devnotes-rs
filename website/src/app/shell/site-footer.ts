@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 
 import { Lang, accessibilityPath, downloadPath } from '../core/lang';
 import { Language } from '../core/language';
+import { VERSION } from '../core/release';
 import { CHANGELOG, LICENSE, REPOSITORY } from '../core/site';
 import { docPath } from '../docs/doc-index';
 import { Logo } from './logo';
@@ -11,6 +12,9 @@ const FR = {
   about:
     'Logiciel libre et gratuit, sous licence GPL-3.0. Aucun compte, aucune télémétrie : vos notes ne quittent pas votre machine.',
   nav: 'Pied de page',
+  site: 'Le site',
+  project: 'Le projet',
+  version: 'Version',
   download: 'Télécharger',
   docs: 'Documentation',
   source: 'Code source',
@@ -24,6 +28,9 @@ const EN: typeof FR = {
   about:
     'Free software, released under the GPL-3.0. No account, no telemetry: your notes never leave your machine.',
   nav: 'Footer',
+  site: 'The site',
+  project: 'The project',
+  version: 'Version',
   download: 'Download',
   docs: 'Documentation',
   source: 'Source code',
@@ -39,42 +46,57 @@ const TEXT: Readonly<Record<Lang, typeof FR>> = { fr: FR, en: EN };
   selector: 'app-site-footer',
   imports: [RouterLink, Logo],
   template: `
-    <footer class="site-foot">
-      <div class="wrap">
-        <div class="foot-brand">
+    <footer class="site-foot sec">
+      <div class="cells foot-grid">
+        <div class="cell foot-brand">
           <span class="brand"><app-logo />DevNotes</span>
           <p>{{ t().about }}</p>
+          <p class="version">{{ t().version }} {{ version }}</p>
         </div>
-        <nav class="foot-links" [attr.aria-label]="t().nav">
-          <a [routerLink]="links().download">{{ t().download }}</a>
-          <a [routerLink]="links().docs">{{ t().docs }}</a>
-          <a [href]="repository">{{ t().source }}</a>
-          <a [href]="changelog">{{ t().changelog }}</a>
-          <a [href]="license">{{ t().license }}</a>
-          <a [routerLink]="links().privacy">{{ t().privacy }}</a>
-          <a [routerLink]="links().accessibility">{{ t().accessibility }}</a>
+        <nav class="cell foot-links" [attr.aria-label]="t().nav">
+          <div>
+            <p class="h">{{ t().site }}</p>
+            <a [routerLink]="links().download">{{ t().download }}</a>
+            <a [routerLink]="links().docs">{{ t().docs }}</a>
+            <a [routerLink]="links().privacy">{{ t().privacy }}</a>
+            <a [routerLink]="links().accessibility">{{ t().accessibility }}</a>
+          </div>
+          <div>
+            <p class="h">{{ t().project }}</p>
+            <a [href]="repository">{{ t().source }}</a>
+            <a [href]="changelog">{{ t().changelog }}</a>
+            <a [href]="license">{{ t().license }}</a>
+          </div>
         </nav>
       </div>
     </footer>
   `,
   styles: `
     .site-foot {
-      border-top: 1px solid var(--line-soft);
-      margin-top: clamp(64px, 10vw, 128px);
-      padding-block: 40px 24px;
       color: var(--text-1);
       font-size: 14.5px;
     }
 
-    .wrap {
+    .foot-grid {
       display: grid;
       grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
-      gap: 24px 48px;
+    }
+
+    .cell {
+      padding: 36px var(--pad) 40px;
+    }
+
+    .cell + .cell {
+      border-left: 1px solid var(--line-soft);
     }
 
     .foot-brand {
       display: grid;
-      gap: 10px;
+      align-content: start;
+      gap: 12px;
+    }
+
+    .foot-brand p {
       max-width: 34em;
     }
 
@@ -87,21 +109,43 @@ const TEXT: Readonly<Record<Lang, typeof FR>> = { fr: FR, en: EN };
       color: var(--text-0);
     }
 
+    .version {
+      font: 500 12.5px var(--font-mono);
+      color: var(--text-2);
+    }
+
     .foot-links {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px 22px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 24px;
+    }
+
+    .foot-links div {
+      display: grid;
       align-content: start;
+      gap: 4px;
+    }
+
+    .h {
+      margin-bottom: 6px;
+      font: 500 12.5px var(--font-mono);
+      color: var(--text-2);
     }
 
     .foot-links a {
-      text-underline-offset: 3px;
+      justify-self: start;
       padding-block: 4px;
+      text-underline-offset: 3px;
     }
 
-    @media (max-width: 700px) {
-      .wrap {
+    @media (max-width: 760px) {
+      .foot-grid {
         grid-template-columns: minmax(0, 1fr);
+      }
+
+      .cell + .cell {
+        border-left: 0;
+        border-top: 1px solid var(--line-soft);
       }
     }
   `,
@@ -112,6 +156,7 @@ export class SiteFooter {
   protected readonly repository = REPOSITORY;
   protected readonly changelog = CHANGELOG;
   protected readonly license = LICENSE;
+  protected readonly version = VERSION;
   protected readonly t = computed(() => TEXT[this.language.lang()]);
   protected readonly links = computed(() => {
     const lang = this.language.lang();

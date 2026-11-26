@@ -5,7 +5,6 @@ import { filter } from 'rxjs';
 
 import { Lang, downloadPath, homePath } from '../core/lang';
 import { Language } from '../core/language';
-import { PageProgress, Tone } from '../core/page-progress';
 import { REPOSITORY } from '../core/site';
 import { ThemeStore } from '../core/theme.store';
 import { docPath } from '../docs/doc-index';
@@ -14,7 +13,7 @@ import { Logo } from './logo';
 const FR = {
   home: 'DevNotes, accueil',
   main: 'Principale',
-  features: 'Fonctionnalités',
+  day: 'Une journée',
   docs: 'Documentation',
   download: 'Télécharger',
   toLight: 'Passer au thème clair',
@@ -27,7 +26,7 @@ const FR = {
 const EN: typeof FR = {
   home: 'DevNotes, home',
   main: 'Main',
-  features: 'Features',
+  day: 'A day',
   docs: 'Documentation',
   download: 'Download',
   toLight: 'Switch to the light theme',
@@ -48,7 +47,6 @@ const TEXT: Readonly<Record<Lang, typeof FR>> = { fr: FR, en: EN };
 })
 export class SiteHeader {
   protected readonly theme = inject(ThemeStore);
-  protected readonly progress = inject(PageProgress);
   protected readonly language = inject(Language);
   protected readonly repository = REPOSITORY;
   protected readonly menuOpen = signal(false);
@@ -59,11 +57,8 @@ export class SiteHeader {
     return { home: homePath(lang), docs: docPath('overview', lang), download: downloadPath(lang) };
   });
 
-  /** The section the visitor is reading, named beside the logo. */
-  protected readonly here = computed(() => this.progress.segments()[this.progress.reading().current] ?? null);
-
-  /** Where the switch lands in the other language: the home page's sections share one address. */
-  protected readonly section = computed(() => this.language.section() ?? this.here()?.anchor);
+  /** Where the switch lands in the other language: the section its page says is being read. */
+  protected readonly section = computed(() => this.language.section() ?? undefined);
 
   constructor() {
     inject(Router)
@@ -72,10 +67,6 @@ export class SiteHeader {
         takeUntilDestroyed(),
       )
       .subscribe(() => this.menuOpen.set(false));
-  }
-
-  protected rgb(tone: Tone): string {
-    return `var(--${tone}-rgb)`;
   }
 
   protected toggleMenu(): void {

@@ -1,0 +1,51 @@
+@let day = t();
+<section class="sec" id="journee" aria-labelledby="day-h">
+  <div class="sec-h col">
+    <span><b>02</b> / {{ day.section }}</span><span>{{ day.span }}</span>
+  </div>
+  <div class="bridge col"><h2 id="day-h">{{ day.bridge }}</h2></div>
+
+  <aside
+    class="rail col"
+    [class.shown]="shown()"
+    [class]="'t-' + (day.moments[current()]?.tone ?? 'list')"
+    aria-hidden="true"
+  >
+    <div>
+      <p class="clock">{{ clock() }}</p>
+      <p class="say">{{ day.moments[current()]?.kind ?? day.before }}</p>
+    </div>
+    <div class="ruler" [style.--now]="now()">
+      <i class="fill"></i><i class="now"></i>
+      @for (hour of hours; track hour.label) {
+      <span class="hour" [class.minor]="hour.minor" [style.--at]="hour.at">{{ hour.label }}</span>
+      } @for (mark of marks(); track $index; let i = $index) {
+      <span class="mark" [class.past]="i < current()" [class.here]="i === current()" [style.--at]="mark.at"
+        ><b>{{ mark.kind }}</b></span
+      >
+      }
+    </div>
+  </aside>
+
+  <div class="cells">
+    @for (moment of day.moments; track moment.id; let i = $index) {
+    <article
+      class="mo"
+      [class]="'t-' + moment.tone"
+      [class.on]="i === current()"
+      [id]="moment.id"
+      [attr.aria-labelledby]="moment.id + '-h'"
+    >
+      <div class="mo-t">
+        <p class="when"><time>{{ moment.time }}</time> <span>{{ moment.kind }}</span></p>
+        <h3 [id]="moment.id + '-h'">{{ moment.title }}</h3>
+        <p><app-runs [runs]="moment.text" /></p>
+        @if (moment.gesture) {
+        <p class="gesture"><app-runs [runs]="moment.gesture" /></p>
+        }
+      </div>
+      <app-day-scene [scene]="moment.scene" [lang]="lang()" [loop]="loop(moment.scene)" />
+    </article>
+    }
+  </div>
+</section>

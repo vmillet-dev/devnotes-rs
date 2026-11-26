@@ -1,13 +1,10 @@
 <header class="site-head">
-  <div class="wrap head-row">
+  <div class="col head-row">
     <a class="brand" [routerLink]="links().home" [attr.aria-label]="t().home"
       ><app-logo /><span>DevNotes</span></a
     >
-    <span class="here" [class.off]="!here()" [style.--c]="rgb(here()?.tone ?? 'grey')" aria-hidden="true">
-      <span class="sw"></span>{{ here()?.name }}
-    </span>
     <nav class="site-nav" [attr.aria-label]="t().main">
-      <a class="link" [routerLink]="links().home" fragment="snippets">{{ t().features }}</a>
+      <a class="link" [routerLink]="links().home" fragment="journee">{{ t().day }}</a>
       <a class="link" [routerLink]="links().docs" routerLinkActive="is-current" ariaCurrentWhenActive="page"
         >{{ t().docs }}</a
       >
@@ -90,8 +87,8 @@
       </svg>
     </button>
   </div>
-  <nav class="wrap menu-panel" id="site-menu" [attr.aria-label]="t().menu" [hidden]="!menuOpen()">
-    <a [routerLink]="links().home" fragment="snippets">{{ t().features }}</a>
+  <nav class="col menu-panel" id="site-menu" [attr.aria-label]="t().menu" [hidden]="!menuOpen()">
+    <a [routerLink]="links().home" fragment="journee">{{ t().day }}</a>
     <a [routerLink]="links().docs" routerLinkActive="is-current" ariaCurrentWhenActive="page"
       >{{ t().docs }}</a
     >
@@ -100,13 +97,4 @@
     >
     <a [href]="repository">GitHub</a>
   </nav>
-  @if (progress.segments().length) {
-  <div class="progress" aria-hidden="true">
-    @for (segment of progress.segments(); track segment.anchor; let i = $index) {
-    <span [style.--c]="rgb(segment.tone)" [style.--w]="progress.reading().weights[i]">
-      <i [style.--f]="progress.reading().fills[i]"></i>
-    </span>
-    }
-  </div>
-  }
 </header>

@@ -1,58 +1,67 @@
-<section class="wrap head" aria-labelledby="download-h" style="--c: var(--amber-rgb)">
-  <span class="zone-title"><span class="sw"></span>{{ text().label }}</span>
-  <h1 id="download-h">{{ text().heading }}</h1>
-  <p class="lede">{{ text().lede }}</p>
-  @if (onPhone()) {
-  <p class="phone">{{ text().phone }}</p>
-  }
-</section>
-
-<section class="wrap systems" [attr.aria-label]="text().systems">
-  @for (offer of offers(); track offer.system) {
-  <article
-    class="window system"
-    [class.yours]="yours() === offer.system"
-    [attr.aria-labelledby]="'system-' + offer.system"
+<section class="sec" aria-labelledby="download-h">
+  <div class="sec-h col">
+    <span><b>01</b> / {{ text().label }}</span><span>Version {{ version }}</span>
+  </div>
+  <div class="head col">
+    <h1 id="download-h">{{ text().heading }}</h1>
+    <p class="lede">{{ text().lede }}</p>
+    @if (onPhone()) {
+    <p class="phone">{{ text().phone }}</p>
+    }
+  </div>
+  <div
+    class="systems cells"
+    role="group"
+    [attr.aria-label]="text().systems"
+    [style.--count]="offers().length"
   >
-    <header class="win-head">
-      <h2 class="win-title" [id]="'system-' + offer.system">{{ offer.label }}</h2>
-      @if (yours() === offer.system) {
-      <span class="mine">{{ text().yours }}</span>
-      }
-      <span class="arch">{{ text().arch }}</span>
-    </header>
-    <div class="body">
-      <a class="btn btn-primary" [href]="offer.primary.url">{{ offer.action }}</a>
-      <p class="file">
-        <code>{{ offer.primary.file }}</code>
-        @if (offer.primary.size) {
-        <span class="size">{{ offer.primary.size }}</span>
+    @for (offer of offers(); track offer.system) {
+    <article
+      class="system"
+      [class.yours]="yours() === offer.system"
+      [attr.aria-labelledby]="'system-' + offer.system"
+    >
+      <header class="system-head">
+        <h2 [id]="'system-' + offer.system">{{ offer.label }}</h2>
+        @if (yours() === offer.system) {
+        <span class="mine">{{ text().yours }}</span>
         }
-      </p>
-      <p class="who">{{ offer.primary.who }}</p>
-      <p class="heads-up">{{ headsUp(offer.system) }}</p>
-      <h3>{{ text().others }}</h3>
-      <ul class="others">
-        @for (other of offer.others; track other.file) {
-        <li>
-          <a [href]="other.url">{{ other.name }}</a>
-          <code>{{ other.file }}</code>
-          <span>{{ other.who }}</span>
-        </li>
-        }
-      </ul>
-    </div>
-  </article>
-  }
+        <span class="arch">{{ text().arch }}</span>
+      </header>
+      <div class="body">
+        <a class="btn btn-primary" [href]="offer.primary.url">{{ offer.action }}</a>
+        <p class="file">
+          <code>{{ offer.primary.file }}</code>
+          @if (offer.primary.size) {
+          <span class="size">{{ offer.primary.size }}</span>
+          }
+        </p>
+        <p class="who">{{ offer.primary.who }}</p>
+        <p class="heads-up">{{ headsUp(offer.system) }}</p>
+        <h3>{{ text().others }}</h3>
+        <ul class="others">
+          @for (other of offer.others; track other.file) {
+          <li>
+            <a [href]="other.url">{{ other.name }}</a>
+            <code>{{ other.file }}</code>
+            <span>{{ other.who }}</span>
+          </li>
+          }
+        </ul>
+      </div>
+    </article>
+    }
+  </div>
+  <div class="beside col">
+    <a class="notes" [href]="releasePage">{{ text().notes }}</a>
+  </div>
 </section>
 
-<div class="wrap beside">
-  <a class="notes" [href]="releasePage">{{ text().notes }}</a>
-</div>
-
-<section class="wrap install" aria-labelledby="install-h">
-  <h2 id="install-h">{{ text().install }}</h2>
-  <div class="columns">
+<section class="sec" aria-labelledby="install-h">
+  <div class="sec-h col">
+    <h2 id="install-h"><b>02</b> / {{ text().install }}</h2>
+  </div>
+  <div class="columns cells" [style.--count]="hasMacos ? 3 : 2">
     <div class="column">
       <h3>{{ text().onWindows }}</h3>
       <p>{{ text().windows }}</p>
@@ -71,42 +80,49 @@
   </div>
 </section>
 
-<section class="wrap verify" aria-labelledby="verify-h">
-  <h2 id="verify-h">{{ text().verify }}</h2>
-  <p class="verify-lede">{{ text().verifyLede }} <a [href]="checksums">SHA256SUMS.txt</a>.</p>
-  <div class="sums">
-    <table>
-      <caption class="visually-hidden">
-        {{ text().verify }}
-      </caption>
-      <thead>
-        <tr>
-          <th scope="col">{{ text().file }}</th>
-          <th scope="col">{{ text().size }}</th>
-          <th scope="col">SHA-256</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (file of files(); track file.file) {
-        <tr>
-          <th scope="row">
-            <code>{{ file.file }}</code>
-          </th>
-          <td>{{ file.size }}</td>
-          <td>
-            <code class="hash">{{ file.sha256 }}</code>
-          </td>
-        </tr>
-        }
-      </tbody>
-    </table>
+<section class="sec" aria-labelledby="verify-h">
+  <div class="sec-h col">
+    <h2 id="verify-h"><b>03</b> / {{ text().verify }}</h2>
+    <span>SHA-256</span>
   </div>
-  <app-doc-blocks [blocks]="check()" />
+  <div class="verify col">
+    <p class="verify-lede">{{ text().verifyLede }} <a [href]="checksums">SHA256SUMS.txt</a>.</p>
+    <div class="sums">
+      <table>
+        <caption class="visually-hidden">
+          {{ text().verify }}
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">{{ text().file }}</th>
+            <th scope="col">{{ text().size }}</th>
+            <th scope="col">SHA-256</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (file of files(); track file.file) {
+          <tr>
+            <th scope="row">
+              <code>{{ file.file }}</code>
+            </th>
+            <td>{{ file.size }}</td>
+            <td>
+              <code class="hash">{{ file.sha256 }}</code>
+            </td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <app-doc-blocks [blocks]="check()" />
+  </div>
 </section>
 
-<section class="wrap after" aria-labelledby="after-h">
-  <h2 id="after-h">{{ text().after }}</h2>
-  <ul class="facts">
+<section class="sec" aria-labelledby="after-h">
+  <div class="sec-h col">
+    <h2 id="after-h"><b>04</b> / {{ text().after }}</h2>
+  </div>
+  <ul class="facts cells">
     <li>
       <h3>{{ text().updates }}</h3>
       <p>{{ text().updatesText }}</p>

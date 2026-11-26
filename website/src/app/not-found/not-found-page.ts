@@ -8,6 +8,7 @@ import { docPath } from '../docs/doc-index';
 
 const FR = {
   title: 'Page introuvable · DevNotes',
+  label: 'Page introuvable',
   description: "Cette page n'existe pas. La documentation et le téléchargement de DevNotes sont toujours là.",
   heading: "Cette page n'existe pas.",
   lede: "L'adresse a peut-être changé. La documentation et le téléchargement sont toujours là.",
@@ -17,6 +18,7 @@ const FR = {
 
 const EN: typeof FR = {
   title: 'Page not found · DevNotes',
+  label: 'Page not found',
   description: 'This page does not exist. The DevNotes documentation and download are still there.',
   heading: 'This page does not exist.',
   lede: 'The address may have changed. The documentation and the download are still there.',
@@ -30,13 +32,17 @@ const TEXT: Readonly<Record<Lang, typeof FR>> = { fr: FR, en: EN };
   selector: 'app-not-found-page',
   imports: [RouterLink],
   template: `
-    <section class="wrap lost" aria-labelledby="lost-h">
-      <span class="chip">404</span>
-      <h1 id="lost-h">{{ text().heading }}</h1>
-      <p class="lede">{{ text().lede }}</p>
-      <div class="cta-row">
-        <a class="btn btn-primary" [routerLink]="home()">{{ text().home }}</a>
-        <a class="btn btn-ghost" [routerLink]="docs()">{{ text().docs }}</a>
+    <section class="sec" aria-labelledby="lost-h">
+      <div class="sec-h col">
+        <span><b>404</b> / {{ text().label }}</span>
+      </div>
+      <div class="lost col">
+        <h1 id="lost-h">{{ text().heading }}</h1>
+        <p class="lede">{{ text().lede }}</p>
+        <div class="cta-row">
+          <a class="btn btn-primary" [routerLink]="home()">{{ text().home }}</a>
+          <a class="btn btn-ghost" [routerLink]="docs()">{{ text().docs }}</a>
+        </div>
       </div>
     </section>
   `,
@@ -45,15 +51,7 @@ const TEXT: Readonly<Record<Lang, typeof FR>> = { fr: FR, en: EN };
       display: grid;
       gap: 22px;
       justify-items: start;
-      padding-block: clamp(64px, 12vw, 160px) 0;
-    }
-
-    .chip {
-      padding: 4px 10px;
-      border-radius: 999px;
-      border: 1px solid var(--line);
-      color: var(--text-2);
-      font: 600 13px var(--font-mono);
+      padding-block: clamp(56px, 10vw, 128px);
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,

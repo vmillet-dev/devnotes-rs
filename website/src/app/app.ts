@@ -21,6 +21,21 @@ import { SiteHeader } from './shell/site-header';
     <app-site-footer />
   `,
   styles: `
+    /* The two hairlines of the construction grid, down every page, header and footer included. */
+    :host {
+      position: relative;
+      display: block;
+    }
+
+    :host::before {
+      content: '';
+      position: absolute;
+      inset: 0 var(--gr) 0 var(--gl);
+      z-index: 1;
+      border-inline: 1px solid var(--line-soft);
+      pointer-events: none;
+    }
+
     .skip-link {
       position: absolute;
       left: 16px;

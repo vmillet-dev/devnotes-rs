@@ -1,21 +1,18 @@
 // The sidebar is drawn as the application's rail of spaces; the page, as a note opened beside it.
-// Three columns kept together and centred: on a large screen the page grows wider and its text
-// larger, rather than drifting apart.
+// Three cells of the grid, the page between two hairlines: on a large screen it grows wider and its
+// text larger, rather than drifting apart.
 .docs {
   display: grid;
-  grid-template-columns: minmax(220px, 264px) minmax(0, 62rem) minmax(180px, 220px);
-  justify-content: center;
-  gap: clamp(28px, 3.5vw, 64px);
-  max-width: clamp(86rem, 92vw, 120rem);
-  padding-top: clamp(28px, 4vw, 48px);
+  grid-template-columns: minmax(220px, 264px) minmax(0, 1fr) minmax(180px, 220px);
 }
 
 .side,
 .toc {
   position: sticky;
-  top: calc(var(--head-h) + 24px);
+  top: var(--head-h);
+  padding: 28px clamp(14px, 1.4vw, 22px);
   align-self: start;
-  max-height: calc(100vh - var(--head-h) - 48px);
+  max-height: calc(100vh - var(--head-h));
   overflow-y: auto;
 }
 
@@ -151,6 +148,8 @@
 
 .article {
   min-width: 0;
+  padding: clamp(28px, 4vw, 48px) clamp(20px, 3.4vw, 56px) 72px;
+  border-inline: 1px solid var(--line-soft);
   font-size: clamp(16px, 0.3vw + 11px, 18px);
   display: grid;
   gap: 22px;
@@ -263,7 +262,10 @@
 @media (max-width: 1200px) {
   .docs {
     grid-template-columns: 220px minmax(0, 1fr);
-    justify-content: stretch;
+  }
+
+  .article {
+    border-right: 0;
   }
 
   .toc {
@@ -274,13 +276,18 @@
 @media (max-width: 860px) {
   .docs {
     grid-template-columns: minmax(0, 1fr);
-    gap: 20px;
   }
 
   .side {
     position: static;
     max-height: none;
     overflow: visible;
+    padding-block: 20px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .article {
+    border-left: 0;
   }
 
   .side-toggle {

@@ -1,0 +1,373 @@
+@let w = words(); @switch (scene()) { @case ('list') {
+<div class="duo">
+  <article class="piece" style="width: min(100%, 420px)">
+    <header class="piece-h">
+      <span class="kind k-list"><app-kind-icon name="list" /></span>
+      <b>{{ w.list.title }}</b><span class="tag-r">{{ w.list.priority }}</span>
+    </header>
+    <div class="piece-b">
+      <div class="bar"><i style="--to: 33.3%; --d: 3s"></i></div>
+      <div class="item in" style="--d: 0.2s">
+        <i class="tick done" style="--d: 3s"></i
+        ><span class="strike" style="--d: 3s"
+          ><span class="rv" style="--d: 0.3s; --t: 0.6s">{{ w.list.items[0] }}</span></span
+        >
+      </div>
+      <div class="item in" style="--d: 1s">
+        <i class="tick"></i><span class="rv" style="--d: 1.1s; --t: 0.6s">{{ w.list.items[1] }}</span>
+      </div>
+      <div class="item in" style="--d: 1.8s">
+        <i class="tick"></i><span class="rv" style="--d: 1.9s; --t: 0.6s">{{ w.list.items[2] }}</span>
+      </div>
+    </div>
+  </article>
+  <article class="piece mini pop" style="--d: 3.7s">
+    <header class="piece-h">
+      <span class="kind k-list"><app-kind-icon name="list" /></span><b>{{ w.list.title }}</b>
+    </header>
+    <div class="piece-b">
+      <div class="bar"><i style="--to: 33.3%; --d: 4.1s"></i></div>
+      <div class="item">
+        <i class="tick done" style="--d: 4.1s"></i
+        ><span class="strike" style="--d: 4.1s">{{ w.list.items[0] }}</span>
+      </div>
+      <div class="item"><i class="tick"></i><span>{{ w.list.items[1] }}</span></div>
+    </div>
+    <footer><span>{{ w.list.space }}</span><span>1/3</span></footer>
+  </article>
+</div>
+} @case ('snippet') {
+<div class="stack" style="width: min(100%, 540px)">
+  <div class="piece pal win" style="--d: 0s; --len: 3.3s">
+    <div class="pal-in">
+      <span class="ty mono" style="--d: 0.35s; --t: 0.6s">{{ w.snippet.query }}</span><i class="caret"></i>
+    </div>
+    <p class="label">{{ w.snippet.group }}</p>
+    <div class="found in" style="--d: 1.1s">
+      <span class="kind k-snip"><app-kind-icon name="snip" /></span>
+      <span class="name">{{ w.snippet.title }}<em>{{ w.snippet.fields }}</em></span>
+      <kbd class="press" style="--d: 2.4s">↵</kbd>
+      <span class="mono"
+        >kubectl rollout restart deployment/{{ field('service') }} -n {{ field('namespace') }}</span
+      >
+    </div>
+    <div class="pal-keys">
+      <span><kbd>↑</kbd><kbd>↓</kbd>{{ w.snippet.keys[0] }}</span>
+      <span><kbd>↵</kbd>{{ w.snippet.keys[1] }}</span>
+      <span><kbd>Ctrl</kbd><kbd>C</kbd>{{ w.snippet.keys[2] }}</span>
+      <span><kbd>Esc</kbd>{{ w.snippet.keys[3] }}</span>
+    </div>
+  </div>
+  <div class="piece fields win" style="--d: 3.3s; --len: 3.5s">
+    <h4>{{ w.snippet.form }}</h4>
+    <p>{{ w.snippet.hint }}</p>
+    <div class="field">
+      <code>{{ field('service') }}</code
+      ><span class="value mono"
+        ><span class="ty" style="--d: 3.8s; --t: 0.6s">{{ w.snippet.service }}</span></span
+      >
+    </div>
+    <div class="field">
+      <code>{{ field('namespace') }}</code
+      ><span class="value mono"
+        ><span class="ty" style="--d: 4.6s; --t: 0.4s">{{ w.snippet.namespace }}</span></span
+      >
+    </div>
+    <div class="buttons">
+      <span>{{ w.snippet.cancel }}</span
+      ><span class="btn-a press" style="--d: 5.7s">{{ w.snippet.copy }}</span>
+    </div>
+  </div>
+  <div class="term in" style="--d: 6.9s">
+    <p class="label">Terminal</p>
+    <span class="prompt">$</span>{{ terminal() }}<i class="caret"></i>
+    <span class="toast pop" style="--d: 7s"><app-kind-icon name="check" />{{ w.copied }}</span>
+  </div>
+</div>
+} @case ('drawing') {
+<article class="piece" style="width: min(100%, 680px)">
+  <header class="piece-h">
+    <span class="kind k-draw"><app-kind-icon name="draw" /></span><b>{{ w.drawing.title }}</b>
+  </header>
+  <svg class="drawing" viewBox="0 0 660 300">
+    <defs>
+      <marker
+        id="piece-head"
+        class="head"
+        viewBox="0 0 10 10"
+        refX="8"
+        refY="5"
+        markerWidth="7"
+        markerHeight="7"
+        orient="auto"
+      >
+        <path d="M0 0 10 5 0 10z" />
+      </marker>
+    </defs>
+    <g class="shape s0 pop" style="--d: 0.2s">
+      <rect x="20" y="125" width="110" height="46" rx="6" />
+      <text x="75" y="153">{{ w.drawing.browser }}</text>
+    </g>
+    <g class="shape s1 pop" style="--d: 0.4s">
+      <rect x="180" y="118" width="120" height="60" rx="6" />
+      <text x="240" y="144">{{ w.drawing.balancer[0] }}</text>
+      <text x="240" y="162">{{ w.drawing.balancer[1] }}</text>
+    </g>
+    <g class="shape s2 pop" style="--d: 0.6s">
+      <rect x="360" y="50" width="120" height="46" rx="6" />
+      <text x="420" y="78">{{ w.drawing.api[0] }}</text>
+    </g>
+    <g class="shape s2 pop" style="--d: 0.7s">
+      <rect x="360" y="200" width="120" height="46" rx="6" />
+      <text x="420" y="228">{{ w.drawing.api[1] }}</text>
+    </g>
+    <g class="dragged">
+      <g class="shape s3 pop" style="--d: 0.9s">
+        <ellipse cx="570" cy="148" rx="56" ry="28" />
+        <text x="570" y="153">Postgres</text>
+      </g>
+    </g>
+    <path class="arrow" pathLength="1" style="--d: 1.3s" d="M130 148 L174 148" />
+    <path class="arrow" pathLength="1" style="--d: 1.45s" d="M300 140 L354 80" />
+    <path class="arrow" pathLength="1" style="--d: 1.55s" d="M300 156 L354 216" />
+    <path class="arrow held-1" pathLength="1" style="--d: 1.75s" d="M480 73 L522 132" />
+    <path class="arrow held-2" pathLength="1" style="--d: 1.85s" d="M480 223 L522 164" />
+    <text class="note in" x="240" y="204" style="--d: 2.3s">{{ w.drawing.note }}</text>
+    <g class="cursor"><path d="M0 0 L0 17 L4.6 12.6 L7.6 19.4 L10.4 18.2 L7.4 11.6 L13 11.6 Z" /></g>
+  </svg>
+  <div class="piece-f">
+    <span class="export pop" style="--d: 5s">{{ w.drawing.exports[0] }}</span>
+    <span class="export pop" style="--d: 5.15s">{{ w.drawing.exports[1] }}</span>
+  </div>
+</article>
+} @case ('request') {
+<article class="piece" style="width: min(100%, 660px)">
+  <header class="piece-h">
+    <span class="kind k-http"><app-kind-icon name="http" /></span><b>{{ w.request.title }}</b
+    ><span class="env"><i></i>{{ w.request.env }}</span>
+  </header>
+  <div class="piece-b">
+    <div class="url">
+      <span class="verb">GET</span
+      ><span class="address"
+        ><span class="ph" style="--d: 2.2s">{{ field('baseUrl') }}</span
+        ><span class="ty" style="--d: 2.45s; --t: 0.7s">{{ w.request.host }}</span>{{ w.request.path }}</span
+      ><span class="btn-a press" style="--d: 3.7s">{{ w.request.send }}</span>
+    </div>
+    <div class="chain">
+      <b>baseUrl</b>
+      @for (link of w.request.links; track link; let i = $index) {
+      <span class="link miss" [style.--d]="0.4 + i * 0.35 + 's'">{{ link }}</span>
+      }
+      <span class="link hit" style="--d: 1.5s">{{ w.request.found }}</span>
+    </div>
+    <div class="answer">
+      <div class="stack">
+        <span class="sending win" style="--d: 3.85s; --len: 0.7s">{{ w.request.sending }}</span>
+        <span class="status in" style="--d: 4.5s"
+          ><b>200 OK</b><span>84 ms</span><span>{{ w.request.size }}</span></span
+        >
+      </div>
+      <div class="body mono in" style="--d: 4.8s">[]</div>
+    </div>
+  </div>
+</article>
+} @case ('jwt') {
+<article class="piece" style="width: min(100%, 660px)">
+  <header class="piece-h">
+    <span class="kind k-tool"><app-kind-icon name="tool" /></span><span class="dim">{{ w.jwt.tools }}</span
+    ><b>JWT</b>
+  </header>
+  <div class="piece-b">
+    <p class="label">{{ w.jwt.input }}</p>
+    <div class="token rv" style="--d: 0.2s; --t: 0.9s">
+      <span class="t1">eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9</span>.<span class="t2">{{ w.jwt.load }}</span
+      >.<span class="t3">Qm9xJ3n7t1aVYkq8vS0dW2cH5rLx4uEoZpN6fGyTbM</span>
+    </div>
+    <div class="parts">
+      <div class="part head in" style="--d: 1.3s">
+        <p class="label">{{ w.jwt.header }}</p>
+        <div class="mono">{{ header }}</div>
+      </div>
+      <div class="part load in" style="--d: 1.6s">
+        <p class="label">{{ w.jwt.payload }}</p>
+        <div class="mono">{{ claims() }}</div>
+      </div>
+    </div>
+    <div class="dates">
+      <span class="in" style="--d: 2.3s">{{ w.jwt.issued }}</span
+      ><span class="mono in" style="--d: 2.3s">2026-11-26T11:18:00Z</span>
+      <span class="in" style="--d: 2.5s">{{ w.jwt.expires }}</span
+      ><span class="mono in" style="--d: 2.5s">2026-11-26T12:18:00Z</span>
+    </div>
+    <span class="state pop" style="--d: 3.1s">{{ w.jwt.state }}</span>
+  </div>
+</article>
+} @case ('diff') {
+<article class="piece" style="width: min(100%, 720px)">
+  <header class="piece-h">
+    <span class="kind k-tool"><app-kind-icon name="tool" /></span><span class="dim">{{ w.jwt.tools }}</span
+    ><b>Diff</b>
+    <span class="counts"
+      ><span class="plus pop" style="--d: 3s">{{ w.diff.plus }}</span
+      ><span class="minus pop" style="--d: 3.1s">{{ w.diff.minus }}</span></span
+    >
+  </header>
+  <div class="sides">
+    <div class="was">
+      <p class="side-h">{{ w.diff.was }}</p>
+      <div class="line"><u>1</u><s>{{ open }}</s></div>
+      <div class="line ch" style="--d: 0.8s">
+        <u>2</u><s>{{ indent }}listen <em style="--d: 2.2s">80</em>;</s>
+      </div>
+      <div class="line ch" style="--d: 1.1s"><u>3</u><s>{{ indent }}server_name devnotes.fr;</s></div>
+      <div class="line"><u>4</u><s>{{ indent }}root /var/www/devnotes;</s></div>
+      <div class="line ch" style="--d: 1.4s">
+        <u>5</u><s>{{ indent }}gzip <em style="--d: 2.4s">off</em>;</s>
+      </div>
+      <div class="line gap" style="--d: 1.7s"><u></u><s> </s></div>
+      <div class="line"><u>6</u><s>{{ close }}</s></div>
+    </div>
+    <div class="now">
+      <p class="side-h">{{ w.diff.now }}</p>
+      <div class="line"><u>1</u><s>{{ open }}</s></div>
+      <div class="line ch" style="--d: 0.8s">
+        <u>2</u><s>{{ indent }}listen <em style="--d: 2.2s">443 ssl</em>;</s>
+      </div>
+      <div class="line ch" style="--d: 1.1s">
+        <u>3</u><s>{{ indent }}server_name devnotes.fr<em style="--d: 2.3s"> www.devnotes.fr</em>;</s>
+      </div>
+      <div class="line"><u>4</u><s>{{ indent }}root /var/www/devnotes;</s></div>
+      <div class="line ch" style="--d: 1.4s">
+        <u>5</u><s>{{ indent }}gzip <em style="--d: 2.4s">on</em>;</s>
+      </div>
+      <div class="line add" style="--d: 1.7s">
+        <u>6</u><s>{{ indent }}ssl_certificate /etc/ssl/devnotes.pem;</s>
+      </div>
+      <div class="line"><u>7</u><s>{{ close }}</s></div>
+    </div>
+  </div>
+</article>
+} @case ('search') {
+<div class="piece" style="width: min(100%, 580px)">
+  <div class="find">
+    <app-kind-icon name="search" /><span class="rv" style="--d: 0.3s; --t: 0.8s">{{ w.search.query }}</span
+    ><span class="count pop" style="--d: 1.7s">{{ w.search.count }}</span>
+  </div>
+  <div class="rows">
+    @for (row of searchRows(); track row.title; let i = $index) { @if (i === 1) {
+    <div class="row">
+      <span class="kind k-snip"><app-kind-icon name="snip" /></span>
+      <b
+        >{{ w.search.match[0] }}<mark class="hit" style="--d: 1.5s">{{ w.search.match[1] }}</mark>{{
+        w.search.match[2] }}</b
+      >
+      <span class="where">{{ row.where }}</span>
+      <span class="cite mono" style="--d: 1.7s"
+        >{{ w.search.cite[0] }}<mark class="hit" style="--d: 1.95s">{{ w.search.cite[1] }}</mark>{{
+        w.search.cite[2] }}</span
+      >
+    </div>
+    } @else {
+    <div class="row gone" [style.--d]="1.3 + i * 0.05 + 's'">
+      <span class="kind" [class]="'k-' + row.kind"><app-kind-icon [name]="row.kind" /></span>
+      <b>{{ row.title }}</b><span class="where">{{ row.where }}</span>
+    </div>
+    } }
+  </div>
+</div>
+} @case ('calc') {
+<article class="piece" style="width: min(100%, 560px)">
+  <header class="piece-h">
+    <span class="kind k-calc"><app-kind-icon name="calc" /></span><b>{{ w.calc.title }}</b>
+  </header>
+  <div class="piece-b calc">
+    <u>1</u><span class="rv" style="--d: 0.2s; --t: 0.5s">{{ w.calc.train }}</span
+    ><b class="in" style="--d: 0.8s">{{ w.calc.results[0] }}</b> <u>2</u
+    ><span class="rv" style="--d: 1s; --t: 0.5s"
+      >{{ w.calc.hotel[0] }}<span class="swap"
+        ><span class="o" style="--d: 4s">{{ w.calc.hotel[1] }}</span
+        ><span class="in" style="--d: 4.2s">{{ w.calc.hotel[2] }}</span></span
+      >{{ w.calc.hotel[3] }}</span
+    ><b class="swap"
+      ><span class="o2" style="--d: 1.6s; --d2: 4.5s">{{ w.calc.results[1] }}</span
+      ><span class="in" style="--d: 4.6s">{{ w.calc.results[2] }}</span></b
+    >
+    <u>3</u><span class="rv" style="--d: 1.8s; --t: 0.5s">{{ w.calc.meals }}</span
+    ><b class="in" style="--d: 2.4s">{{ w.calc.results[3] }}</b> <u>4</u
+    ><span class="rv" style="--d: 2.6s; --t: 0.7s">{{ w.calc.total }}</span
+    ><b class="swap sum flash" style="--d: 4.8s"
+      ><span class="o2" style="--d: 3.4s; --d2: 4.8s">{{ w.calc.results[4] }}</span
+      ><span class="in" style="--d: 4.9s">{{ w.calc.results[5] }}</span></b
+    >
+  </div>
+</article>
+} @case ('note') {
+<div class="stack" style="width: min(100%, 560px)">
+  <article class="piece win" style="--d: 0s; --len: 4.6s">
+    <header class="piece-h">
+      <span class="kind k-note"><app-kind-icon name="note" /></span><b>{{ w.note.title }}</b
+      ><span class="tag-r">{{ w.note.tag }}</span>
+    </header>
+    <div class="piece-b md">
+      <h4 class="rv" style="--d: 0.2s; --t: 0.5s">{{ w.note.heading }}</h4>
+      <p class="in" style="--d: 0.7s">{{ w.note.lead[0] }}<b>{{ w.note.lead[1] }}</b>{{ w.note.lead[2] }}</p>
+      <ol>
+        <li class="in" style="--d: 1s">
+          {{ w.note.first[0] }}<code>{{ w.note.first[1] }}</code>{{ w.note.first[2] }}
+        </li>
+        <li class="in" style="--d: 1.25s">{{ w.note.steps[0] }}</li>
+        <li class="in" style="--d: 1.5s">{{ w.note.steps[1] }}</li>
+      </ol>
+      <table class="in" style="--d: 1.9s">
+        <tbody>
+          <tr>
+            <th>{{ w.note.head[0] }}</th>
+            <th>{{ w.note.head[1] }}</th>
+          </tr>
+          @for (row of w.note.rows; track row[0]) {
+          <tr>
+            <td>{{ row[0] }}</td>
+            <td>{{ row[1] }}</td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </article>
+  <article class="piece win" style="--d: 4.6s; --len: 2.8s">
+    <header class="piece-h">
+      <span class="kind k-note"><app-kind-icon name="note" /></span><b>{{ w.note.saved }}</b>
+    </header>
+    <div class="piece-b mono">{{ w.note.markdown }}</div>
+  </article>
+  <div class="slide in" style="--d: 7.4s">
+    <p class="label">{{ w.note.present }}</p>
+    <h4>{{ w.note.heading }}</h4>
+    <ol>
+      <li>{{ w.note.first[0] }}{{ w.note.first[1] }}{{ w.note.first[2] }}</li>
+      <li>{{ w.note.steps[0] }}</li>
+      <li>{{ w.note.steps[1] }}</li>
+    </ol>
+  </div>
+</div>
+} @case ('lock') {
+<article class="piece" style="width: min(100%, 540px)">
+  <header class="piece-h">
+    <span class="lock"
+      ><svg viewBox="0 0 24 24" aria-hidden="true">
+        <rect width="18" height="11" x="3" y="11" rx="2" />
+        <path class="o" style="--d: 1.1s" d="M7 11V7a5 5 0 0 1 9.9-1" />
+        <path class="in" style="--d: 1.15s" d="M7 11V7a5 5 0 0 1 10 0v4" /></svg></span
+    ><b>{{ w.lock.library }}</b><span class="tag-r pop" style="--d: 2.6s">{{ w.lock.state }}</span>
+  </header>
+  <div class="piece-b">
+    @for (row of w.lock.rows; track row[0]; let i = $index) {
+    <div class="kept">
+      <span class="sealed" [style.--d]="1.4 + i * 0.2 + 's'">{{ row[0] }}</span
+      ><span class="tag">{{ row[1] }}</span><time>{{ row[2] }}</time>
+    </div>
+    }
+  </div>
+</article>
+} }
