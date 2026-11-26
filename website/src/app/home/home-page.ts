@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 
 import { Lang, downloadPath, homePath } from '../core/lang';
 import { Language } from '../core/language';
-import { RELEASE_PAGE, System, VERSION, offers, systems, visitorSystem } from '../core/release';
+import { Offer, RELEASE_PAGE, System, VERSION, offers, systems, visitorSystem } from '../core/release';
 import { Seo } from '../core/seo';
 import { REPOSITORY, absolute } from '../core/site';
 import { ThemeStore } from '../core/theme.store';
@@ -244,5 +244,14 @@ export class HomePage {
 
   protected srcset(theme: 'dark' | 'light'): string {
     return SHOT.widths.map((width) => `${this.file(theme, width)} ${width}w`).join(', ');
+  }
+
+  /**
+   * What the button's file is: its size, and for a Mac its chip, since the browser does not say
+   * which a Mac has. An Intel Mac finds its own file on the download page.
+   */
+  protected note(offer: Offer): string {
+    const parts = offer.system === 'macos' ? [offer.primary.name, offer.primary.size] : [offer.primary.size];
+    return parts.filter(Boolean).join(', ');
   }
 }

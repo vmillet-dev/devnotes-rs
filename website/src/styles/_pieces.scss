@@ -943,7 +943,7 @@
 
 .anim .line.add,
 .anim .line.gap {
-  max-height: 0;
+  opacity: 0;
 }
 
 .run .was .line.ch,
@@ -959,11 +959,11 @@
 .run .line.add {
   animation:
     piece-green 0.3s ease var(--d, 0s) forwards,
-    piece-open 0.35s var(--ease-out) var(--d, 0s) forwards;
+    piece-show 0.35s var(--ease-out) var(--d, 0s) forwards;
 }
 
 .run .line.gap {
-  animation: piece-open 0.35s var(--ease-out) var(--d, 0s) forwards;
+  animation: piece-show 0.35s var(--ease-out) var(--d, 0s) forwards;
 }
 
 .run .line em {
@@ -982,9 +982,9 @@
   }
 }
 
-@keyframes piece-open {
+@keyframes piece-show {
   to {
-    max-height: 24px;
+    opacity: 1;
   }
 }
 
@@ -1024,6 +1024,11 @@
   overflow: hidden;
 }
 
+// The list keeps the room of the rows the search folds away: nothing under the scene moves.
+.scene .rows {
+  min-height: 248px;
+}
+
 .scene .rows .row:first-child {
   border-top: 0;
 }
@@ -1042,7 +1047,6 @@
 
 .scene .row .cite {
   grid-column: 2 / -1;
-  max-height: 30px;
 }
 
 .scene .row.gone {
@@ -1070,7 +1074,6 @@
 }
 
 .anim .row .cite {
-  max-height: 0;
   opacity: 0;
 }
 
@@ -1084,7 +1087,7 @@
 }
 
 .run .row .cite {
-  animation: piece-cite 0.35s var(--ease-out) var(--d, 0s) forwards;
+  animation: piece-show 0.35s var(--ease-out) var(--d, 0s) forwards;
 }
 
 .run .hit {
@@ -1097,13 +1100,6 @@
     padding-block: 0;
     border-top-width: 0;
     opacity: 0;
-  }
-}
-
-@keyframes piece-cite {
-  to {
-    max-height: 30px;
-    opacity: 1;
   }
 }
 

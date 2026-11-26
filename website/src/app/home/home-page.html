@@ -10,8 +10,8 @@
       @if (offer(); as get) {
       <div class="cta-row">
         <a class="btn btn-primary" [href]="get.primary.url"
-          >{{ text.downloadFor }} {{ get.label }} @if (get.primary.size) {
-          <small>{{ get.primary.size }}</small>
+          >{{ text.downloadFor }} {{ get.label }} @if (note(get); as says) {
+          <small>{{ says }}</small>
           }
         </a>
         <a class="btn btn-ghost" [routerLink]="downloadPath()">{{ text.others }}</a>
@@ -81,8 +81,8 @@
     </div>
     @if (offer(); as get) {
     <a class="btn btn-primary" [href]="get.primary.url"
-      >{{ text.downloadFor }} {{ get.label }} @if (get.primary.size) {
-      <small>{{ get.primary.size }}</small>
+      >{{ text.downloadFor }} {{ get.label }} @if (note(get); as says) {
+      <small>{{ says }}</small>
       }
     </a>
     }

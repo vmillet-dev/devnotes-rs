@@ -252,10 +252,6 @@
   .facts {
     grid-template-columns: minmax(0, 1fr);
   }
-
-  .system.yours {
-    order: 0;
-  }
 }
 
 // A phone: each file on two lines, its fingerprint wrapped under its name rather than off-screen.
