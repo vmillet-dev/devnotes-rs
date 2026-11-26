@@ -1,4 +1,4 @@
-//! The look of the application (plan § 3.7): the reference's tokens, the two themes and the two
+//! The look of the application: the reference's tokens, the two themes and the two
 //! densities, and the egui `Style` drawn from them. A widget reads its colours from
 //! [`palette`] and its gaps from [`spacing`], never a literal.
 

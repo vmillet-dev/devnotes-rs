@@ -1,6 +1,6 @@
 # Releasing
 
-Before a release, pass the manual checklist (`docs/recette/recette.html`, plan § 8.5) on both operating systems.
+Before a release, pass the manual checklist (`docs/recette/recette.html`) on both operating systems.
 
 A release is a `workflow_dispatch`. One run writes the changelog, commits it, tags, builds
 every bundle and publishes — there is no step to do by hand between them, and no partial
@@ -18,10 +18,11 @@ state to clean up if it stops.
    says the same for `app`. It checks that **before the tag exists**, so a mismatch costs a
    re-run rather than a deleted tag.
 
-2. **Actions → Release → Run workflow, with `dry_run` checked.** It prints the notes it
-   would write to the run summary, builds and signs the packages (kept as the run's
-   artifacts), and changes nothing. Read the notes: this is the only moment where a misfiled
-   entry is free to fix.
+2. **Actions → Release → Run workflow, with `dry_run` checked.** In about a minute, the run's
+   summary shows what the release would change and with what: the version and the commit it
+   leaves from, the diff of `CHANGELOG.md`, the commit and the tag, the files, the notes of the
+   update prompt, and the pull request behind each entry. It builds nothing and changes nothing.
+   Read it: this is the only moment where a misfiled entry is free to fix.
 
 3. **Run it again unchecked.** It writes the `CHANGELOG.md` section, commits it, tags,
    builds the packages and publishes the release.
@@ -29,7 +30,7 @@ state to clean up if it stops.
 4. **Nothing to do for the website.** `website.yml` runs when the release run completes and
    publishes the site again: its download page offers the files of the latest release, whose
    version, sizes and SHA-256 `website/scripts/fetch-release.mjs` reads at build time. A dry run
-   publishes nothing new: the latest release is still the same. → "The website" in
+   does not start it. → "The website" in
    `docs/architecture.md`.
 
 ## A version on a branch of its own
@@ -88,6 +89,12 @@ entry — so a surprise in the summary tells you which of the four fired.
 Beyond GitHub's defaults, the labels worth reaching for are `change` (behaviour that already
 existed and now differs), `security` and `removal`.
 
+**The update prompt shows the sections a user can see**, so `enhancement`, `change`, `bug` and
+`removal` are for what someone using the application notices. A fix to the CI, the tests, the
+scripts, the release or the site wears `test`, `refactor`, `documentation` or `website`: filed
+under « Under the hood », it is in `CHANGELOG.md` and on the release page, and out of the prompt.
+The dry run says, entry by entry, whether the prompt shows it.
+
 The sections, in their order: ✨ Added, 🔧 Changed, 🐛 Fixed, 🗑️ Removed, 🔒 Security,
 🧰 Under the hood, 📦 Dependencies. The last one holds the pull requests labelled
 `dependencies` — Dependabot applies that label itself — and nothing else. When a pull request
@@ -116,6 +123,10 @@ what the build left in `target/release`. Its configuration is `[package.metadata
 - **Linux** — the AppImage (`devnotes_<version>_x86_64.AppImage`), the `.deb` (by
   `cargo-packager`), the `.rpm` (by `cargo-generate-rpm`, `[package.metadata.generate-rpm]`),
   and the standalone binary (`devnotes-<version>-linux`).
+- **macOS** — one `.dmg` per architecture (`devnotes_<version>_aarch64.dmg` for Apple Silicon,
+  `devnotes_<version>_x64.dmg` for Intel), and the archive the updater installs beside each
+  (`….app.tar.gz`). Signed ad hoc. A macOS build that fails leaves the release without its files,
+  and the site without its offer, and holds nothing else back.
 
 Plus `SHA256SUMS.txt` over all of them, and `latest.json` — the manifest the in-app updater
 reads, written by `scripts/latest-json.mjs`. Neither package needs WebView2 or WebKitGTK any
@@ -151,4 +162,6 @@ release is published last. A failure before the tag leaves nothing to undo but a
 commit.
 
 A failure after the tag is the awkward one: delete the tag and the draft release, then run
-again. This is what the dry run exists to avoid.
+again. The dry run builds nothing, so what keeps it from happening is CI, green on the commit;
+`packages.yml`, on every pull request that touches packaging (packages, signatures and an update,
+with a key made for the run); and `prepare`, which refuses a release whose signing key is not set.

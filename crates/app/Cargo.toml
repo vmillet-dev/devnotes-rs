@@ -14,7 +14,7 @@ publish = false
 name = "devnotes"
 path = "src/main.rs"
 
-# The packages of a release (plan § 4.3, D8, D26): `cargo packager -p app --release`, after
+# The packages of a release (D8, D26): `cargo packager -p app --release`, after
 # `cargo build -p app --release`, which it does not run. Paths are read from this folder.
 [package.metadata.packager]
 product-name = "DevNotes"
@@ -29,6 +29,12 @@ icons = ["icons/32x32.png", "icons/128x128.png", "icons/icon.png", "icons/icon.i
 # Per user, without administrator rights: the only Windows format (D8).
 [package.metadata.packager.nsis]
 installer-mode = "currentUser"
+
+# Signed by nobody (« - »): a Mac with Apple Silicon starts no downloaded build that is not signed at
+# all. The packager makes the icon of the PNGs above.
+[package.metadata.packager.macos]
+signing-identity = "-"
+minimum-system-version = "11.0"
 
 # GTK for the tray alone (D29); xkbcommon, Vulkan and the indicator are opened at run time.
 [package.metadata.packager.deb]
@@ -72,8 +78,8 @@ profiling = { workspace = true, optional = true }
 puffin = { workspace = true, optional = true }
 puffin_http = { workspace = true, optional = true }
 
-[target.'cfg(target_os = "linux")'.dependencies]
-# The one eframe uses, for its X11 switch (D15).
+[target.'cfg(any(target_os = "linux", target_os = "macos"))'.dependencies]
+# The one eframe uses, for its X11 switch (D15) and for macOS's menu bar.
 winit.workspace = true
 
 [dev-dependencies]

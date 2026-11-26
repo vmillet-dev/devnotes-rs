@@ -1,4 +1,5 @@
-//! The dialog itself, which only a desktop can show: the OS checklist's (plan § 8.5).
+//! The dialog itself, which only a desktop can show: the OS checklist's
+//! (`docs/recette/recette.html`).
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -62,7 +63,7 @@ pub(super) fn stopped(title: &str, words: &str) {
 }
 
 /// Under Linux the dialog is the XDG portal's (D29), and without one `rfd` answers `None` like a
-/// cancel (S1): asked first, running or ready to be started by the bus.
+/// cancel: asked first, running or ready to be started by the bus.
 #[cfg(target_os = "linux")]
 fn portal_answers() -> bool {
     use zbus::blocking::{Connection, fdo::DBusProxy};

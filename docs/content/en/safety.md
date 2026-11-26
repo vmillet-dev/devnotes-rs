@@ -71,6 +71,7 @@ The database is checked at every opening. If it is damaged, DevNotes says so ins
 | System | Folder |
 | --- | --- |
 | Windows | `%APPDATA%\com.devnotes.app\` |
+| macOS | `~/Library/Application Support/com.devnotes.app/` |
 | Linux | `~/.local/share/com.devnotes.app/` |
 
 Each library lives in `libraries/<id>/`: the database, `vault.json` (the key your phrase opens), the attachments and the backup copies.

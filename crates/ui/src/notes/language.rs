@@ -28,7 +28,7 @@ struct Row {
     label: String,
     name: String,
     hue: Hue,
-    /// The grammar `text::highlight` colours it with; none is plain text (gap E11).
+    /// The grammar `text::highlight` colours it with; none is plain text.
     syntax: Option<String>,
     /// What Ctrl+/ puts before a line; none where the language has no line comment.
     comment: Option<String>,

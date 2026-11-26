@@ -1,5 +1,5 @@
 //! The vault's gate: the first screen of a launch, and of every library switch. Nothing else is
-//! drawn until the library is open (plan § 3.3.8 « Déverrouillage »).
+//! drawn until the library is open.
 
 mod draw;
 pub mod passphrase;

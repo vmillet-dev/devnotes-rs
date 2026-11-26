@@ -1,4 +1,4 @@
-//! What the review against the reference put back, over a real core (plan § 5.3).
+//! What the review against the reference put back, over a real core.
 
 use egui::{Key, Modifiers};
 use egui_kittest::Harness;

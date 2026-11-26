@@ -186,7 +186,7 @@ fn only_the_rows_in_view_of_two_thousand_requests_are_drawn() {
     assert_eq!(harness.state().state.http.rows().len(), 2_041);
 }
 
-/// The budget of § 6.2, measured by hand: `cargo test -p ui --release http_rail_budget --
+/// The budget, measured by hand: `cargo test -p ui --release http_rail_budget --
 /// --ignored --nocapture`. A frame is egui's pass, without painting.
 #[test]
 #[ignore = "a measure, not a check"]
@@ -1289,7 +1289,7 @@ fn the_line_between_request_and_answer_is_left_automatic_on_a_double_click() {
     assert_eq!(harness.state().state.settings.http_request_share, 0);
 }
 
-/// The budget of § 6.2, measured by hand: `cargo test -p ui --release http_body_budget --
+/// The budget, measured by hand: `cargo test -p ui --release http_body_budget --
 /// --ignored --nocapture`. A frame is egui's pass, without painting.
 #[test]
 #[ignore = "a measure, not a check"]

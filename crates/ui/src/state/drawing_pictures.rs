@@ -1,7 +1,7 @@
 //! A Dessin's pictures: the small one for its card, asked for once the card is drawn (a list
 //! carries none), and the large one for a Note that embeds it, asked by its id where it is shown.
-//! Decoded off the UI thread, uploaded once, and kept for the last ones shown (plan § 3.6
-//! « Images »). It is library content: it lives in `LibraryCaches`. A drawing that came with no
+//! Decoded off the UI thread, uploaded once, and kept for the last ones shown.
+//! It is library content: it lives in `LibraryCaches`. A drawing that came with no
 //! picture, as an import leaves it, has its two taken here, the first time it is shown.
 
 use std::collections::{HashMap, VecDeque};

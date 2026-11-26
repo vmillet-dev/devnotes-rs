@@ -1,4 +1,4 @@
-//! The code editor's widget (plan § 3.8): `text::Buffer` drawn line by line, only the lines on
+//! The code editor's widget: `text::Buffer` drawn line by line, only the lines on
 //! screen laid out, with a gutter, the hanging indent of wrapped lines that egui's `TextEdit`
 //! cannot do, decorations given by the caller, the IME, Tab kept in the text, and the context
 //! menu. It knows no rule of the notes: colours, field ranges and marked lines are arguments.

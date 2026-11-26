@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Whether version $1 is the one installed by `packages.yml`: the AppImage in place is that
-# version's file (Linux), or the per-user install says that version (Windows). An update under
-# Windows finishes in an installer of its own: waited for, two minutes at most.
+# version's file (Linux), the application says that version and is whole (macOS), or the per-user
+# install says it (Windows). An update under Windows finishes in an installer of its own: waited for,
+# two minutes at most.
 set -euo pipefail
 expected=$1
 case "$expected" in
@@ -16,6 +17,17 @@ if [ "$RUNNER_OS" = Linux ]; then
   have=$(sha256sum "$installed" | cut -d' ' -f1)
   if [ "$want" != "$have" ] || [ ! -x "$installed" ]; then
     echo "::error::the AppImage in place is not $expected"
+    exit 1
+  fi
+  echo "installed: $expected"
+  exit 0
+fi
+
+if [ "$RUNNER_OS" = macOS ]; then
+  app="$RUNNER_TEMP/installed/DevNotes.app"
+  found=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app/Contents/Info.plist")
+  if [ "$found" != "$expected" ] || [ ! -x "$app/Contents/MacOS/devnotes" ]; then
+    echo "::error::the application in place is '$found', expected $expected"
     exit 1
   fi
   echo "installed: $expected"

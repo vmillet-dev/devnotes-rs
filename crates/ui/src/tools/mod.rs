@@ -1,4 +1,4 @@
-//! The Tools area: its rail beside the home or the tool open (plan § 7 « Phase 7 »). A tool is a
+//! The Tools area: its rail beside the home or the tool open. A tool is a
 //! session of its own, in memory alone and gone with the library: one left and found again is as
 //! it was.
 

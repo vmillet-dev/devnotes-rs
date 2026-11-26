@@ -1,6 +1,6 @@
 //! A Textbox's lines (D23). Fabric works them out at render time from the stored width: this is
 //! its `_wrapLine`, once, for the editor and the pictures alike. It measures by the advances of
-//! the embedded fonts, where a browser kerns: a word can break earlier or later (E14).
+//! the embedded fonts, where a browser kerns: a word can break earlier or later.
 
 use std::sync::Arc;
 

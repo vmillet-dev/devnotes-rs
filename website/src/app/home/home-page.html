@@ -1,183 +1,106 @@
-<section class="hero" aria-labelledby="hero-h">
-  <div class="wrap hero-text">
-    <h1 id="hero-h">{{ t().headline }}</h1>
+@let text = t();
+<section class="sec" id="app" aria-labelledby="hero-h">
+  <div class="sec-h col">
+    <span><b>01</b> / {{ text.section }}</span><span>Version {{ version }}</span>
+  </div>
+  <div class="hero col">
+    <h1 id="hero-h">{{ text.headline }}</h1>
     <div class="hero-side">
-      <p class="lede">{{ t().lede }}</p>
+      <p class="lede">{{ text.lede }}</p>
       @if (offer(); as get) {
       <div class="cta-row">
-        <a class="btn btn-primary get" [href]="get.primary.url"
-          ><span>{{ t().downloadFor }} {{ get.label }}</span><span class="ver">v{{ version }}</span></a
-        >
-        <a class="btn btn-ghost" [routerLink]="links().docs">{{ t().docs }}</a>
+        <a class="btn btn-primary" [href]="get.primary.url"
+          >{{ text.downloadFor }} {{ get.label }} @if (note(get); as says) {
+          <small>{{ says }}</small>
+          }
+        </a>
+        <a class="btn btn-ghost" [routerLink]="downloadPath()">{{ text.others }}</a>
       </div>
       }
       <ul class="facts">
-        @for (fact of t().facts; track fact; let i = $index) {
-        <li>
-          @if (i === t().sourceFact) {
-          <a [href]="repository">{{ fact }}</a>
-          } @else {
-          <span>{{ fact }}</span>
-          }
-        </li>
+        <li><a [href]="repository">{{ text.free }}</a></li>
+        @for (fact of text.facts; track fact) {
+        <li>{{ fact }}</li>
         }
-        <li class="more">
-          <a [routerLink]="links().download">{{ t().others }}</a>
-        </li>
+        <li>{{ systems() }}</li>
       </ul>
     </div>
   </div>
-  <app-hero-board />
+  <div class="screen col">
+    <figure class="shot">
+      <picture>
+        <source
+          type="image/webp"
+          [attr.media]="lightWhen()"
+          [attr.srcset]="srcset('light')"
+          sizes="(min-width: 1380px) 1300px, 100vw"
+        />
+        <img
+          [src]="file('dark', shot.width)"
+          [attr.srcset]="srcset('dark')"
+          sizes="(min-width: 1380px) 1300px, 100vw"
+          width="2168"
+          height="1362"
+          [alt]="text.alt"
+          fetchpriority="high"
+        />
+      </picture>
+      @for (mark of marks(); track $index; let i = $index) {
+      <span
+        class="mark"
+        [class.on]="pointed() === i"
+        [style.left.%]="mark[0]"
+        [style.top.%]="mark[1]"
+        aria-hidden="true"
+        >{{ i + 1 }}</span
+      >
+      }
+    </figure>
+  </div>
+  <ol class="legend cells" [attr.aria-label]="text.legendName">
+    @for (item of text.legend; track item.name; let i = $index) {
+    <li (mouseenter)="pointed.set(i)" (mouseleave)="pointed.set(-1)">
+      <span class="n" aria-hidden="true">{{ i + 1 }}</span>
+      <b class="name">{{ item.name }}</b>
+      <p><app-runs [runs]="item.text" /></p>
+    </li>
+    }
+  </ol>
 </section>
 
-<app-feature
-  anchor="snippets"
-  tone="green"
-  [label]="t().snippets.label"
-  [heading]="t().snippets.heading"
-  [steps]="t().snippets.steps"
-  [durations]="[1150, 1550, 1700, 1200]"
->
-  @if (lang() === 'fr') {
-  <p lede>
-    Un snippet peut contenir des champs comme <code>{{ field('host') }}</code> ou
-    <code>{{ field('port=22') }}</code>. DevNotes vous demande leurs valeurs, puis copie la commande complète.
-    Depuis n'importe quelle application, avec
-    <span class="keys"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>P</kbd></span
-    >.
-  </p>
-  } @else {
-  <p lede>
-    A snippet can hold fields like <code>{{ field('host') }}</code> or <code>{{ field('port=22') }}</code>.
-    DevNotes asks for their values, then copies the whole command. From any application, with
-    <span class="keys"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>P</kbd></span
-    >.
-  </p>
-  }
-  <app-snippets-scene />
-</app-feature>
+<app-day-section />
 
-<app-feature
-  anchor="ranger"
-  tone="blue"
-  wide
-  [label]="t().organise.label"
-  [heading]="t().organise.heading"
-  [steps]="t().organise.steps"
-  [durations]="[1100, 1350, 1450, 1200]"
->
-  @if (lang() === 'fr') {
-  <p lede>
-    Un espace par contexte, des dossiers dedans, et une vue Tableau où chaque dossier est une zone. La
-    recherche lit les titres, le code, les listes et les tags.
-  </p>
-  } @else {
-  <p lede>
-    A space for each context, folders inside it, and a Board view where each folder is a zone. The search
-    reads titles, code, lists and tags.
-  </p>
-  }
-  <app-organise-scene />
-</app-feature>
-
-<app-feature
-  anchor="code"
-  tone="purple"
-  flip
-  [label]="t().code.label"
-  [heading]="t().code.heading"
-  [steps]="t().code.steps"
-  [durations]="[1700, 1350, 1950]"
->
-  @if (lang() === 'fr') {
-  <p lede>
-    Vingt-six langages colorés, Prettier en un clic, et vos JSON, YAML, TOML ou XML lisibles en graphe à côté
-    du code.
-  </p>
-  } @else {
-  <p lede>
-    Twenty-six highlighted languages, Prettier in one click, and your JSON, YAML, TOML or XML readable as a
-    graph beside the code.
-  </p>
-  }
-  <app-code-scene />
-</app-feature>
-
-<app-feature
-  anchor="outils"
-  tone="teal"
-  [label]="t().tools.label"
-  [heading]="t().tools.heading"
-  [steps]="t().tools.steps"
-  [durations]="[1300, 1800, 1700, 1700]"
->
-  @if (lang() === 'fr') {
-  <p lede>
-    Encoder, hacher, convertir, lire une date ou une expression cron. Chaque outil tourne sur votre machine et
-    n'appelle rien. Un résultat se garde comme une note.
-  </p>
-  } @else {
-  <p lede>
-    Encode, hash, convert, read a date or a cron expression. Every tool runs on your machine and calls
-    nothing. A result can be kept as a note.
-  </p>
-  }
-  <app-tools-scene />
-</app-feature>
-
-<app-feature
-  anchor="client-api"
-  tone="olive"
-  wide
-  [label]="t().api.label"
-  [heading]="t().api.heading"
-  [steps]="t().api.steps"
-  [durations]="[1350, 1600, 1700, 1600]"
->
-  @if (lang() === 'fr') {
-  <p lede>
-    HTTP, GraphQL et WebSocket, avec des collections, des environnements et des variables. L'historique est
-    chiffré comme le reste.
-  </p>
-  } @else {
-  <p lede>
-    HTTP, GraphQL and WebSocket, with collections, environments and variables. The history is encrypted like
-    everything else.
-  </p>
-  }
-  <app-api-scene />
-</app-feature>
-
-<app-feature
-  anchor="chiffrement"
-  tone="pink"
-  flip
-  [label]="t().vault.label"
-  [heading]="t().vault.heading"
-  [steps]="t().vault.steps"
-  [durations]="[1450, 1700, 1350]"
->
-  @if (lang() === 'fr') {
-  <p lede>
-    Vos notes sont chiffrées sur le disque, derrière une phrase de passe que DevNotes n'enregistre nulle part.
-    Pas de compte, pas de cloud. Perdue, elle ne se récupère pas : gardez un export.
-  </p>
-  } @else {
-  <p lede>
-    Your notes are encrypted on disk, behind a passphrase DevNotes stores nowhere. No account, no cloud. Lost,
-    it cannot be recovered: keep an export.
-  </p>
-  }
-  <app-vault-scene />
-</app-feature>
-
-<app-more-section />
-
-<section class="wrap closing" aria-labelledby="closing-h">
-  <h2 id="closing-h">{{ t().closing }}</h2>
-  <p class="lede">{{ t().closingLede(version) }}</p>
-  <div class="cta-row">
-    <a class="btn btn-primary" [routerLink]="links().download">{{ t().closingDownload }}</a>
-    <a class="btn btn-ghost" [routerLink]="links().docs">{{ t().docs }}</a>
+<section class="sec" id="telecharger" aria-labelledby="get-h">
+  <div class="sec-h col">
+    <span><b>03</b> / {{ text.get }}</span><span>{{ text.free }}</span>
+  </div>
+  <div class="get col">
+    <div>
+      <h2 id="get-h">{{ text.getHeading(version) }}</h2>
+      <p>{{ text.getLede }}</p>
+    </div>
+    @if (offer(); as get) {
+    <a class="btn btn-primary" [href]="get.primary.url"
+      >{{ text.downloadFor }} {{ get.label }} @if (note(get); as says) {
+      <small>{{ says }}</small>
+      }
+    </a>
+    }
+  </div>
+  <div class="oses cells" [style.--count]="offers().length + 1">
+    @for (system of offers(); track system.system) {
+    <div class="os">
+      <h3>{{ system.label }}</h3>
+      @for (each of system.files; track each.file) {
+      <a [href]="each.url"><span>{{ each.name }}</span><span>{{ each.size }}</span></a>
+      }
+    </div>
+    }
+    <div class="os">
+      <h3>{{ text.code }}</h3>
+      <p>{{ text.codeText }}</p>
+      <a [href]="repository"><span>{{ text.source }}</span><span>GitHub</span></a>
+      <a [href]="releasePage"><span>{{ text.notes }}</span><span>{{ version }}</span></a>
+    </div>
   </div>
 </section>

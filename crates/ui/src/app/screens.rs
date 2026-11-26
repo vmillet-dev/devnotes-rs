@@ -1,4 +1,4 @@
-//! The screens of the Angular reference (plan § 5.2) drawn by the egui window: its data, its
+//! The screens of the Angular reference drawn by the egui window: its data, its
 //! gestures, its file names and its window sizes, for a look side by side with the captures of
 //! the `angular-reference` pre-release. Nothing here compares pixels, and nothing runs unless
 //! `DEVNOTES_SCREENS` names where to write.
@@ -521,9 +521,9 @@ const MENUS: [(&str, Reach); 10] = [
         preferences_page(window, "settings-page-security");
         click(window, "setting-change-passphrase");
     }),
-    ("getting-started", |window| {
+    ("documentation", |window| {
         click(window, "about-open");
-        click(window, "about-getting-started");
+        click(window, "about-documentation");
     }),
     ("tools-home", |window| area(window, Area::Tools)),
 ];

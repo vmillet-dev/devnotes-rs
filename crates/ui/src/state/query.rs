@@ -1,6 +1,6 @@
 //! A value the core is asked for again whenever what it depends on changes: the list for a
 //! query, the board for a space. It replaces the reference's `resource()`, `linkedSignal` and
-//! `OneInFlight` (plan § 3.3.5).
+//! `OneInFlight`.
 
 use engine::error::AppError;
 

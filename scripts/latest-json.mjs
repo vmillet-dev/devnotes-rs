@@ -3,7 +3,8 @@
 // `node scripts/latest-json.mjs --dir release --base <url> --version x.y.z --notes <file>`.
 //
 // `cargo-packager-updater` refuses a platform without its `format`, and installs only the NSIS
-// installer and the AppImage: the other signatures (.deb, .rpm) are ignored, not fatal.
+// installer, the AppImage and the macOS application: the other signatures (.deb, .rpm, .dmg) are
+// ignored, not fatal.
 
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -13,6 +14,8 @@ import { pathToFileURL } from 'node:url';
 export const TARGETS = [
   { suffix: '-setup.exe', key: 'windows-x86_64', format: 'nsis' },
   { suffix: '.AppImage', key: 'linux-x86_64', format: 'appimage' },
+  { suffix: '_aarch64.app.tar.gz', key: 'macos-aarch64', format: 'app' },
+  { suffix: '_x64.app.tar.gz', key: 'macos-x86_64', format: 'app' },
 ];
 
 /**
@@ -50,7 +53,9 @@ export function manifest({ names, read, base, version, notes, now = new Date() }
   if (!notes.trim()) {
     throw new Error('no release notes');
   }
-  const warnings = platforms['linux-x86_64'] ? [] : ['No Linux update artifact: Windows-only manifest.'];
+  const warnings = TARGETS.filter(({ key }) => !platforms[key]).map(
+    ({ key }) => `No update artifact for ${key}.`,
+  );
   for (const entry of Object.values(platforms)) {
     delete entry.asset;
   }

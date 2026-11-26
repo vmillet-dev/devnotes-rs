@@ -7,7 +7,7 @@ For build/run instructions see [CONTRIBUTING](../CONTRIBUTING.md).
 
 DevNotes is a desktop application in **one Rust process**: an **egui** window over a core that
 owns everything that is not drawing. Since 1.0.0 there is no WebView, no JavaScript in the
-interface and no IPC (`egui-migration/egui-migration-plan.md` tells how it got there). The core,
+interface and no IPC (→ "Decisions"). The core,
 `crates/engine`, holds storage, encryption, the in-memory index of notes, HTTP, the tools; the
 interface, `crates/ui`, calls it directly, through one façade and three queues, with no
 serialisation in between (→ "Backend and events"). The one other process is the application
@@ -48,7 +48,7 @@ crates/platform/    what is asked of the operating system: paths, window, instan
 crates/ui/          the egui interface: the frame, its state, its screens, its widgets
 crates/app/         the `devnotes` binary (main), its icons (`--example icons`) and packages
 e2e/                the end-to-end driver and its scenarios, on the assembled window
-golden/             outputs of the JavaScript libraries, captured before they left
+golden/             test data: exact outputs the tests compare with (its README says which)
 ```
 
 ### Feature-first, not layer-first
@@ -139,17 +139,54 @@ Serde attributes sit on the model types rather than on a separate DTO family: th
 export bundle and the stored JSON, and at this size a second set of types and their mapping
 would cost more than it protects. The interface takes the same types, in the same process.
 
+## Decisions
+
+Taken for the egui application, and in force. Comments in the code name them by number; a number
+missing here was the migration's own, and is over. A decision is changed here first, never silently
+in the code.
+
+| #   | About                        | Decided                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| --- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D1  | Formatting                   | Prettier itself, in QuickJS (p95 340 ms for 13 kB when measured); native formatters only past 500 ms.                                                                                                                                                                                                                                                                                                                                                          |
+| D2  | Mermaid                      | Not drawn since 1.0.2: its renderer weighed 16.6 MB of a 79 MB binary. A `mermaid` block is a code block, kept as written.                                                                                                                                                                                                                                                                                                                                     |
+| D3  | Spell checker                | Never.                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| D7  | `unsafe_code`                | Forbidden in every crate: only dependencies with a safe API.                                                                                                                                                                                                                                                                                                                                                                                                   |
+| D8  | Windows packages             | NSIS alone, no `.msi`.                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| D10 | Data rules                   | One rule, one definition, in the core. `engine` depends on no editing crate; `text`, `richtext` and `drawing` take its results as arguments. Shared all the same: the `{{…}}` shield of `text`, and the `pulldown-cmark` options, which a test compares.                                                                                                                                                                                                       |
+| D11 | Work on the database         | One worker: `Engine` owns a queue and the one "db" thread that runs it in order, reads included. `compute` for pure work, tokio for the network. → "The concurrency rules".                                                                                                                                                                                                                                                                                    |
+| D12 | Calls from the UI thread     | Allowed, through `api/`, for a pure function (no lock, no I/O) whose input the screen bounds and which stays under 1 ms at the p95 (the ranges of `{{fields}}` in the lines shown, the check of a variable's name…). Each says so beside it.                                                                                                                                                                                                                   |
+| D13 | Drawing and state            | Each screen has a state (read, changed in `apply`) and a view (changed while drawing: text typed, buffers, menus, scroll, gestures). State is tested on the real `Backend`, with `settle()`.                                                                                                                                                                                                                                                                   |
+| D14 | Keyboard                     | One order: IME → focused widget (`consume_key`) → `keys::dispatch` (modal, area, application), with entries marked `while_typing`. egui's keyboard zoom is off; Tab is egui's, except in the editors; shortcuts are stored as W3C `code`s.                                                                                                                                                                                                                     |
+| D15 | Wayland or X11               | X11 (XWayland) as soon as `DISPLAY` exists, native Wayland otherwise: under native Wayland winit 0.30 delivers neither dropped files nor the window's visibility. There, and rarely, the window's position is not restored, closing to the tray minimises, and HTML pasted into a Note keeps its text only.                                                                                                                                                    |
+| D16 | Profile, single instance     | One application per profile: the instance's socket is named after the profile. `com.devnotes.app` by default, the packages' identifier; `--profile` for tests and development.                                                                                                                                                                                                                                                                                 |
+| D17 | Caches of the interface      | All in `LibraryCaches`, emptied with egui's widget memory when the library changes; not wiped byte by byte, as the threat model says.                                                                                                                                                                                                                                                                                                                          |
+| D18 | Panics                       | A panic on any thread ends the process: the hook, installed first, logs the place and the thread, never the message (a slicing panic quotes the text), says so in a system box (never in the `e2e` flavour), then `exit(101)`. One exception: the tray's thread on Linux, whose library panics when it is missing, is put to sleep and the application goes on without a tray. Nothing is caught; the database is checked at the next open. `panic = "abort"`. |
+| D19 | Quitting during a write      | Window hidden, db queue closed then drained (drafts, import, restore, passphrase), 30 s at most, then an exit that is logged; network sends are cancelled.                                                                                                                                                                                                                                                                                                     |
+| D20 | Waking the UI, start order   | The input channel and the `Waker` (`OnceLock<egui::Context>`) are made by `main` and filled by eframe's creation closure, where `Engine`, `Backend` and `AppState` are born.                                                                                                                                                                                                                                                                                   |
+| D21 | Localised formats            | Written by hand (`i18n::format`, French and English), held by `golden/intl`; no ICU. The system's language by `sys-locale`.                                                                                                                                                                                                                                                                                                                                    |
+| D22 | Highlighting's regex engine  | `onig`: 1 MB of TypeScript in 2.7 s, against 12.9 s for `fancy-regex`. Highlighting never holds the UI thread.                                                                                                                                                                                                                                                                                                                                                 |
+| D23 | A drawing's text and picture | One line break (Fabric's, in `drawing`) for the editor and the pictures; one way to a picture: the export's SVG, rasterised by `resvg`.                                                                                                                                                                                                                                                                                                                        |
+| D24 | Captures                     | PNGs to be looked at by eye; nothing compares pixels.                                                                                                                                                                                                                                                                                                                                                                                                          |
+| D26 | Signature and updates        | Signed by `cargo-packager` with the key of the first releases; updated by `cargo-packager-updater`: the NSIS installer (passive, `/P /R`) and the AppImage (replaced in place). `latest.json` gives each platform its `format`.                                                                                                                                                                                                                                |
+| D27 | Version                      | `[workspace.package] version` alone; `release.yml` compares `Cargo.toml` and `Cargo.lock`.                                                                                                                                                                                                                                                                                                                                                                     |
+| D28 | Images shown                 | PNG, JPEG, GIF (first frame), WebP, BMP and ICO by `image`, SVG by `resvg`; anything else opens in the system's viewer.                                                                                                                                                                                                                                                                                                                                        |
+| D29 | GTK on Linux                 | One GTK thread, the tray's. File dialogs go through the XDG portal (`rfd`, `xdg-portal`).                                                                                                                                                                                                                                                                                                                                                                      |
+| D30 | Writes after a switch        | Each `Library` opened has a number, from a counter of the process. A send notes it as it reads, and writes nothing once it has changed: cancelling at the switch frees the network, correctness does not depend on it.                                                                                                                                                                                                                                         |
+| D31 | E2E in CI                    | One job per system, `cargo test -p e2e` running the files one after the other, beside the Rust tests. Split one day by file names and measured times, never by a list kept by hand.                                                                                                                                                                                                                                                                            |
+| D32 | The Angular application      | Out of the tree since 1.0.0; the `angular-reference` tag and its pre-release keep all of it. Where egui differs from it by decision rather than by limit, egui is right.                                                                                                                                                                                                                                                                                       |
+| D33 | Workspace manifest           | Each dependency declared once, version and common features, in the root `[workspace.dependencies]`; a crate takes `workspace = true` and adds only its own features.                                                                                                                                                                                                                                                                                           |
+
 ## Interface (egui)
 
 `crates/ui` is the window: the frame, its state, its screens and its widgets. It is the shape of
 the screen, and it calls the core through `ui::api` alone (→ "Backend and events"). Each
 screen keeps the look and the behaviour of its Angular twin at the `angular-reference` tag
-(plan § 5); the subsections below describe that behaviour, and name the egui module that draws
+(D32); the subsections below describe that behaviour, and name the egui module that draws
 it.
 
 ### Where a file goes
 
-> **A folder's path is its place on screen** (plan § 3.2). What draws sits where it is drawn;
+> **A folder's path is its place on screen**. What draws sits where it is drawn;
 > what has no place on screen sits apart, filed by subject.
 
 | Question                                                                              | Answer                                                                    |
@@ -204,7 +241,7 @@ outside the stack, so a modal never covers them.
 
 ### The editing core
 
-`crates/text` is under every editor that is not a one-line field (plan § 3.8), and knows no egui:
+`crates/text` is under every editor that is not a one-line field, and knows no egui:
 
 - **`Buffer`** — the text, a rope (`ropey`), and its selection. Every edit goes through
   `Buffer::replace`, which records it for undo and says from which line the text changed: what
@@ -226,7 +263,7 @@ heading **is** stays the core's, handed to them as ranges (D10).
 ### Rendering and virtualisation
 
 egui draws the whole window every frame it repaints, so what a frame costs is what is on screen,
-never what is stored (plan § 3.6):
+never what is stored:
 
 - **Anything that can run to thousands of rows is virtualised**: `widgets::list` (uniform rows,
   only those in the viewport drawn), the canvas (`notes::canvas::rows`: the view flattened into
@@ -260,7 +297,7 @@ read. Every drag has its keyboard twin.
 
 Every coloured code — a card excerpt, the editor, a Note's code block, an HTTP answer, generated
 code — is coloured by **one grammar per language**: TextMate grammars run by `syntect`, the set
-`bat` maintains (`two-face`), regular expressions by `onig` (D22, ADR S5), plus a Prisma grammar
+`bat` maintains (`two-face`), regular expressions by `onig` (D22), plus a Prisma grammar
 of ours (`crates/text/syntaxes/`). `text::highlight` answers a line's stretches as the
 reference's classes (`Token`: keyword, string, literal, name, property, meta, comment…), and
 `ui::services::highlight::colour` gives each its colour from the theme — the reference's
@@ -337,9 +374,8 @@ evidence now, not proof; a unit or a custom property is what makes it a styleshe
 ### Formatting a snippet with Prettier
 
 "Formater" (Shift+Alt+F) runs Prettier itself — 3.9.10, as `package.json` pins it — on the
-editor's draft, **in QuickJS** (plan D1, ADR S8): the output is the reference's, byte for byte,
-on the whole `golden/format` corpus. `text::format` holds all of it; the editor asks through
-`FormattingState`, on `compute`.
+editor's draft, **in QuickJS** (D1): `golden/format` holds its answers, byte for byte.
+`text::format` holds all of it; the editor asks through `FormattingState`, on `compute`.
 
 - **One host, started by the first format and kept** (`text::format::host`): a thread of its
   own with one QuickJS runtime — a runtime is not shared between threads — in which
@@ -1349,8 +1385,8 @@ and exporting write a Note as the Markdown it is, where a snippet is fenced.
 
 - **The document is `richtext`'s** (egui migration, no egui in it): blocks and marked runs,
   read by `pulldown-cmark` with the core's own options (`notes::markdown` holds the two equal in
-  a test) and written back byte for byte as the reference's editor wrote it — `golden/markdown`
-  and `golden/markdown-escape` pass whole. What the schema does not hold is read as what it shows:
+  a test) and written back byte for byte, as `golden/markdown`
+  and `golden/markdown-escape` hold. What the schema does not hold is read as what it shows:
   raw HTML as its text, a footnote as its brackets, a reference link inline, a bare `https://`
   address as a link to itself. `richtext::escape` is `escapeMarkdownText`, ported rule for rule.
   Undo keeps the document and the selection before each transaction (`History`): a Note is a
@@ -1464,11 +1500,11 @@ way — the kind menu names it and offers nothing.
   that has none, as one that came by import, has them taken when it opens: the editor asks
   `hasPictures` and they go with its next flush.
 - **`crates/drawing` reads the scene** (`Drawing::read`, `write`): an object is the fields it was
-  read with and is read through them, so a body comes back byte for byte (`golden/fabric`, what
-  Fabric itself wrote); `serde_json`'s `preserve_order` and `float_roundtrip` are what hold that.
+  read with and is read through them, so a body comes back byte for byte (`golden/fabric`, in
+  Fabric's format); `serde_json`'s `preserve_order` and `float_roundtrip` are what hold that.
 - **One line break, one way to a picture** (D23): `text::wrap` is Fabric's `_wrapLine` on the advances
   of the embedded fonts, for the editor and the pictures; a browser kerns, so a word can break
-  elsewhere (E14: one case of `golden/fabric-wrap`). `picture::svg` writes the export from the scene
+  elsewhere (one case of `golden/fabric-wrap`). `picture::svg` writes the export from the scene
   and `resvg` rasterises it (`pictures`, 480 and 1,600 px). ⚠️ `resvg` knows no
   `non-scaling-stroke`: a `strokeUniform` shape has its geometry scaled, not its plane.
 - **What is drawn keeps its colours by name.** Each object carries a `hue` (ink, blue…),
@@ -1566,9 +1602,8 @@ and « +4 more » for the tasks the card has no row for. The list takes the gaps
 (a task's 24 px row carries its own air), so the strip costs no row of tasks.
 
 ⚠️ **The title bar was chosen over a band of marks** (2026-11-09). The first version put the
-kind, the format and the counts in a band above a title line, as the mockup
-(`docs/mockups/note-cards.html`) drew it; on a note with no field, attachment, priority or pin
-that band held an icon alone and read as empty. The title went up beside the icon and a snippet's
+kind, the format and the counts in a band above a title line; on a note with no field, attachment,
+priority or pin that band held an icon alone and read as empty. The title went up beside the icon and a snippet's
 format, the counts went down with the date, and the line given back went to the card's height.
 
 **The preview is whole lines, the library's count** — 3, 4 or 5 (`devnotes.notes.previewLines`,
@@ -1642,11 +1677,13 @@ one-click action.
 carried the key — so the block was dead markup that looked like a shipped feature, and
 `update.body` was `undefined` at every release.
 
-The text already exists at that point in the release job: `scripts/release-notes.mjs extract`
-writes it to `$RUNNER_TEMP/release-notes.md` for the GitHub release body, and the manifest
-step reads the same file. ⚠️ `generate_release_notes` appends the raw pull-request list
-inside `action-gh-release` and does not touch that file, so the manifest carries the
-hand-written section alone.
+`scripts/release-notes.mjs extract` writes two files from the section at the tag: the whole of it,
+for the GitHub release body, and the prompt's (`--prompt-out`), for the manifest. **The prompt keeps
+what the user will notice**: the summary, additions, changes, fixes, removals and security. The
+technical work (the tests, the documentation and the site with it) and the dependencies stay in
+`CHANGELOG.md`, on the release page and in "What's new". Which section is shown is said beside its
+labels, in `SECTIONS`. ⚠️ It is filtered in the manifest, not in the application: the prompt is drawn
+by the version already installed. A release with nothing left to show says so in one line.
 
 ⚠️ **Shown open, at a fixed height.** Behind a `<details>` it was installed without being
 read — and worse, opening it _changed the dialog's height_: the body is bounded at 160px but
@@ -3217,7 +3254,7 @@ into one line, and the body under them is drawn by kind (`body.rs`): `code.rs`, 
   the writer's call, which drops an unchanged field. Drafts are committed when the focus leaves
   and on **every closing path** — Escape, the close button, a note stepped to with J/K, another
   area, the window's exit — which all go through one commit first.
-- **The code is `widgets::editor`** (plan § 3.8): `text::Buffer`, a rope, drawn line by line
+- **The code is `widgets::editor`**: `text::Buffer`, a rope, drawn line by line
   with only the lines on screen laid out (`geometry.rs`), so a 2 MB snippet opens and types like
   a short one. It owns its undo history (`text`), the IME, the gutter and the hanging indent of
   wrapped lines, which egui's `TextEdit` cannot do; the keys it handles are taken out of the
@@ -4147,6 +4184,37 @@ Creating or unlocking a library is a `spawn` that runs the vault's db job and th
 of each frame. State tests run against the real core on a temporary profile and wait with
 `Backend::settle()` — a condition, never a duration (`ui::testing`).
 
+### The concurrency rules
+
+These are all of them: one that is not here does not exist. There is one user and one process per
+profile (D16), so what runs at once is the interface, which must never wait; two writes sent close
+together; HTTP sends; and a library changed while something runs.
+
+1. **One worker for the database** (D11). Everything that touches the database or the index goes
+   through the queue, in the order it was sent: from the interface by `Backend::db`, from a send by
+   `db::run`. A job of the queue never waits for another one, which would lock both, nor for the
+   network.
+2. **A long operation holds the queue, not the interface.** Export, import, backup, restore and a
+   change of passphrase take the time they take; a search typed meanwhile answers after. The index
+   is filled by slices, between which a search slips in.
+3. **Snapshots are not changed in place.** The index holds `Arc<IndexedNote>`s, and a write replaces
+   one. A view keeps the ones it was given, and is drawn without a lock.
+4. **A send is three steps**: read (a db job: inheritance, variables, environment, a copy of the
+   cookie jar, the library's number), send (on tokio, never through the queue), write (a db job:
+   history, cookies, variables). The last **merges**: cookies are replayed as changes on the jar of
+   the moment, variables read again before their writes are applied, so two sends at once lose
+   nothing.
+5. **The library's number** (D30): a send that ends in another library writes nothing. Opening a
+   library or restoring a copy empties the `Mutex` and the index, closes the sockets and cancels
+   sends and runs before it touches the files.
+6. **Writes are not optimistic**: persist, adopt the answer, bump `Revision`. A stale search is
+   dropped (`QueryCell`).
+7. **The UI thread waits once**: at exit, the window hidden, for the queue to drain (D19).
+
+Left out on purpose: an asynchronous database, a connection pool, a version number per row, an actor
+framework, the cancelling of a db job that has begun, and a parallel read path while no measure asks
+for one.
+
 ### State between frames
 
 `ui::state::AppState` is the root of what the interface remembers; each screen's state joins it
@@ -4167,7 +4235,7 @@ as the screen is ported. Three pieces replace the reference's `resource()`, `lin
 
 ### A frame, its actions and its keys
 
-`DevNotesApp` does the same thing every frame, in this order (plan § 3.3.7): `logic` drains the
+`DevNotesApp` does the same thing every frame, in this order: `logic` drains the
 inputs (engine events, a second launch's `reveal` or `action <name>`), adopts the answers that
 arrived and asks the `QueryCell`s again; `ui` draws, then reads the keys the widgets left, then
 applies the actions. **Drawing never changes the state**: it reads a screen's state, may change
@@ -4246,11 +4314,11 @@ without one.
 - `DialogStack` and `dialog`: one rung per layer of `dialog.model.ts` (editor … passphrase), the
   higher drawn over the lower and served first by Escape; an `egui::Modal` blocks what is under it
   and keeps Tab inside; the fitted frame is `bg-1`, 14 px, `line`, the overlay's shadow, 480 px,
-  over a solid scrim (E7). The focus goes back to the opener — **the frame after**, once no modal
+  over a solid scrim. The focus goes back to the opener — **the frame after**, once no modal
   layer blocks it (`DialogStack::begin_frame`), since egui drops a focus given while one does.
 - `virtual_list` (uniform rows, only those in view drawn — 30 000 rows draw fewer than twenty),
   `code_viewer` (read-only, numbered in `line_no`), `rail_frame` and `split_handle` (a drag or the
-  arrows, 16 px a press, within bounds), `tooltip` (drawn, E3), `release_notes` (the core's runs:
+  arrows, 16 px a press, within bounds), `tooltip` (drawn), `release_notes` (the core's runs:
   plain, strong, code).
 
 Hover colours ease over `motion::FAST`; a disabled control is drawn at half strength.
@@ -4329,8 +4397,8 @@ bars, the pin), the preview by kind — a snippet's first lines in
 the mono face, a Note's outline, a list's open tasks (ticking one writes it through
 `state::notes`, not optimistically), a sheet's last results, a drawing's picture — and the status
 line (the place; the fields, the attachments, the short date). Previews are monochrome until syntax colouring arrives with
-the editors. A sheet's results are written by `notes::calc::value`, the reference's formatter in
-Rust, held by the core's golden cases (`golden/calc-format`).
+the editors. A sheet's results are written by `notes::calc::value`, held by
+`golden/calc-format`.
 
 The header (`notes::header`) asks, and `NotesQueryState` holds what it asked: the search as typed,
 the search the core is asked for (the typed one once the keys have rested 150 ms, a deadline in
@@ -4728,7 +4796,7 @@ send ends. A send is deleted unasked and comes back from the bar under the list 
 it came from, as changes to save or not (`http_history_onto_request`, `Tabs::open_with`), asking
 before it writes over a tab's own; the request gone, or the send made from a draft, it is a
 draft named after the send and its time. The core keeps `KEPT_AT_MOST` sends, so the list holds
-500 rows at most, whatever the plan's budget of 20,000 assumed.
+500 rows at most.
 
 A WebSocket's tab holds a composer above and a log below. `state::http::sockets` keeps where each
 socket stands and its last `LOG_KEPT` events, under the id it was connected with: the core's
@@ -4848,7 +4916,7 @@ Detection reads the content and returns one of the languages; without it every n
 
 ### The service functions
 
-- **Three families** (plan § 3.3.3): a **data** function (`fn name(engine: &Engine, …)`,
+- **Three families**: a **data** function (`fn name(engine: &Engine, …)`,
   synchronous, run on the db queue), a **network** one (`async fn name(engine: Arc<Engine>, …)`,
   which reaches the queue through `db::run` and never holds the lock while it waits), and a pure
   **tool**, run on `compute`. `ui::api` gives each its queue once.
@@ -5625,7 +5693,7 @@ maximised one, a full screen never.
 on the thread the window's loop will run on: under Windows that loop serves the tray and the
 keys. Its `Default` answers nothing, so no test touches the session. Each subject is a module of
 `platform` with a trait a test fakes; what only a real desktop can run sits in its `system.rs`
-and is answered for by the manual checklist (`docs/recette/recette.html`, plan § 8.5), not by coverage.
+and is answered for by the manual checklist (`docs/recette/recette.html`), not by coverage.
 
 - `tray`: the icon and its menu, translated in Rust and rebuilt when the language moves. Under
   Linux on a thread of its own, the only GTK one (D29), reached by message; a desktop without the
@@ -5952,7 +6020,7 @@ operating system is `platform`, one module per subject with a trait a test fakes
 ## i18n
 
 The interface's strings are `crates/i18n/translations/{fr,en}.json`, in the format the
-reference wrote them (plan § 3.11). The `i18n` crate embeds both and **generates one constant
+reference wrote them. The `i18n` crate embeds both and **generates one constant
 per key at build time** (`build.rs`, from `fr.json`): `vault.unlockTitle` is
 `i18n::keys::vault::UNLOCK_TITLE`, a segment that is a Rust keyword takes `r#`, `fr-FR` becomes
 `FR_FR`. A misspelled key does not compile; two segments that would make the same name stop the
@@ -5966,8 +6034,8 @@ does not exist — an enum of the cases, matched once, is better wherever the se
 - **Plurals** are the reference's ICU subset, ported (`i18n::plural`): `{name, plural, =N {…} one
 {…} other {…}}`, `#`, no `select`, no nesting; an exact `=N` wins over a category (French calls
   zero `one`), and the categories are CLDR's for the two languages — French `one` for an integer
-  part of 0 or 1 (1.5 included), `many` for a whole million. `golden/plurals` (every plural key
-  of both files at 0, 1, 2, 5, 21, 1 000, 1 000 000 and 1.5) is read back by a test.
+  part of 0 or 1 (1.5 included), `many` for a whole million. A test reads every plural of both
+  files: each closes, and has an `other` branch.
 - Then `{{name}}` is filled; ⚠️ **a parameter not given is left empty**, as Transloco did — so
   no translated string can carry a snippet's `{{fields}}`, and user content is never interpolated
   into a template. `{{app}}` is the application's name, read by `build.rs` from the engine's
@@ -5981,8 +6049,7 @@ does not exist — an enum of the cases, matched once, is better wherever the se
   registry's countries only)… A date arrives as the wall-clock value to show; the caller puts it
   in the local zone, or in UTC where the screen says so. Numbers round the shortest decimal half
   away from zero, as ICU does (12.345 is 12.35 at two digits), and French groups with a narrow
-  no-break space. `golden/intl` — every `Intl` call of the reference with its options, at its
-  edge values — is read back by a test. No ICU.
+  no-break space. `golden/intl` — every pattern at its edge values — is read back by a test. No ICU.
 - **Ageing labels** are `i18n::time`: `relative` (« il y a 3 min »), `expiry` (in local calendar
   days: an expiry is the end of its day), `span` (« dans 2 jours », the largest whole unit). They
   answer a `Message`, `now` given; `golden/relative-time` is read back by a test.
@@ -5995,7 +6062,7 @@ does not exist — an enum of the cases, matched once, is better wherever the se
 
 Treated as part of the definition of done. egui speaks to screen readers through **AccessKit**
 (UI Automation on Windows, AT-SPI and Orca on Linux), and the kit makes most of it a property of
-the widget rather than of each screen (plan § 3.12):
+the widget rather than of each screen:
 
 - **Every interactive widget goes through `widgets::interact`**, which gives the AccessKit node
   its role and its name, sets its `author_id`, paints the focus ring and allocates at least
@@ -6052,7 +6119,7 @@ from it.
 
 **Type.** Inter and JetBrains Mono are embedded as the variable TrueType files the reference
 loaded (Latin and Latin Extended, `theme::fonts`), so the CSS weights, 650 included, apply as
-written (ADR S2); Noto Emoji, monochrome, comes next, so an emoji is drawn the same on every
+written; Noto Emoji, monochrome, comes next, so an emoji is drawn the same on every
 machine; eframe's `system_fonts` finds the rest (CJK) on demand. egui's own fonts are not
 compiled in. The body is 14 px. Licences and sources: `crates/ui/assets/README.md`.
 
@@ -6115,7 +6182,7 @@ terms of them, and a rail row stays above the 24 px target in Compact.
 
 ## Application updates
 
-The client is `cargo-packager-updater` (D26, ADR S9), behind `platform::updater::Updater`, a trait
+The client is `cargo-packager-updater` (D26), behind `platform::updater::Updater`, a trait
 the interface fakes. Each release package is signed at packaging time with a minisign key; the
 matching public key is compiled into the binary (`UPDATES` in `crates/app/src/desktop.rs`), so a
 compromised release host cannot push a payload the application will accept — only the private
@@ -6146,26 +6213,28 @@ key can produce an installable update. It is the key the Tauri releases were sig
   answers.
 - **The dot on the About menu** says « an update exists and is not installed », and outlives the
   prompt it was raised with.
-- **The notes the prompt shows** are the release's changelog section, carried by `latest.json`
-  (→ "The update prompt shows the release's notes").
-- **The manifest** (`latest.json`, `scripts/latest-json.mjs`) carries the NSIS installer and the
-  AppImage, each with its `format` (`nsis`, `appimage`), which the client requires. Windows is the
-  one platform whose absence fails the release; a missing Linux artefact only warns. It is
+- **The notes the prompt shows** are the release's changelog section less what the user cannot see,
+  carried by `latest.json` (→ "The update prompt shows the release's notes").
+- **The manifest** (`latest.json`, `scripts/latest-json.mjs`) carries the NSIS installer, the
+  AppImage and the two macOS archives, each with its `format` (`nsis`, `appimage`, `app`), which the
+  client requires. Windows is the one platform whose absence fails the release; another missing
+  only warns. It is
   published at `releases/latest/download/latest.json`, the endpoint compiled into the binary.
 - The signing key and its password are the `release` **environment**'s secrets, so no other
   workflow and no other branch can reach them; `packages.yml` signs with a key made for its run.
 
 ## Releasing
 
-One button: **Actions → Release → Run workflow**, with a `dry_run` checkbox. `release.yml`
+One button: **Actions → Release → Run workflow**, with a `dry_run` checkbox, which stops after
+`prepare` and shows what the release would change (`scripts/release-preview.mjs`). `release.yml`
 carries the whole path — `prepare`, `release-build`, `publish` — and `ci.yml` is only CI.
 
-**Two platforms, deliberately: Windows and Linux.** The release matrix builds
-`windows-latest` and `ubuntu-22.04`, the CI matrix tests the same two, and that is the whole
-list. macOS is out of scope and stays out: nothing here can test it, and Gatekeeper wants a
-paid Apple Developer account with no free bypass on recent versions — a build that can be
-neither tested nor distributed is a liability wearing the costume of a feature. The packages
-therefore declare no `.icns`, and the README says which platforms it ships.
+**Three platforms: Windows, Linux and macOS.** The CI matrix tests `windows-latest`,
+`ubuntu-22.04` and `macos-latest`; the release builds on the same, and on an Intel runner for the
+second macOS file. There is no Mac to try it by hand: what CI does not show of macOS is not known.
+Its packages are signed ad hoc, by nobody, since Gatekeeper's own signature wants a paid Apple
+Developer account: a person opens the first one through the system's settings. ⚠️ A macOS leg that
+fails holds nothing back (`continue-on-error`): the tag is out by then.
 
 Two facts shape that, and neither is negotiable:
 
@@ -6184,7 +6253,8 @@ the file it just wrote, and `scripts/release-notes.mjs` mirrors, in `assertRende
 three invariants `changelog::tests::the_shipped_file_parses_into_something_to_show` asserts.
 
 **The packages** are built by `cargo build -p app --release`, then `.github/actions/package`:
-`cargo packager` (NSIS per user on Windows; AppImage and deb on Linux) and `cargo generate-rpm`,
+`cargo packager` (NSIS per user on Windows; AppImage and deb on Linux; a `.dmg` and the updater's
+archive on macOS) and `cargo generate-rpm`,
 each signed with the minisign key, each checked to hold the application alone (→
 `docs/releasing.md`, "What gets published").
 `packages.yml` runs the same action on a pull request that touches packaging, with a key made
@@ -6451,24 +6521,24 @@ pages copied, not tags compared.
 
 #### The index on the reference corpora
 
-`cargo bench -p engine --bench index` (`benches/reference.rs` builds the two libraries of the egui
-migration plan, § 6.1, on disk first). Windows 11, Ryzen 7 9800X3D, release profile, the machine
+`cargo bench -p engine --bench index` (`benches/reference.rs` builds two reference libraries
+on disk first). Windows 11, Ryzen 7 9800X3D, release profile, the machine
 in use meanwhile — orders of magnitude, not a record. **Realistic**: 30 000 notes (20 000
 snippets of ~1.5 kB, 5 000 Notes of ~4 kB, 3 000 lists of 20 items, 1 500 Calcul sheets, 500
 Dessins of ~20 kB), 4 spaces, 300 folders, 600 tags, 2 000 attachments, and the HTTP side (2 000
 requests, 20 000 history entries, 500 cookies). **Stress**: 30 000 snippets of ~13 kB and the same
 HTTP.
 
-| Group, measure                             | Realistic | Stress  | Budget (plan § 6.2) |
-| ------------------------------------------ | --------- | ------- | ------------------- |
-| `index_build`, every slice                 | 1.87 s    | 2.98 s  | ≤ 1.5 s / ≤ 4 s     |
-| `index_query`, search matching nothing     | 12.2 ms   | 22.4 ms | ≤ 50 / 120 ms       |
-| `index_query`, space + tag + pinned        | 2.6 ms    | 2.6 ms  | —                   |
-| `index_query`, unfiltered                  | 10.5 ms   | 10.9 ms | —                   |
-| `index_query`, search `etape` (most match) | 10.9 ms   | 10.9 ms | ≤ 50 / 120 ms       |
-| `index_query`, `list_tags`                 | 7.6 ms    | 7.7 ms  | ≤ 5 / 10 ms         |
-| `index_refresh`, `update_note` (title)     | 0.44 ms   | 0.56 ms | ≤ 5 ms              |
-| `index_refresh`, tag then untag 100 notes  | 4.2 ms    | 10.1 ms | ≤ 30 ms             |
+| Group, measure                             | Realistic | Stress  | Budget          |
+| ------------------------------------------ | --------- | ------- | --------------- |
+| `index_build`, every slice                 | 1.87 s    | 2.98 s  | ≤ 1.5 s / ≤ 4 s |
+| `index_query`, search matching nothing     | 12.2 ms   | 22.4 ms | ≤ 50 / 120 ms   |
+| `index_query`, space + tag + pinned        | 2.6 ms    | 2.6 ms  | —               |
+| `index_query`, unfiltered                  | 10.5 ms   | 10.9 ms | —               |
+| `index_query`, search `etape` (most match) | 10.9 ms   | 10.9 ms | ≤ 50 / 120 ms   |
+| `index_query`, `list_tags`                 | 7.6 ms    | 7.7 ms  | ≤ 5 / 10 ms     |
+| `index_refresh`, `update_note` (title)     | 0.44 ms   | 0.56 ms | ≤ 5 ms          |
+| `index_refresh`, tag then untag 100 notes  | 4.2 ms    | 10.1 ms | ≤ 30 ms         |
 
 **Neither the search nor the view costs any more.** Finding nothing reads every folded text and
 stays inside its budget. A query that keeps most notes used to cost what the view cost — every
@@ -6482,7 +6552,7 @@ every note's tags at each call.
 
 Three tools, none in CI. `benches/reference_profile.rs` writes a reference library into a real
 profile; `app::perf` (`DEVNOTES_PERF=<profile> cargo test --release -p ui --lib app::perf --
---nocapture`) replays the journeys of § 6.3 through the real application without a window;
+--nocapture`) replays the journeys below through the real application without a window;
 `e2e/examples/footprint.rs` reads memory and idle CPU of the running process from outside,
 on the machine's GPU (`DEVNOTES_E2E_GPU`) and painting every frame (`DEVNOTES_E2E_PAINT_ALL`). The
 `e2e` flavour cannot be a release build, so that one runs at `CARGO_PROFILE_DEV_OPT_LEVEL=3`.
@@ -6490,11 +6560,11 @@ on the machine's GPU (`DEVNOTES_E2E_GPU`) and painting every frame (`DEVNOTES_E2
 `CARGO_PROFILE_DEV_OPT_LEVEL=3`: a release build refuses it); `puffin_egui` stops at egui
 0.33. A debug build logs every `Backend` database call past 16 ms.
 
-⚠️ This machine is not the plan's reference: Windows 11, Ryzen 7 9800X3D, RTX 5070 Ti, against a
-four-core laptop on integrated graphics. A frame here is a CPU frame (pass and tessellation, the
+⚠️ The budgets are for a four-core laptop on integrated graphics; this machine is Windows 11,
+Ryzen 7 9800X3D, RTX 5070 Ti. A frame here is a CPU frame (pass and tessellation, the
 AccessKit tree included, no GPU). Release without LTO, 6 November 2026.
 
-| Measure                                     | Realistic         | Stress            | Budget (plan § 6.2)      |
+| Measure                                     | Realistic         | Stress            | Budget                   |
 | ------------------------------------------- | ----------------- | ----------------- | ------------------------ |
 | Launch → window shown (release)             | **~500 ms**       | **~500 ms**       | ≤ 400 ms                 |
 | Unlock → past the gate                      | 140 ms            | 220 ms            | —                        |
@@ -6529,7 +6599,7 @@ That is what the p95 of a note opened pays, the note read through SQLite's own c
 | Stress, canvas scrolled       | 1 221       | 1 423   | 254           | < 0.3 %  |
 
 The budgets are ≤ 350 and ≤ 900 MB resident, read without the GPU driver, which DevNotes does not
-ship (plan § 6.2): `app::perf` prints that figure, 235 MiB on the realistic corpus and **945 MiB on
+ship: `app::perf` prints that figure, 235 MiB on the realistic corpus and **945 MiB on
 the stress one**, canvas scrolled. The ~220 MiB between the two tables at the gate are the driver's.
 What grows with the text is the index, which keeps each note and its folded copy in clear: the
 stress budget holds only if it stops keeping the bodies.
@@ -6596,13 +6666,13 @@ process that ended leaves it. The widget bench runs with reduced motion, so its 
 bar and the banners, and renders each in both themes on a software adapter — WARP on Windows,
 lavapipe on Linux — into `DEVNOTES_CAPTURES` when it is set. `test-rust` sets it and uploads
 the PNGs as `captures-<os>`, to be looked at beside the reference's captures. Nothing compares
-pixels: the geometry and SSIM scoring the plan describes are postponed (D24).
+pixels (D24).
 
 `app::screens` replays the reference's own screens, its data, gestures, file names and window
 sizes: `DEVNOTES_SCREENS=<dir> cargo test -p ui --lib app::screens` writes the PNGs to set beside
 the `angular-reference` zip, one profile copy a screen since a board shown or a rail put away is
 remembered. Without the variable it does nothing, and CI does not set it. The three tours of the
-README (`docs/tour-notes.gif`, `docs/tour-tools.gif`, `docs/tour-http.gif`) are frames of those
+README (`docs/gifs/tour-notes.gif`, `tour-tools.gif`, `tour-http.gif`) are frames of those
 screens, two seconds each, assembled by `cargo run -p app --example tours -- <dir>`: in the dark
 theme throughout, with one palette a loop. A frame of another theme, or a file of a megabyte,
 fails `crates/app/tests/tours.rs`.
@@ -6699,17 +6769,31 @@ specs, `npm run lint` ESLint, `npm run test:scripts` the Node tests of the token
   home page's canonical link, checks every page (one `h1`, a title, a canonical, no local
   address, download links that answer, languages that name each other, structured data that
   parses, a social image of 1200 × 630), and writes `sitemap.xml`, with each page's languages,
-  `robots.txt` and `404.html`. The two social images, `public/social-{fr,en}.png`, are captures of
-  the home page's window under its headline, made by hand in a browser: made again when it changes.
-  `public/.htaccess` serves `/docs/x` from `docs/x/index.html` without a redirect on the Apache
-  host.
-- **The home page redraws the application in HTML** rather than showing screenshots. Each
-  feature (`home/feature.ts`) is a section whose scene is a pure function of a step and its
-  progress `t` (`ScenePlayer`): it plays once well in view, rests when it leaves the
-  screen, and a step clicked shows that step. The scroll is never held, except by the hero
-  board, which stays centred while its cards are filed; a phone gets a window drawn for its
-  width. Code inside a scene is data (`home/code-view.ts`): the template compiler drops the
-  whitespace between two elements, and a formatter would reflow it.
+  `robots.txt` and `404.html`. The two social images, `public/social-{fr,en}.png`, show the home
+  page's headline over the capture of the notes list, drawn by hand in a browser: made again when
+  either changes. `public/.htaccess` serves `/docs/x` from `docs/x/index.html` without a redirect
+  on the Apache host.
+- **Every page stands on one construction grid** (`styles/_frame.scss`): a column between two
+  hairlines down the whole page, drawn by the root (`app.ts`), sections between rules with a cross
+  where they meet each hairline, and above each section a mono row with its number and name. `.col`
+  sets text inside the column, `.cells` lays cells edge to edge against the hairlines; the line
+  between two cells is the hairline's colour showing through a one-pixel gap. The column grows with
+  the screen up to 1600 px; from 1380 px the right gutter is wide enough to hold a page's own index.
+- **The home page shows the application itself**: a capture of the notes list (`public/shots/`,
+  `app::screens`' `notes-list` drawn at twice its size by hand, the locale set and the seed
+  translated for each language, in both themes, at two widths). A `<picture>` fetches one file: the
+  light one when the system's theme is light, until the site's own theme is known. Six numbered
+  marks stand on it, at each language's places (`MARKS`: English keeps the search on the toolbar's
+  first row), and a legend of six cells says what each part does.
+- **The day** (`home/day/`): ten moments, each a row whose scene moves the application's pieces
+  (`styles/_pieces.scss`). A scene is written in its end state, which is what a crawler, a page
+  without script and reduced motion show; `SceneLoop` puts it back to its start (`anim`) and plays
+  it (`run`) while it is on screen, again and again, each piece at its own `--d`; what CSS cannot
+  move (the arrows of a dragged shape) is moved on its `replay`. The words are the application's
+  own (`scene-words.ts`, from `crates/i18n` and the capture's seed). The hour follows the reading
+  point, in the right margin from 1380 px, in a bar under the header below. Text inside a scene is
+  interpolated where its spaces matter: the template compiler drops the whitespace between two
+  elements and collapses the rest.
 - **The documentation is the Markdown of `docs/content/`**, one file per page and per language,
   under one `index.json` (the pages in reading order, their group, colour, address and name);
   `docs/content/README.md` says how to write a page, add one, add a language. Nothing is generated

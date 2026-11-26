@@ -1,0 +1,82 @@
+// The construction grid every page is drawn on: one column between two hairlines, sections
+// between rules with a cross where they meet (the hairlines themselves are the root's, app.ts).
+// `--gl` and `--gr` are the gutters, `--pad` the room between a hairline and what it frames:
+// `.col` sets text inside the column, `.cells` lays cells edge to edge against its hairlines.
+:root {
+  --col: min(1600px, max(1240px, 68vw));
+  --gut: max(12px, (100vw - var(--col)) / 2);
+  --pad: clamp(14px, 2.2vw, 28px);
+  --gl: max(var(--gut), env(safe-area-inset-left, 0px));
+  --gr: max(var(--gut), env(safe-area-inset-right, 0px));
+}
+
+// From here the right gutter is wide enough to hold a page's own index: the hour of the day.
+@media (min-width: 1380px) {
+  :root {
+    --gut: max(184px, (100vw - var(--col)) / 2);
+  }
+}
+
+.col {
+  padding-left: calc(var(--gl) + var(--pad));
+  padding-right: calc(var(--gr) + var(--pad));
+}
+
+.cells {
+  padding-left: var(--gl);
+  padding-right: var(--gr);
+}
+
+.sec {
+  position: relative;
+  border-top: 1px solid var(--line-soft);
+}
+
+.sec:first-child {
+  border-top: 0;
+}
+
+.sec::before,
+.sec::after {
+  content: '';
+  position: absolute;
+  top: -5px;
+  z-index: 2;
+  width: 9px;
+  height: 9px;
+  background:
+    linear-gradient(var(--text-2), var(--text-2)) center / 1px 100% no-repeat,
+    linear-gradient(var(--text-2), var(--text-2)) center / 100% 1px no-repeat;
+  pointer-events: none;
+}
+
+.sec::before {
+  left: calc(var(--gl) - 4px);
+}
+
+.sec::after {
+  right: calc(var(--gr) - 4px);
+}
+
+// A section's number and name on the left, what it holds on the right.
+.sec-h {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 24px;
+  padding-block: 16px;
+  border-bottom: 1px solid var(--line-soft);
+  font: 500 12.5px/1.5 var(--font-mono);
+  color: var(--text-2);
+}
+
+.sec-h b {
+  font-weight: 500;
+  color: var(--amber-text);
+}
+
+// A section whose name is its heading: the outline has it, the eye reads it as the others.
+.sec-h h2 {
+  font: inherit;
+  letter-spacing: normal;
+}

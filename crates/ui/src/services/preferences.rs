@@ -1,7 +1,6 @@
 //! A `preferences.json`, as the reference wrote it: one flat object of `devnotes.*` keys, each a
-//! string. Two of them (plan § 4.2): the
-//! application's, in the profile, and the open library's, in its directory, for
-//! `devnotes.notes.*`.
+//! string. Two of them: the application's, in the profile, and the open library's, in its directory,
+//! for `devnotes.notes.*`.
 
 use std::collections::BTreeMap;
 use std::io;

@@ -1,5 +1,8 @@
 name: Release
 
+# `website.yml` reads it: a dry run published nothing the site could name.
+run-name: ${{ inputs.dry_run && 'Release (dry run)' || 'Release' }}
+
 # One button. The version is already in the root Cargo.toml — a human bumps it, and this
 # workflow draws a changelog section, a commit, a tag, the bundles and the release from it.
 #
@@ -12,7 +15,7 @@ on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: 'Run everything except the commit, the tag and the publication.'
+        description: 'Show what the release would change, and stop there: nothing is built.'
         type: boolean
         default: false
 
@@ -135,6 +138,17 @@ jobs:
             exit 1
           fi
 
+      # Nothing tries the key before the tag: without it the packages are built unsigned, and
+      # `publish` refuses them once the tag is out. Only whether it is set is read here.
+      - name: The signing key must be set
+        env:
+          KEY_SET: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
+        run: |
+          if [ "$KEY_SET" != true ]; then
+            echo "::error::the secret TAURI_SIGNING_PRIVATE_KEY is not set: no package could be signed"
+            exit 1
+          fi
+
       # For Prettier, which reformats the written file: an unformatted CHANGELOG.md would
       # break `npm run lint` on somebody else's next push.
       - run: npm ci
@@ -154,7 +168,7 @@ jobs:
           npx prettier --write CHANGELOG.md
           npx prettier --check CHANGELOG.md
           node scripts/release-notes.mjs extract --version "$VERSION" \
-            --out "$RUNNER_TEMP/release-notes.md"
+            --out "$RUNNER_TEMP/release-notes.md" --prompt-out "$RUNNER_TEMP/prompt-notes.md"
           cp CHANGELOG.md "$RUNNER_TEMP/CHANGELOG.md"
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
@@ -182,19 +196,27 @@ jobs:
           git push --atomic origin HEAD:main "refs/tags/$TAG"
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
-      - name: Preview only
+      - name: Show what the release would change
         if: ${{ inputs.dry_run }}
-        run: echo "::notice::dry run — nothing was committed, tagged or published"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          node scripts/release-preview.mjs --version "$VERSION" --repo "$GITHUB_REPOSITORY" \
+            --prompt "$RUNNER_TEMP/prompt-notes.md" >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice::dry run — nothing was committed, tagged, built or published"
 
-  # In a dry run too: the packages and their signatures by the real key are what a dry run
-  # proves, without publishing them. Its binary carries the changelog as it was, without the
-  # section `prepare` did not commit.
+  # Not in a dry run: the packages, their signatures and an update are what `packages.yml` proves,
+  # on the pull requests that touch them.
   release-build:
     name: Package ${{ matrix.target }}
     needs: prepare
+    if: ${{ !inputs.dry_run }}
     environment: release
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
+    # ⚠️ The tag is out by now: a macOS leg that fails must not leave it without a release.
+    continue-on-error: ${{ startsWith(matrix.target, 'macos') }}
     defaults:
       run:
         shell: bash
@@ -208,6 +230,10 @@ jobs:
             target: linux
           - os: windows-latest
             target: windows
+          - os: macos-latest
+            target: macos-aarch64
+          - os: macos-15-intel
+            target: macos-x64
     steps:
       # The SHA rather than the tag name: the tag was just created by `prepare`, and a SHA
       # cannot come to mean something else in between.
@@ -267,10 +293,12 @@ jobs:
           VERSION: ${{ needs.prepare.outputs.version }}
         run: |
           node scripts/release-notes.mjs extract --version "$VERSION" \
-            --out "$RUNNER_TEMP/release-notes.md"
-          cat "$RUNNER_TEMP/release-notes.md"
+            --out "$RUNNER_TEMP/release-notes.md" --prompt-out "$RUNNER_TEMP/prompt-notes.md"
+          cat "$RUNNER_TEMP/prompt-notes.md"
 
-      # The manifest the updater reads, with each platform's `format` (D26).
+      # The manifest the updater reads, with each platform's `format` (D26), and what the prompt
+      # shows: the section without what the user cannot see. Here and not in the application, since
+      # the prompt is drawn by the version already installed.
       - name: Assemble latest.json
         env:
           TAG: ${{ needs.prepare.outputs.tag }}
@@ -278,7 +306,7 @@ jobs:
         run: |
           node scripts/latest-json.mjs --dir release --version "$TAG" \
             --base "https://github.com/$REPO/releases/download/$TAG" \
-            --notes "$RUNNER_TEMP/release-notes.md"
+            --notes "$RUNNER_TEMP/prompt-notes.md"
 
       - name: Checksums
         run: |
@@ -286,9 +314,7 @@ jobs:
           sha256sum * > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
-      # ⚠️ The page's body is the changelog section **plus a compare link**, and not the
-      # extracted file itself: that one is what the manifest carries, and a link in a `<pre>`
-      # inside the update prompt is noise nobody can click.
+      # The page's body is the whole changelog section, plus a compare link.
       - name: Body for the release page
         env:
           TAG: ${{ needs.prepare.outputs.tag }}

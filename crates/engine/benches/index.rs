@@ -1,5 +1,5 @@
-//! The in-memory index on the two reference corpora (`reference.rs`, plan § 6.1), against the
-//! budgets of § 6.2: built ≤ 1.5 s / ≤ 4 s, search p95 ≤ 50 / 120 ms, `list_tags` ≤ 5 / 10 ms,
+//! The in-memory index on the two reference corpora (`reference.rs`), against their
+//! budgets: built ≤ 1.5 s / ≤ 4 s, search p95 ≤ 50 / 120 ms, `list_tags` ≤ 5 / 10 ms,
 //! a write ≤ 5 ms, a batch of 100 ≤ 30 ms.
 //!
 //! ```

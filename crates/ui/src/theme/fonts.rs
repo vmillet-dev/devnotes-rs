@@ -1,4 +1,4 @@
-//! The reference's two typefaces, embedded (ADR S2): Inter and `JetBrains Mono` as the variable
+//! The reference's two typefaces, embedded: Inter and `JetBrains Mono` as the variable
 //! files the reference loaded, one per script, so the CSS weights (650 included) apply as they
 //! are; Noto Emoji before the system's fonts, so an emoji looks the same on every machine.
 //! What none of them draws (CJK, say) comes from the system, found on demand by eframe.

@@ -1,4 +1,4 @@
-//! The interface's own components, in place of the reference's `shared/` (plan § 3.7): painted
+//! The interface's own components, in place of the reference's `shared/`: painted
 //! by hand after its CSS, reading the theme and nothing else — no global state. Every one goes
 //! through [`interact`], which gives it its response, its AccessKit node named and addressed by
 //! the `data-testid` its Angular twin had, and its focus ring.
@@ -129,7 +129,7 @@ pub fn address(ui: &Ui, response: &Response, author_id: &str) {
     });
 }
 
-/// Text at a size and a CSS weight, the variable font's `wght` axis set (ADR S2).
+/// Text at a size and a CSS weight, the variable font's `wght` axis set.
 pub(crate) fn text(
     ui: &Ui,
     words: &str,

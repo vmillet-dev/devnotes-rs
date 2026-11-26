@@ -1,4 +1,4 @@
-//! The two bubbles the caller fills (plan § 3.8): the completion list at the caret — ↑ and ↓ to
+//! The two bubbles the caller fills: the completion list at the caret — ↑ and ↓ to
 //! move, Tab or Enter to accept, Escape to close until the word changes — and the tooltip for
 //! the position under the pointer.
 

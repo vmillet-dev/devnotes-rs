@@ -4,7 +4,7 @@ Installing DevNotes, choosing your library’s passphrase, and a tour of the sam
 
 ## Installing
 
-DevNotes runs on Windows and Linux. Every file is on [the download page](https://devnotes.fr/en/download), each as a direct link: take the one that matches your system. There is no browser engine inside, so nothing else to install.
+DevNotes runs on Windows, on macOS (from the version after 1.1.0) and on Linux. Every file is on [the download page](https://devnotes.fr/en/download), each as a direct link: take the one that matches your system. There is no browser engine inside, so nothing else to install.
 
 **The files of each version**
 
@@ -12,6 +12,8 @@ DevNotes runs on Windows and Linux. Every file is on [the download page](https:/
 | --- | --- | --- |
 | Windows | `…_x64-setup.exe` | you simply want to install it: this is the one |
 | Windows | `…-windows.exe` | you want nothing installed |
+| macOS | `…_aarch64.dmg` | Macs with an Apple chip (M1 and later) |
+| macOS | `…_x64.dmg` | Macs with an Intel processor |
 | Linux | `…_x86_64.AppImage` | any distribution, nothing to install |
 | Linux | `…_amd64.deb` | Debian, Ubuntu and derivatives |
 | Linux | `…x86_64.rpm` | Fedora, RHEL and derivatives |

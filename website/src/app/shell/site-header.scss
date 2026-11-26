@@ -2,9 +2,7 @@
   position: sticky;
   top: env(safe-area-inset-top, 0px);
   z-index: 30;
-  background: var(--head-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: var(--bg-0);
   border-bottom: 1px solid var(--line-soft);
 }
 
@@ -12,7 +10,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  min-height: 64px;
+  min-height: calc(var(--head-h) - 1px);
 }
 
 .brand {
@@ -23,37 +21,7 @@
   font-size: 17px;
   letter-spacing: -0.01em;
   text-decoration: none;
-}
-
-// The section being read. Kept in the row while empty: it is what pushes the nav right.
-.here {
   margin-right: auto;
-  min-width: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 10px;
-  border-radius: 7px;
-  background: rgba(var(--c), 0.12);
-  border: 1px solid rgba(var(--c), 0.45);
-  font-size: 13px;
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  transition: opacity var(--motion);
-}
-
-.here .sw {
-  width: 9px;
-  height: 9px;
-  border-radius: 3px;
-  background: rgb(var(--c));
-  flex: none;
-}
-
-.here.off {
-  opacity: 0;
 }
 
 .site-nav {
@@ -137,28 +105,6 @@
   color: var(--amber-text);
 }
 
-// One segment per section, as long as the section, filled as it is read.
-.progress {
-  display: flex;
-  gap: 2px;
-  height: 3px;
-}
-
-.progress span {
-  position: relative;
-  flex: var(--w, 1) 1 0;
-  background: rgba(var(--c), 0.18);
-  overflow: hidden;
-}
-
-.progress i {
-  position: absolute;
-  inset: 0;
-  background: rgb(var(--c));
-  transform-origin: left;
-  transform: scaleX(var(--f, 0));
-}
-
 @media (max-width: 820px) {
   .site-nav {
     display: none;
@@ -175,16 +121,8 @@
   }
 }
 
-// A phone keeps the name; the section being read gives way first, then GitHub, still in the menu.
+// A phone keeps the name; GitHub gives way, still in the menu.
 @media (max-width: 560px) {
-  .here {
-    display: none;
-  }
-
-  .brand {
-    margin-right: auto;
-  }
-
   .icon-btn.source {
     display: none;
   }

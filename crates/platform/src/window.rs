@@ -18,14 +18,19 @@ pub struct Geometry {
     pub maximized: bool,
 }
 
-/// A session with no X server left (D15): winit 0.30 can neither place nor hide a window there
-/// (E12).
+/// A session with no X server left (D15): winit 0.30 can neither place nor hide a window there.
 pub fn is_native_wayland() -> bool {
     cfg!(target_os = "linux")
         && only_wayland(
             std::env::var_os("DISPLAY").as_deref(),
             std::env::var_os("WAYLAND_DISPLAY").as_deref(),
         )
+}
+
+/// Whether a window put out of sight can be called back. Nothing hides one under native Wayland, and
+/// on macOS a click on the Dock brings back a window that is minimised, not one that is hidden.
+pub fn can_hide() -> bool {
+    !cfg!(target_os = "macos") && !is_native_wayland()
 }
 
 fn only_wayland(x11: Option<&OsStr>, wayland: Option<&OsStr>) -> bool {

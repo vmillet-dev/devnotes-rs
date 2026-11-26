@@ -1,6 +1,6 @@
-//! Markdown typed becomes what it writes (the input rules of the reference's `StarterKit`, as
-//! `golden/rich-keys` records them): `# ` to `###### `, `- `, `* `, `+ `, `1. `, `[ ] `, `[x] `,
-//! `> `, a fence, `---`, and `**bold**`, `*italic*`, `~~strike~~`, `` `code` `` closed at the caret.
+//! Markdown typed becomes what it writes: `# ` to `###### `, `- `, `* `, `+ `, `1. `, `[ ] `,
+//! `[x] `, `> `, a fence, `---`, and `**bold**`, `*italic*`, `~~strike~~`, `` `code` `` closed at
+//! the caret.
 //! A spaced emphasis — `2 * 3 *` — is kept as typed (the reference's `SpacedEmphasis`). The
 //! patterns use lookahead, which the `regex` crate does not: each is read here by hand.
 

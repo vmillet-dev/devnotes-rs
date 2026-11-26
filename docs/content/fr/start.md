@@ -4,7 +4,7 @@ Installer DevNotes, choisir la phrase de passe de votre bibliothèque, et faire 
 
 ## Installer
 
-DevNotes fonctionne sous Windows et sous Linux. Tous les fichiers sont sur [la page de téléchargement](https://devnotes.fr/telecharger), chacun en lien direct : prenez celui qui correspond à votre système. Il n’y a aucun moteur de navigateur à l’intérieur, donc rien d’autre à installer.
+DevNotes fonctionne sous Windows, sous macOS (à partir de la version qui suit la 1.1.0) et sous Linux. Tous les fichiers sont sur [la page de téléchargement](https://devnotes.fr/telecharger), chacun en lien direct : prenez celui qui correspond à votre système. Il n’y a aucun moteur de navigateur à l’intérieur, donc rien d’autre à installer.
 
 **Les fichiers de chaque version**
 
@@ -12,6 +12,8 @@ DevNotes fonctionne sous Windows et sous Linux. Tous les fichiers sont sur [la p
 | --- | --- | --- |
 | Windows | `…_x64-setup.exe` | vous voulez simplement l’installer : c’est celui-là |
 | Windows | `…-windows.exe` | vous ne voulez aucune installation |
+| macOS | `…_aarch64.dmg` | Mac à puce Apple (M1 et suivantes) |
+| macOS | `…_x64.dmg` | Mac à processeur Intel |
 | Linux | `…_x86_64.AppImage` | toutes les distributions, rien à installer |
 | Linux | `…_amd64.deb` | Debian, Ubuntu et dérivées |
 | Linux | `…x86_64.rpm` | Fedora, RHEL et dérivées |

@@ -1,0 +1,329 @@
+.bridge {
+  padding-block: clamp(52px, 7vw, 88px) clamp(40px, 5vw, 64px);
+}
+
+.bridge h2 {
+  max-width: 21ch;
+  font-size: clamp(1.9rem, 3.6vw, 3.1rem);
+}
+
+// A moment is a row: what happens, then the application doing it.
+.mo {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  border-top: 1px solid var(--line-soft);
+}
+
+.mo-t {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  padding: 56px var(--pad);
+}
+
+.mo-t p {
+  max-width: 46ch;
+  font-size: 17px;
+  line-height: 1.62;
+  color: var(--text-1);
+}
+
+.mo-t strong {
+  font-weight: 600;
+  color: var(--text-0);
+}
+
+.mo h3 {
+  font-size: clamp(1.55rem, 2.4vw, 2.1rem);
+  line-height: 1.14;
+  letter-spacing: -0.022em;
+  font-weight: 600;
+  text-wrap: balance;
+}
+
+.mo-t .when {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  font: 500 15px var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-2);
+  transition: color var(--motion);
+}
+
+.when span {
+  font: 600 14px var(--font-sans);
+  color: var(--tone, var(--text-2));
+}
+
+.mo.on .when {
+  color: var(--amber-text);
+}
+
+.mo-t .gesture {
+  font-size: 15.5px;
+}
+
+.mo app-day-scene {
+  border-left: 1px solid var(--line-soft);
+}
+
+// Each moment in its kind's colour, as the application paints its cards.
+.t-list,
+.t-find {
+  --tone: var(--text-1);
+}
+
+.t-snip {
+  --tone: var(--green);
+}
+
+.t-draw {
+  --tone: var(--teal);
+}
+
+.t-http {
+  --tone: var(--blue);
+}
+
+.t-tool,
+.t-lock {
+  --tone: var(--amber-text);
+}
+
+.t-calc {
+  --tone: var(--pink);
+}
+
+.t-note {
+  --tone: var(--purple);
+}
+
+// The hour: in the right margin, named moment by moment, while the day is on screen.
+.rail {
+  position: fixed;
+  top: var(--head-h);
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  width: var(--gr);
+  padding: 56px 24px 40px 28px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--motion-scene),
+    visibility var(--motion-scene);
+}
+
+.rail.shown {
+  opacity: 1;
+  visibility: visible;
+}
+
+.clock {
+  font: 500 clamp(40px, 3.4vw, 54px) / 1 var(--font-mono);
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-0);
+}
+
+.say {
+  margin-top: 10px;
+  min-height: 1.4em;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--tone, var(--text-2));
+}
+
+.ruler {
+  position: relative;
+  margin: 36px 0 0 30px;
+  border-left: 1px solid var(--line);
+}
+
+.hour {
+  position: absolute;
+  top: calc(var(--at) * 100%);
+  left: -30px;
+  width: 24px;
+  transform: translateY(-50%);
+  font: 400 11px var(--font-mono);
+  color: var(--text-2);
+  text-align: right;
+}
+
+.hour.minor {
+  color: transparent;
+}
+
+.hour::after {
+  content: '';
+  position: absolute;
+  left: 26px;
+  top: 50%;
+  width: 6px;
+  border-top: 1px solid var(--line);
+}
+
+.mark {
+  position: absolute;
+  top: calc(var(--at) * 100%);
+  left: -4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1px solid var(--text-2);
+  background: var(--bg-0);
+  transform: translateY(-50%);
+}
+
+.mark b {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  font: 500 12.5px var(--font-sans);
+  white-space: nowrap;
+  color: var(--text-2);
+  transition: color var(--motion);
+}
+
+.mark.past {
+  background: var(--amber-dim);
+  border-color: var(--amber-dim);
+}
+
+.mark.here {
+  background: var(--amber-fill);
+  border-color: var(--amber-fill);
+}
+
+.mark.here b {
+  font-weight: 600;
+  color: var(--text-0);
+}
+
+.fill {
+  position: absolute;
+  left: -1px;
+  top: 0;
+  width: 1px;
+  height: calc(var(--now, 0) * 100%);
+  background: var(--amber-fill);
+}
+
+.now {
+  position: absolute;
+  top: calc(var(--now, 0) * 100%);
+  left: -5px;
+  width: 9px;
+  margin-top: -1px;
+  border-top: 2px solid var(--amber-fill);
+}
+
+// Below a wide screen, the margin is too narrow: the hour becomes a bar under the header.
+@media (max-width: 1379px) {
+  .rail {
+    position: sticky;
+    top: calc(env(safe-area-inset-top, 0px) + var(--head-h));
+    bottom: auto;
+    width: auto;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding-block: 10px;
+    border-bottom: 1px solid var(--line-soft);
+    background: var(--bg-0);
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .clock {
+    font-size: 24px;
+  }
+
+  .say {
+    flex: none;
+    width: 8.5em;
+    min-height: 0;
+    margin: 0;
+  }
+
+  .ruler {
+    flex: 1;
+    height: 24px;
+    margin: 0;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    align-self: center;
+    translate: 0 6px;
+  }
+
+  .hour {
+    top: 0;
+    left: calc(var(--at) * 100%);
+    width: auto;
+    padding-top: 7px;
+    transform: translateX(-50%);
+    font-size: 10px;
+  }
+
+  .hour::after {
+    left: 50%;
+    top: 0;
+    width: 0;
+    height: 5px;
+    border-top: 0;
+    border-left: 1px solid var(--line);
+  }
+
+  .mark {
+    top: -4px;
+    left: calc(var(--at) * 100%);
+    transform: translateX(-50%);
+  }
+
+  .mark b {
+    display: none;
+  }
+
+  .fill {
+    top: -1px;
+    left: 0;
+    width: calc(var(--now, 0) * 100%);
+    height: 1px;
+  }
+
+  .now {
+    top: -9px;
+    left: calc(var(--now, 0) * 100%);
+    width: 0;
+    height: 17px;
+    margin: 0 0 0 -1px;
+    border-top: 0;
+    border-left: 2px solid var(--amber-fill);
+  }
+}
+
+@media (max-width: 1000px) {
+  .mo {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mo-t {
+    padding-bottom: 28px;
+  }
+
+  .mo app-day-scene {
+    border-left: 0;
+    border-top: 1px solid var(--line-soft);
+  }
+}
+
+@media (max-width: 640px) {
+  .say {
+    display: none;
+  }
+}

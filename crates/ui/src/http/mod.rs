@@ -1,5 +1,5 @@
-//! The HTTP area: its rail of collections beside the open requests (plan § 7 « Phase 6 »). The
-//! rail is the library's, and so is its width.
+//! The HTTP area: its rail of collections beside the open requests. The rail is the library's,
+//! and so is its width.
 
 mod close;
 mod code;

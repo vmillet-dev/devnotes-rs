@@ -133,10 +133,10 @@ mod tests {
     use super::*;
     use crate::Language;
 
-    /// The reference's labels, from a second to a year, both ways, both languages
-    /// (`golden/relative-time`), on the machine's zone, Europe/Paris.
+    /// From a second to a year, both ways, both languages (`golden/relative-time`), in
+    /// Europe/Paris.
     #[test]
-    fn every_label_reads_as_the_reference_wrote_it() {
+    fn every_label_reads_as_its_golden_case_says() {
         let corpus: serde_json::Value =
             serde_json::from_str(include_str!("../../../golden/relative-time/cases.json")).unwrap();
         let mut wrong = Vec::new();

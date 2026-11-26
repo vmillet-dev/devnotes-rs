@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 
 import { Lang, downloadPath } from '../core/lang';
 import { Language } from '../core/language';
-import { CHECKSUMS, RELEASE_PAGE, System, VERSION, offers, visitorSystem } from '../core/release';
+import { CHECKSUMS, RELEASE_PAGE, System, VERSION, offers, systems, visitorSystem } from '../core/release';
 import { Seo } from '../core/seo';
 import { CHANGELOG } from '../core/site';
 import { DocBlocks } from '../docs/doc-blocks';
@@ -20,11 +20,11 @@ const CHECK_COMMANDS = `sha256sum -c SHA256SUMS.txt --ignore-missing     # Linux
 Get-FileHash .\\devnotes_*_x64-setup.exe         # Windows, PowerShell`;
 
 const FR = {
-  title: `Télécharger DevNotes ${VERSION} pour Windows et Linux`,
-  description: `DevNotes ${VERSION} pour Windows et Linux : l'installateur, l'AppImage, les paquets .deb et .rpm, et les exécutables autonomes. Gratuit et libre.`,
+  title: `Télécharger DevNotes ${VERSION} pour ${systems('fr')}`,
+  description: `DevNotes ${VERSION} pour ${systems('fr')} : l'installateur, l'AppImage, les paquets .deb et .rpm, et les exécutables autonomes. Gratuit et libre.`,
   label: 'Télécharger',
   heading: 'Télécharger DevNotes',
-  lede: `La version ${VERSION}, pour Windows et Linux. Gratuite et libre, sans compte : tout reste sur votre machine.`,
+  lede: `La version ${VERSION}, pour ${systems('fr')}. Gratuite et libre, sans compte : tout reste sur votre machine.`,
   phone: "DevNotes s'installe sur un ordinateur. Ouvrez cette page depuis votre poste pour le télécharger.",
   systems: 'Les fichiers, par système',
   yours: 'Votre système',
@@ -34,11 +34,15 @@ const FR = {
   executable: 'Rendez-la exécutable avec chmod +x, puis lancez-la.',
   others: 'Autres formats',
   notes: `Notes de la version ${VERSION}`,
-  mac: "Pas de version macOS pour l'instant : elle ne peut pas être testée ici, et Gatekeeper réclame un compte Apple Developer payant.",
+  opening:
+    'Au premier lancement, macOS le bloque : ouvrez Réglages Système, Confidentialité et sécurité, puis Ouvrir quand même.',
   install: 'Installer',
   onWindows: 'Sous Windows',
   windows:
     "Lancez l'installateur : il s'installe pour votre compte, sans droits d'administrateur. L'avertissement de SmartScreen porte sur l'éditeur, DevNotes n'ayant pas de certificat de signature de code, pas sur le fichier : son empreinte est plus bas.",
+  onMacos: 'Sous macOS',
+  macos:
+    "Ouvrez l'image et glissez DevNotes dans Applications. Au premier lancement, macOS le bloque, DevNotes n'ayant pas de certificat d'éditeur : ouvrez Réglages Système, Confidentialité et sécurité, puis Ouvrir quand même.",
   onLinux: 'Sous Linux',
   linux:
     "Une AppImage se rend exécutable puis se lance ; un paquet s'installe avec le gestionnaire de la distribution.",
@@ -60,11 +64,11 @@ const FR = {
 };
 
 const EN: typeof FR = {
-  title: `Download DevNotes ${VERSION} for Windows and Linux`,
-  description: `DevNotes ${VERSION} for Windows and Linux: the installer, the AppImage, the .deb and .rpm packages, and the standalone executables. Free and open source.`,
+  title: `Download DevNotes ${VERSION} for ${systems('en')}`,
+  description: `DevNotes ${VERSION} for ${systems('en')}: the installer, the AppImage, the .deb and .rpm packages, and the standalone executables. Free and open source.`,
   label: 'Download',
   heading: 'Download DevNotes',
-  lede: `Version ${VERSION}, for Windows and Linux. Free and open source, no account: everything stays on your machine.`,
+  lede: `Version ${VERSION}, for ${systems('en')}. Free and open source, no account: everything stays on your machine.`,
   phone: 'DevNotes installs on a computer. Open this page from your desktop to download it.',
   systems: 'The files, by system',
   yours: 'Your system',
@@ -74,11 +78,14 @@ const EN: typeof FR = {
   executable: 'Make it executable with chmod +x, then run it.',
   others: 'Other formats',
   notes: `Release notes for ${VERSION}`,
-  mac: 'No macOS version for now: it cannot be tested here, and Gatekeeper requires a paid Apple Developer account.',
+  opening: 'On first launch, macOS blocks it: open System Settings, Privacy & Security, then Open Anyway.',
   install: 'Installing',
   onWindows: 'On Windows',
   windows:
     "Run the installer: it installs for your account, without administrator rights. SmartScreen's warning is about the publisher, DevNotes having no code signing certificate, not about the file: its fingerprint is below.",
+  onMacos: 'On macOS',
+  macos:
+    'Open the image and drag DevNotes to Applications. On first launch, macOS blocks it, DevNotes having no publisher certificate: open System Settings, Privacy & Security, then Open Anyway.',
   onLinux: 'On Linux',
   linux:
     "An AppImage is made executable then run; a package installs with the distribution's package manager.",
@@ -116,6 +123,7 @@ export class DownloadPage {
   protected readonly files = computed(() =>
     this.offers().flatMap((offer) => [offer.primary, ...offer.others]),
   );
+  protected readonly hasMacos = this.offers().some(({ system }) => system === 'macos');
   protected readonly startPath = computed(() => docPath('start', this.lang()));
   protected readonly linuxInstall = computed(() => [shell(this.text().linuxTitle, LINUX_COMMANDS)]);
   protected readonly check = computed(() => [shell(this.text().checkTitle, CHECK_COMMANDS)]);
@@ -141,5 +149,11 @@ export class DownloadPage {
       this.yours.set(visitorSystem());
       this.onPhone.set(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
     });
+  }
+
+  /** What the first launch asks. */
+  protected headsUp(system: System): string {
+    const { unsigned, opening, executable } = this.text();
+    return { windows: unsigned, macos: opening, linux: executable }[system];
   }
 }

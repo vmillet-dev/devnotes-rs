@@ -22,7 +22,12 @@ fn serve(version: &str, installer: &'static [u8]) -> String {
         "version": version,
         "notes": "### Added\n\n- Faster search",
         "pub_date": "2026-11-06T00:00:00Z",
-        "platforms": { "windows-x86_64": entry, "linux-x86_64": entry },
+        "platforms": {
+            "windows-x86_64": entry,
+            "linux-x86_64": entry,
+            "macos-aarch64": entry,
+            "macos-x86_64": entry,
+        },
     })
     .to_string();
     std::thread::spawn(move || {

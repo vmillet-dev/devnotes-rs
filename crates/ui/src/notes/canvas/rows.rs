@@ -1,5 +1,5 @@
 //! The view flattened into rows of one height each — a section's heading, then its cards a
-//! row at a time — so that only the rows in the viewport are drawn (plan § 3.6). Cards are a
+//! row at a time — so that only the rows in the viewport are drawn. Cards are a
 //! fixed height in a grid of `repeat(auto-fill, minmax(220px, 1fr))`: the rows are uniform.
 
 use crate::theme::tokens::gap;

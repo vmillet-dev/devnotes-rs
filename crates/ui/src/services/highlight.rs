@@ -1,4 +1,4 @@
-//! Code coloured without ever holding the frame (D22, ADR S5). A card's few lines are coloured at
+//! Code coloured without ever holding the frame (D22). A card's few lines are coloured at
 //! once and kept while drawn; a long text is coloured by windows, on a thread of its own that
 //! builds the parser's states from the top: a line it has not reached is drawn plain meanwhile.
 
@@ -259,68 +259,5 @@ mod tests {
         let lines = short(&ctx, "SQL", "SELECT 1;");
         assert!(lines[0].iter().any(|(_, token)| *token == Token::Keyword));
         assert!(Colouring::new(&ctx, "Not a language").is_none());
-    }
-
-    /// The `syntax-tokens` corpus, read as a report (gap E11): how many of the reference's
-    /// coloured characters take the same class here. `cargo test -p ui syntax_tokens_report --
-    /// --ignored --nocapture`.
-    #[test]
-    #[ignore = "a report, not a check: TextMate grammars cut tokens otherwise than Lezer"]
-    fn syntax_tokens_report() {
-        text::highlight::warm();
-        let corpus = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../golden/syntax-tokens/cases.json");
-        let cases: Vec<serde_json::Value> =
-            serde_json::from_str(&std::fs::read_to_string(corpus).unwrap()).unwrap();
-        let class = |token: Token| match token {
-            Token::Keyword => "tok-keyword",
-            Token::String => "tok-string",
-            Token::Literal => "tok-literal",
-            Token::Name => "tok-name",
-            Token::Property => "tok-property",
-            Token::Meta => "tok-meta",
-            Token::Comment => "tok-comment",
-            Token::Deleted => "tok-deleted",
-            Token::Emphasis => "tok-emphasis",
-            Token::Strong => "tok-strong",
-        };
-        let (mut same, mut total) = (0, 0);
-        for case in &cases {
-            let tag = case["input"]["language"].clone();
-            let language: engine::notes::language::Language = serde_json::from_value(tag).unwrap();
-            let code = case["input"]["text"].as_str().unwrap();
-            let chars: Vec<char> = code.chars().collect();
-            let mut ours = vec![""; chars.len()];
-            if let Some(syntax) = crate::notes::language::syntax(language) {
-                let mut at = 0;
-                for (line, coloured) in code
-                    .split_inclusive('\n')
-                    .zip(text::highlight::highlight(code, syntax))
-                {
-                    for (range, token) in coloured {
-                        for slot in &mut ours[at + range.start..at + range.end] {
-                            *slot = class(token);
-                        }
-                    }
-                    at += line.chars().count();
-                }
-            }
-            let (mut case_same, mut case_total) = (0, 0);
-            for range in case["output"].as_array().unwrap() {
-                let from = usize::try_from(range["from"].as_u64().unwrap()).unwrap();
-                let to = usize::try_from(range["to"].as_u64().unwrap()).unwrap();
-                let wanted = range["classes"].as_str().unwrap();
-                for slot in ours.iter().take(to.min(chars.len())).skip(from) {
-                    case_total += 1;
-                    if slot.contains(wanted) {
-                        case_same += 1;
-                    }
-                }
-            }
-            println!("{language:?}: {case_same}/{case_total}");
-            same += case_same;
-            total += case_total;
-        }
-        println!("all: {same}/{total}");
     }
 }

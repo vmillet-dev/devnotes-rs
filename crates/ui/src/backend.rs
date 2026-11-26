@@ -1,4 +1,4 @@
-//! Where the interface hands its work to the core, and how the answer comes back (plan § 3.3.5).
+//! Where the interface hands its work to the core, and how the answer comes back.
 //! The UI thread never does I/O, crypto or waiting: everything leaves through one of three
 //! queues and returns as a [`Pending`], polled each frame, its worker waking the window.
 //!
