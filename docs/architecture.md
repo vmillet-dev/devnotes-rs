@@ -6769,17 +6769,31 @@ specs, `npm run lint` ESLint, `npm run test:scripts` the Node tests of the token
   home page's canonical link, checks every page (one `h1`, a title, a canonical, no local
   address, download links that answer, languages that name each other, structured data that
   parses, a social image of 1200 × 630), and writes `sitemap.xml`, with each page's languages,
-  `robots.txt` and `404.html`. The two social images, `public/social-{fr,en}.png`, are captures of
-  the home page's window under its headline, made by hand in a browser: made again when it changes.
-  `public/.htaccess` serves `/docs/x` from `docs/x/index.html` without a redirect on the Apache
-  host.
-- **The home page redraws the application in HTML** rather than showing screenshots. Each
-  feature (`home/feature.ts`) is a section whose scene is a pure function of a step and its
-  progress `t` (`ScenePlayer`): it plays once well in view, rests when it leaves the
-  screen, and a step clicked shows that step. The scroll is never held, except by the hero
-  board, which stays centred while its cards are filed; a phone gets a window drawn for its
-  width. Code inside a scene is data (`home/code-view.ts`): the template compiler drops the
-  whitespace between two elements, and a formatter would reflow it.
+  `robots.txt` and `404.html`. The two social images, `public/social-{fr,en}.png`, show the home
+  page's headline over the capture of the notes list, drawn by hand in a browser: made again when
+  either changes. `public/.htaccess` serves `/docs/x` from `docs/x/index.html` without a redirect
+  on the Apache host.
+- **Every page stands on one construction grid** (`styles/_frame.scss`): a column between two
+  hairlines down the whole page, drawn by the root (`app.ts`), sections between rules with a cross
+  where they meet each hairline, and above each section a mono row with its number and name. `.col`
+  sets text inside the column, `.cells` lays cells edge to edge against the hairlines; the line
+  between two cells is the hairline's colour showing through a one-pixel gap. The column grows with
+  the screen up to 1600 px; from 1380 px the right gutter is wide enough to hold a page's own index.
+- **The home page shows the application itself**: a capture of the notes list (`public/shots/`,
+  `app::screens`' `notes-list` drawn at twice its size by hand, the locale set and the seed
+  translated for each language, in both themes, at two widths). A `<picture>` fetches one file: the
+  light one when the system's theme is light, until the site's own theme is known. Six numbered
+  marks stand on it, at each language's places (`MARKS`: English keeps the search on the toolbar's
+  first row), and a legend of six cells says what each part does.
+- **The day** (`home/day/`): ten moments, each a row whose scene moves the application's pieces
+  (`styles/_pieces.scss`). A scene is written in its end state, which is what a crawler, a page
+  without script and reduced motion show; `SceneLoop` puts it back to its start (`anim`) and plays
+  it (`run`) while it is on screen, again and again, each piece at its own `--d`; what CSS cannot
+  move (the arrows of a dragged shape) is moved on its `replay`. The words are the application's
+  own (`scene-words.ts`, from `crates/i18n` and the capture's seed). The hour follows the reading
+  point, in the right margin from 1380 px, in a bar under the header below. Text inside a scene is
+  interpolated where its spaces matter: the template compiler drops the whitespace between two
+  elements and collapses the rest.
 - **The documentation is the Markdown of `docs/content/`**, one file per page and per language,
   under one `index.json` (the pages in reading order, their group, colour, address and name);
   `docs/content/README.md` says how to write a page, add one, add a language. Nothing is generated

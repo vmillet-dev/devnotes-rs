@@ -1,8 +1,10 @@
 import index from '../../../../docs/content/index.json';
 import { Lang } from '../core/lang';
-import { Tone } from '../core/page-progress';
 
 type PerLang = Readonly<Record<Lang, string>>;
+
+/** A page's colour in the sidebar, as the tokens name its RGB triplet (`--green-rgb`). */
+export type Tone = 'green' | 'blue' | 'purple' | 'teal' | 'olive' | 'pink' | 'grey' | 'amber';
 
 /** `docs/content/index.json`, as it is written there. */
 interface DocsIndex {

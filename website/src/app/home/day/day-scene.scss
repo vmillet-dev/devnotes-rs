@@ -1,0 +1,51 @@
+// The cell a scene stands in: the board's dotted paper, the piece in its middle.
+:host {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  place-items: center;
+  min-height: 460px;
+  padding: 56px var(--pad);
+  overflow: hidden;
+  background-image: radial-gradient(circle, var(--dot) 1.1px, transparent 1.7px);
+  background-size: 24px 24px;
+}
+
+.duo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  width: 100%;
+}
+
+.sending {
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+
+.stack,
+.piece {
+  min-width: 0;
+}
+
+// A wide screen gives the pieces their room.
+@media (min-width: 1500px) {
+  :host > * {
+    zoom: 1.1;
+  }
+}
+
+@media (max-width: 1000px) {
+  :host {
+    min-height: 0;
+    padding-block: 36px;
+  }
+}
+
+@media (max-width: 640px) {
+  :host {
+    padding: 28px 12px;
+  }
+}

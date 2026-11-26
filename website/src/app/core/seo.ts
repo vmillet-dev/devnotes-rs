@@ -19,10 +19,16 @@ export interface PageMeta {
 
 const SITE_NAME = 'DevNotes';
 
-/** The image of a shared link: the home page's window under its headline, one per language. */
+/** The image of a shared link: the home page's headline over the application's capture, one per language. */
 const SOCIAL: Readonly<Record<Lang, { readonly file: string; readonly alt: string }>> = {
-  fr: { file: '/social-fr.png', alt: 'La fenêtre de DevNotes : un espace et ses dossiers, en tableau.' },
-  en: { file: '/social-en.png', alt: 'The DevNotes window: a space and its folders, on a board.' },
+  fr: {
+    file: '/social-fr.png',
+    alt: 'DevNotes : « Vos snippets, vos notes, vos requêtes. », au-dessus de la liste des notes de l’application.',
+  },
+  en: {
+    file: '/social-en.png',
+    alt: 'DevNotes: “Your snippets, your notes, your requests.”, above the application’s list of notes.',
+  },
 };
 
 /**
