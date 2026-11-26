@@ -11,7 +11,7 @@ Everything local, everything behind one passphrase.
 
 [![Latest release](https://img.shields.io/github/v/release/vmillet-dev/devnotes-rs?style=flat-square&color=e8a33d&label=release)](https://github.com/vmillet-dev/devnotes-rs/releases/latest)
 [![CI](https://img.shields.io/github/actions/workflow/status/vmillet-dev/devnotes-rs/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/vmillet-dev/devnotes-rs/actions/workflows/ci.yml)
-[![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-5b6b8c?style=flat-square)](#install)
+[![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-5b6b8c?style=flat-square)](#install)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-5b6b8c?style=flat-square)](LICENSE)
 
 [**Download**](https://github.com/vmillet-dev/devnotes-rs/releases/latest) · [Notes](#notes-and-snippets) · [Tools](#tools) · [API client](#api-client) · [Code quality](#code-quality) · [Install](#install) · [Privacy](#privacy)
@@ -52,7 +52,7 @@ HTTP, GraphQL and WebSocket. Collections, environments and variables, a history 
 </tr>
 </table>
 
-**Shared by all three:** local-first and encrypted · no account, no cloud, no telemetry · keyboard first · Windows and Linux.
+**Shared by all three:** local-first and encrypted · no account, no cloud, no telemetry · keyboard first · Windows, macOS and Linux.
 
 ## Code quality
 
@@ -106,12 +106,14 @@ Several libraries, each behind its own passphrase · a daily backup restored in 
 
 ## Install
 
-DevNotes runs on **Windows** and **Linux**, as one native program: no browser engine, no runtime to install beside it. The Windows installer installs for you alone and needs no administrator rights. Take the file for your system from the [latest release](https://github.com/vmillet-dev/devnotes-rs/releases/latest):
+DevNotes runs on **Windows**, **macOS** and **Linux**, as one native program: no browser engine, no runtime to install beside it. The Windows installer installs for you alone and needs no administrator rights. Take the file for your system from the [latest release](https://github.com/vmillet-dev/devnotes-rs/releases/latest):
 
 | Platform | File                                 | Pick it if                                       |
 | -------- | ------------------------------------ | ------------------------------------------------ |
 | Windows  | `devnotes_<version>_x64-setup.exe`   | you just want it installed — **the one to take** |
 | Windows  | `devnotes-<version>-windows.exe`     | you want no installer at all                     |
+| macOS    | `devnotes_<version>_aarch64.dmg`     | a Mac with an Apple chip (M1 and later)          |
+| macOS    | `devnotes_<version>_x64.dmg`         | a Mac with an Intel processor                    |
 | Linux    | `devnotes_<version>_x86_64.AppImage` | any distribution, nothing to install             |
 | Linux    | `devnotes_<version>_amd64.deb`       | Debian, Ubuntu and derivatives                   |
 | Linux    | `devnotes-<version>.x86_64.rpm`      | Fedora, RHEL and derivatives                     |
@@ -128,16 +130,16 @@ sudo dnf install ./devnotes-*.x86_64.rpm  # Fedora and RHEL
 
 <br>
 
-Choose **More info**, then **Run anyway**. The warning is about the publisher's identity, not the file: DevNotes has no code-signing certificate. Its updates are signed and verified before they install — the installer and the AppImage update themselves from inside the application; the `.deb` and `.rpm` are updated by your package manager — and every release publishes `SHA256SUMS.txt`.
+Choose **More info**, then **Run anyway**. The warning is about the publisher's identity, not the file: DevNotes has no code-signing certificate. Its updates are signed and verified before they install — the installer, the macOS application and the AppImage update themselves from inside the application; the `.deb` and `.rpm` are updated by your package manager — and every release publishes `SHA256SUMS.txt`.
 
 </details>
 
 <details>
-<summary><strong>Why there is no macOS build</strong></summary>
+<summary><strong>macOS blocks it the first time</strong></summary>
 
 <br>
 
-It cannot be tested here, and Gatekeeper wants a paid Apple Developer account with no free way around it on recent versions.
+Open **System Settings**, **Privacy & Security**, then **Open Anyway**. DevNotes has no publisher certificate, which needs a paid Apple Developer account. The macOS files come with the version after 1.1.0.
 
 </details>
 

@@ -7,11 +7,17 @@ const SIGNATURES = {
   'devnotes_1.0.1_x64-setup.exe.sig': 'sig-nsis\n',
   'devnotes_1.0.1_x86_64.AppImage.sig': 'sig-appimage\n',
   'devnotes_1.0.1_amd64.deb.sig': 'sig-deb\n',
+  'devnotes_1.0.1_aarch64.app.tar.gz.sig': 'sig-arm\n',
+  'devnotes_1.0.1_aarch64.dmg.sig': 'sig-dmg\n',
+  'devnotes_1.0.1_x64.app.tar.gz.sig': 'sig-intel\n',
 };
 const RELEASE = [
   'devnotes_1.0.1_x64-setup.exe',
   'devnotes_1.0.1_x86_64.AppImage',
   'devnotes_1.0.1_amd64.deb',
+  'devnotes_1.0.1_aarch64.app.tar.gz',
+  'devnotes_1.0.1_aarch64.dmg',
+  'devnotes_1.0.1_x64.app.tar.gz',
   'devnotes-1.0.1-windows.exe',
   ...Object.keys(SIGNATURES),
 ];
@@ -28,7 +34,7 @@ const build = (names, overrides = {}) =>
   });
 
 describe('latest.json', () => {
-  it('lists the NSIS installer and the AppImage with their format, signature and address', () => {
+  it('lists what each system installs with its format, signature and address', () => {
     const { manifest: written, ignored } = build(RELEASE);
 
     assert.deepEqual(written, {
@@ -46,9 +52,19 @@ describe('latest.json', () => {
           signature: 'sig-appimage',
           url: 'https://example.org/download/v1.0.1/devnotes_1.0.1_x86_64.AppImage',
         },
+        'macos-aarch64': {
+          format: 'app',
+          signature: 'sig-arm',
+          url: 'https://example.org/download/v1.0.1/devnotes_1.0.1_aarch64.app.tar.gz',
+        },
+        'macos-x86_64': {
+          format: 'app',
+          signature: 'sig-intel',
+          url: 'https://example.org/download/v1.0.1/devnotes_1.0.1_x64.app.tar.gz',
+        },
       },
     });
-    assert.deepEqual(ignored, ['devnotes_1.0.1_amd64.deb']);
+    assert.deepEqual(ignored, ['devnotes_1.0.1_amd64.deb', 'devnotes_1.0.1_aarch64.dmg']);
   });
 
   it('never takes the standalone executable for the installer', () => {
@@ -67,12 +83,12 @@ describe('latest.json', () => {
     assert.throws(() => build(names), /no Windows/);
   });
 
-  it('warns when Linux is missing but still writes the manifest', () => {
-    const names = RELEASE.filter((name) => !name.includes('AppImage'));
+  it('warns of each system that is missing but still writes the manifest', () => {
+    const names = RELEASE.filter((name) => !/AppImage|app\.tar\.gz/.test(name));
 
     const { manifest: written, warnings } = build(names);
 
-    assert.equal(warnings.length, 1);
+    assert.equal(warnings.length, 3);
     assert.deepEqual(Object.keys(written.platforms), ['windows-x86_64']);
   });
 

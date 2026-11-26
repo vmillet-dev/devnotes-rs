@@ -1,7 +1,7 @@
 name: Package
 description: >-
   The packages of the release build already in target/release (NSIS on Windows; deb, AppImage and
-  rpm on Linux), signed, each checked to hold the application alone, gathered with the standalone
+  rpm on Linux; a .dmg and the updater's archive on macOS), signed, each checked to hold the application alone, gathered with the standalone
   executable into a folder.
 
 inputs:
@@ -43,6 +43,25 @@ runs:
         rm -rf "$packages"
         if [ "$RUNNER_OS" = Windows ]; then
           cargo packager -p app --release -f nsis -o "$packages"
+        elif [ "$RUNNER_OS" = macOS ]; then
+          # The runner's scanners can still hold the image when it is ejected: busy, free later.
+          for attempt in 1 2 3; do
+            cargo packager -p app --release -f app,dmg -o "$packages" && break
+            [ "$attempt" = 3 ] && exit 1
+            hdiutil detach /Volumes/DevNotes -force > /dev/null 2>&1 || true
+            rm -rf "$packages"
+            sleep 15
+          done
+          # One archive an architecture in a release: the packager names it after the application alone.
+          version=$(cargo metadata --format-version 1 --no-deps \
+            | jq -r '.packages[] | select(.name == "app") | .version')
+          arch=$([ "$RUNNER_ARCH" = ARM64 ] && echo aarch64 || echo x64)
+          for ending in dmg dmg.sig; do
+            mv "$packages/DevNotes_${version}_$arch.$ending" "$packages/devnotes_${version}_$arch.$ending"
+          done
+          for ending in app.tar.gz app.tar.gz.sig; do
+            mv "$packages/DevNotes.$ending" "$packages/devnotes_${version}_$arch.$ending"
+          done
         else
           cargo packager -p app --release -f deb,appimage -o "$packages"
           version=$(cargo metadata --format-version 1 --no-deps \
@@ -75,6 +94,15 @@ runs:
           pwsh -NoProfile -Command "Start-Process '$(cygpath -w "$scratch/uninstall.exe")' -ArgumentList '/S' -Wait"
           # The uninstaller leaves the remembered folder behind; a later install would reuse it.
           reg delete 'HKCU\Software\vmillet-dev\DevNotes' //f > /dev/null 2>&1 || true
+        elif [ "$RUNNER_OS" = macOS ]; then
+          codesign --verify --deep --strict "$packages/DevNotes.app"
+          archive=$(ls "$packages"/*.app.tar.gz)
+          check archive "$(tar -tzf "$archive" | grep '/Contents/MacOS/[^/]' | xargs -n1 basename)" devnotes
+          mounted="$RUNNER_TEMP/dmg-check"
+          # The image shows the licence first; `yes` ends on a closed pipe.
+          { yes 2> /dev/null || true; } | PAGER=cat hdiutil attach -nobrowse -readonly -mountpoint "$mounted" "$(ls "$packages"/*.dmg)" > /dev/null
+          check dmg "$(ls "$mounted/DevNotes.app/Contents/MacOS")" devnotes
+          hdiutil detach "$mounted" > /dev/null
         else
           deb=$(ls "$packages"/*.deb)
           check deb "$(dpkg-deb -c "$deb" | awk '$6 ~ /^\.?\/?usr\/bin\/[^\/]+$/ { n = split($6, p, "/"); print p[n] }')" devnotes
@@ -97,11 +125,11 @@ runs:
           | jq -r '.packages[] | select(.name == "app") | .version')
         mkdir -p "$OUT"
         find "$packages" -maxdepth 1 -type f \
-          \( -name '*-setup.exe' -o -name '*.deb' -o -name '*.rpm' -o -name '*.AppImage' -o -name '*.sig' \) \
+          \( -name '*-setup.exe' -o -name '*.deb' -o -name '*.rpm' -o -name '*.AppImage' -o -name '*.dmg' -o -name '*.app.tar.gz' -o -name '*.sig' \) \
           -exec cp {} "$OUT/" \;
         if [ "$RUNNER_OS" = Windows ]; then
           cp target/release/devnotes.exe "$OUT/devnotes-$version-windows.exe"
-        else
+        elif [ "$RUNNER_OS" = Linux ]; then
           cp target/release/devnotes "$OUT/devnotes-$version-linux"
         fi
         ls -l "$OUT"

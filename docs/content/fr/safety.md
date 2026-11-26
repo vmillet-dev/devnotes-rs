@@ -71,6 +71,7 @@ La base est vérifiée à chaque ouverture. Si elle est endommagée, DevNotes le
 | Système | Dossier |
 | --- | --- |
 | Windows | `%APPDATA%\com.devnotes.app\` |
+| macOS | `~/Library/Application Support/com.devnotes.app/` |
 | Linux | `~/.local/share/com.devnotes.app/` |
 
 Chaque bibliothèque vit dans `libraries/<id>/` : la base, `vault.json` (la clé que votre phrase ouvre), les pièces jointes et les copies de sauvegarde.

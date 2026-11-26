@@ -73,7 +73,10 @@ fn passphrase_change() {
             });
             fill_change(&mut app, PASSPHRASE);
             app.eventually("the dialog closed", |tree| !tree.has("change-passphrase"));
+            // It stands over the dialog's buttons in a small window.
             app.wait_for("status-toast");
+            app.click("status-dismiss");
+            app.eventually("the report is dismissed", |tree| !tree.has("status-toast"));
             assert_ne!(std::fs::read(&file).unwrap(), first);
             app.click("settings-close");
             app.eventually("the panel closed", |tree| !tree.has("settings-dialog"));

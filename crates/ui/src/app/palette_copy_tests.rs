@@ -2,11 +2,11 @@
 
 use std::sync::{Arc, Mutex};
 
-use egui::ViewportCommand as Command;
 use egui_kittest::Harness;
 
 use super::DevNotesApp;
 use super::tests::{commands, open_library, settle};
+use crate::state::out_of_sight;
 
 #[derive(Default)]
 struct Toasts(Mutex<Vec<(String, String)>>);
@@ -42,7 +42,7 @@ fn over_another_application_the_window_goes_and_a_toast_says_it() {
 
     let toasts = copied_from_the_palette(&mut harness, true);
 
-    assert!(commands(&harness).contains(&Command::Visible(false)));
+    assert!(commands(&harness).contains(&out_of_sight()));
     settle(&mut harness);
     assert_eq!(toasts.0.lock().unwrap().len(), 1);
     let state = harness.state().state();
@@ -57,7 +57,7 @@ fn with_devnotes_in_front_it_only_closes_and_says_so_in_the_window() {
 
     let toasts = copied_from_the_palette(&mut harness, false);
 
-    assert!(!commands(&harness).contains(&Command::Visible(false)));
+    assert!(!commands(&harness).contains(&out_of_sight()));
     settle(&mut harness);
     assert!(toasts.0.lock().unwrap().is_empty());
     assert!(harness.state().state().status.latest().is_some());
@@ -71,7 +71,7 @@ fn with_the_confirmation_off_the_window_goes_without_a_word() {
 
     let toasts = copied_from_the_palette(&mut harness, true);
 
-    assert!(commands(&harness).contains(&Command::Visible(false)));
+    assert!(commands(&harness).contains(&out_of_sight()));
     settle(&mut harness);
     assert!(toasts.0.lock().unwrap().is_empty());
 }

@@ -11,7 +11,7 @@ export const VERSION = RELEASE.version;
 
 const FILES = `${REPOSITORY}/releases/download/v${VERSION}`;
 
-export type System = 'windows' | 'linux';
+export type System = 'windows' | 'macos' | 'linux';
 
 export interface ReleaseFile {
   readonly name: string;
@@ -48,9 +48,35 @@ const file = (lang: Lang, name: string, fileName: string, who: string): ReleaseF
   sha256: KNOWN[fileName]?.sha256 ?? '',
 });
 
+const APPLE_SILICON = `devnotes_${VERSION}_aarch64.dmg`;
+const INTEL = `devnotes_${VERSION}_x64.dmg`;
+
+/** The first releases had no macOS files, and a release whose macOS build failed has none either. */
+const HAS_MACOS = APPLE_SILICON in KNOWN && INTEL in KNOWN;
+
+/** The systems the release is for, as a sentence names them. */
+export function systems(lang: Lang): string {
+  const and = lang === 'fr' ? 'et' : 'and';
+  return HAS_MACOS ? `Windows, macOS ${and} Linux` : `Windows ${and} Linux`;
+}
+
 /** One format put forward per system, the others offered beside it. Named as `release.yml` writes them. */
 export function offers(lang: Lang): readonly Offer[] {
   const fr = lang === 'fr';
+  const macos: Offer = {
+    system: 'macos',
+    label: 'macOS',
+    action: fr ? 'Télécharger pour Apple Silicon' : 'Download for Apple Silicon',
+    primary: file(
+      lang,
+      'Apple Silicon',
+      APPLE_SILICON,
+      fr ? 'Les Mac à puce Apple (M1 et suivantes).' : 'Macs with an Apple chip (M1 and later).',
+    ),
+    others: [
+      file(lang, 'Intel', INTEL, fr ? 'Les Mac à processeur Intel.' : 'Macs with an Intel processor.'),
+    ],
+  };
   return [
     {
       system: 'windows',
@@ -73,6 +99,7 @@ export function offers(lang: Lang): readonly Offer[] {
         ),
       ],
     },
+    ...(HAS_MACOS ? [macos] : []),
     {
       system: 'linux',
       label: 'Linux',
@@ -110,7 +137,11 @@ export function offers(lang: Lang): readonly Offer[] {
 /** The visitor's system, from what the browser says of itself; Windows when it says nothing. */
 export function visitorSystem(): System {
   const agent = navigator.userAgent;
-  return /linux|x11/i.test(`${navigator.platform} ${agent}`) && !/android/i.test(agent) ? 'linux' : 'windows';
+  const said = `${navigator.platform} ${agent}`;
+  if (HAS_MACOS && /mac/i.test(said) && !/iphone|ipad|ipod/i.test(agent)) {
+    return 'macos';
+  }
+  return /linux|x11/i.test(said) && !/android/i.test(agent) ? 'linux' : 'windows';
 }
 
 /** The checksums of every file of the release, to check a download against. */

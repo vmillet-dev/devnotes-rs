@@ -27,6 +27,12 @@ pub fn is_native_wayland() -> bool {
         )
 }
 
+/// Whether a window put out of sight can be called back. Nothing hides one under native Wayland, and
+/// on macOS a click on the Dock brings back a window that is minimised, not one that is hidden.
+pub fn can_hide() -> bool {
+    !cfg!(target_os = "macos") && !is_native_wayland()
+}
+
 fn only_wayland(x11: Option<&OsStr>, wayland: Option<&OsStr>) -> bool {
     x11.is_none() && wayland.is_some()
 }

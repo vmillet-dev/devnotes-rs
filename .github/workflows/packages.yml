@@ -41,7 +41,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, windows-latest]
+        os: [ubuntu-22.04, windows-latest, macos-latest, macos-15-intel]
     env:
       SERVED: ${{ github.workspace }}/served
       ORIGIN: http://127.0.0.1:8765
@@ -77,7 +77,7 @@ jobs:
 
       # The one line of `[workspace.package]` that starts with `version`; Cargo.lock follows.
       - name: Version 1.0.0
-        run: sed -i 's/^version = ".*"/version = "1.0.0"/' Cargo.toml && cargo metadata --format-version 1 > /dev/null
+        run: perl -pi -e 's/^version = ".*"/version = "1.0.0"/' Cargo.toml && cargo metadata --format-version 1 > /dev/null
 
       - uses: ./.github/actions/package
         with:
@@ -86,7 +86,7 @@ jobs:
           out: old
 
       - name: Version 1.0.1
-        run: sed -i 's/^version = ".*"/version = "1.0.1"/' Cargo.toml && cargo metadata --format-version 1 > /dev/null
+        run: perl -pi -e 's/^version = ".*"/version = "1.0.1"/' Cargo.toml && cargo metadata --format-version 1 > /dev/null
 
       - uses: ./.github/actions/package
         with:
@@ -103,7 +103,7 @@ jobs:
             mkdir -p "$SERVED/$kind"
             cp new/* "$SERVED/$kind/"
             # The manifest script refuses a release without Windows: a stand-in, never fetched.
-            if [ "$RUNNER_OS" = Linux ]; then
+            if [ "$RUNNER_OS" != Windows ]; then
               echo stand-in > "$SERVED/$kind/devnotes_1.0.1_x64-setup.exe"
               echo stand-in > "$SERVED/$kind/devnotes_1.0.1_x64-setup.exe.sig"
             fi
@@ -112,6 +112,8 @@ jobs:
           done
           if [ "$RUNNER_OS" = Windows ]; then
             package=$(ls "$SERVED/altered" | grep -- '-setup\.exe$')
+          elif [ "$RUNNER_OS" = macOS ]; then
+            package=$(ls "$SERVED/altered" | grep '\.app\.tar\.gz$')
           else
             package=$(ls "$SERVED/altered" | grep '\.AppImage$')
           fi
@@ -126,6 +128,12 @@ jobs:
         run: |
           if [ "$RUNNER_OS" = Windows ]; then
             pwsh -NoProfile -Command "Start-Process '$(cygpath -w "$(ls old/*-setup.exe)")' -ArgumentList '/S' -Wait"
+          elif [ "$RUNNER_OS" = macOS ]; then
+            # Copied from the image, as a person drags it.
+            mkdir -p "$RUNNER_TEMP/installed"
+            { yes 2> /dev/null || true; } | PAGER=cat hdiutil attach -nobrowse -readonly -mountpoint "$RUNNER_TEMP/image" "$(ls old/*.dmg)" > /dev/null
+            ditto "$RUNNER_TEMP/image/DevNotes.app" "$RUNNER_TEMP/installed/DevNotes.app"
+            hdiutil detach "$RUNNER_TEMP/image" > /dev/null
           else
             mkdir -p "$RUNNER_TEMP/installed"
             cp old/*.AppImage "$RUNNER_TEMP/installed/DevNotes.AppImage"
@@ -133,10 +141,20 @@ jobs:
           fi
           .github/scripts/installed.sh 1.0.0
 
+      # What replaces a macOS application is found beside the executable that runs.
+      - name: The updater, where it runs from
+        run: |
+          updater=target/release/examples/update
+          if [ "$RUNNER_OS" = macOS ]; then
+            cp "$updater" "$RUNNER_TEMP/installed/DevNotes.app/Contents/MacOS/update"
+            updater="$RUNNER_TEMP/installed/DevNotes.app/Contents/MacOS/update"
+          fi
+          echo "UPDATER=$updater" >> "$GITHUB_ENV"
+
       - name: The altered 1.0.1 is refused, 1.0.0 stays
         run: |
           set +e
-          APPIMAGE="$RUNNER_TEMP/installed/DevNotes.AppImage" target/release/examples/update 1.0.0 \
+          APPIMAGE="$RUNNER_TEMP/installed/DevNotes.AppImage" "$UPDATER" 1.0.0 \
             "$ORIGIN/altered/latest.json" '${{ steps.key.outputs.public }}'
           status=$?
           set -e
@@ -148,7 +166,7 @@ jobs:
 
       - name: The whole 1.0.1 is installed
         run: |
-          APPIMAGE="$RUNNER_TEMP/installed/DevNotes.AppImage" target/release/examples/update 1.0.0 \
+          APPIMAGE="$RUNNER_TEMP/installed/DevNotes.AppImage" "$UPDATER" 1.0.0 \
             "$ORIGIN/whole/latest.json" '${{ steps.key.outputs.public }}'
           .github/scripts/installed.sh 1.0.1
 
