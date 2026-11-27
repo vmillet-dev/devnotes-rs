@@ -54,7 +54,7 @@ Run by CI on every change, and by `cargo test -p engine docs`, `cargo test -p ui
 
 Write its two files, then name it in `index.json`, in the group it is read in: its colour, its address and its name in the sidebar, in each language. Add it to the list of the overview.
 
-`checkedOn` is the version of the application the pages were last read against.
+The badge under the pages names the version they describe: the workspace's, read from `Cargo.toml` by `website/scripts/docs.mjs`, nothing to change by hand.
 
 ## Adding a language
 
