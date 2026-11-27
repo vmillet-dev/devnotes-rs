@@ -11,5 +11,5 @@ description: Use when building the desktop executable/installer, preparing a ver
 - Release notes come from PR labels; PR bodies need `Closes #N`. The newest `CHANGELOG.md` section is generated; do not hand-edit it.
 - A version on its own branch (`dev/x.y.z`): PRs are squashed into it, `main` is merged into it to catch up, and it reaches `main` by a merge commit (`git merge --no-ff`), never a squash — the notes read what that merge brings. From the branch, `node scripts/release-notes.mjs generate --version x.y.z` prints what the version holds so far and writes nothing.
 - Never commit signing keys (`*.key`, `*.pfx`, `.tauri/` are ignored). Never trigger a release, tag or push unless the user asks.
-- The site follows by itself: `website.yml` publishes it at the end of the release (its download page names the latest one). Before a release, `docs/content/` says what the version does; the version under its pages follows `Cargo.toml` by itself.
+- The site follows by itself: `website.yml` publishes it at the end of the release (its download page names the latest one). Before a release, `docs/content/` says what the version does, and `checkedOn` in `index.json` names it once the pages were read against the application.
 - Before a release: `verify-change` (all rows), then `dependency-audit`.

@@ -19,12 +19,12 @@ import { Language } from '../core/language';
 import { ScrollFrame } from '../core/scroll-frame';
 import { Seo } from '../core/seo';
 import { absolute } from '../core/site';
-import { DOC_INDEX, docGroups, docPath } from './doc-index';
+import { CHECKED_ON, DOC_INDEX, docGroups, docPath } from './doc-index';
 import { search, searchIndex } from './doc-search';
 import { questions } from './faq';
 import { DocPage } from './doc.model';
 import { DocBlocks } from './doc-blocks';
-import { CHECKED_ON, DOC_PAGES } from './generated/pages';
+import { DOC_PAGES } from './generated/pages';
 
 /** A heading counts as read once it has passed this far below the header. */
 const READ_LINE = 140;
