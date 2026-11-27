@@ -84,7 +84,7 @@ puffin_http = { workspace = true, optional = true }
 # The one eframe uses, for its X11 switch (D15) and for macOS's menu bar.
 winit.workspace = true
 
-[build-dependencies]
+[target.'cfg(windows)'.build-dependencies]
 toml.workspace = true
 winresource.workspace = true
 
