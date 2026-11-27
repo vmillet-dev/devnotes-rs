@@ -23,4 +23,4 @@ pub use diff::changed_lines;
 pub use indent::{TextEdit, indent, outdent, rewrite};
 pub use search::{COUNT_CAP, Count, Query, find};
 pub use shield::{Shielded, shield_fields, unshield_fields};
-pub use words::count_words;
+pub use words::{count_words, word_around};

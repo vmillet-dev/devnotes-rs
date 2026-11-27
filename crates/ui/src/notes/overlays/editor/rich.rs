@@ -240,6 +240,53 @@ impl RichEditor {
         }
     }
 
+    /// The word holding the `char` at `at`, as the code editor reads a word; `extend`, the
+    /// selection stretched to it.
+    fn select_word(&mut self, at: Position, extend: bool) {
+        let text = match tree::leaf(&self.document, &at.path) {
+            Some(tree::Leaf::Inlines(content)) => inlines::plain(content),
+            Some(tree::Leaf::Code(text)) => text.clone(),
+            None => return,
+        };
+        let word = text::word_around(&text, at.offset);
+        let start = Position {
+            path: at.path.clone(),
+            offset: word.start,
+        };
+        let end = Position {
+            path: at.path,
+            offset: word.end,
+        };
+        if extend {
+            let head = if start >= self.selection.anchor {
+                end
+            } else {
+                start
+            };
+            self.move_head(head, true);
+        } else {
+            self.move_head(start, false);
+            self.move_head(end, true);
+        }
+        self.goal_x = None;
+    }
+
+    /// The whole paragraph, heading, item's line, cell or code block at `path`.
+    fn select_leaf(&mut self, path: Vec<usize>) {
+        let Some(len) = tree::leaf(&self.document, &path).map(|leaf| leaf.len()) else {
+            return;
+        };
+        self.move_head(
+            Position {
+                path: path.clone(),
+                offset: 0,
+            },
+            false,
+        );
+        self.move_head(Position { path, offset: len }, true);
+        self.goal_x = None;
+    }
+
     fn move_head(&mut self, head: Position, extend: bool) {
         self.picked = None;
         if extend {
@@ -263,17 +310,32 @@ impl RichEditor {
         Some(local.translate(laid.origin.to_vec2()))
     }
 
-    /// The place under a point: the leaf whose lines it is on, or the nearest one.
-    fn position_at(&self, point: Pos2) -> Option<Position> {
-        let laid = self
-            .laid
+    /// The leaf whose lines a point is on, or the nearest one.
+    fn laid_at(&self, point: Pos2) -> Option<&Laid> {
+        self.laid
             .iter()
-            .min_by(|a, b| distance(a, point).total_cmp(&distance(b, point)))?;
-        let local = point - laid.origin;
-        let offset = laid.galley.cursor_from_pos(local).index.0;
+            .min_by(|a, b| distance(a, point).total_cmp(&distance(b, point)))
+    }
+
+    /// The place under a point: the boundary between two `char`s nearest it.
+    fn position_at(&self, point: Pos2) -> Option<Position> {
+        let laid = self.laid_at(point)?;
+        let offset = laid.galley.cursor_from_pos(point - laid.origin).index.0;
         Some(Position {
             path: laid.path.clone(),
             offset,
+        })
+    }
+
+    /// The `char` under a point: before the nearest boundary when the point is left of it.
+    fn char_at(&self, point: Pos2) -> Option<Position> {
+        let laid = self.laid_at(point)?;
+        let local = point - laid.origin;
+        let cursor = laid.galley.cursor_from_pos(local);
+        let before = local.x < laid.galley.pos_from_cursor(cursor).center().x;
+        Some(Position {
+            path: laid.path.clone(),
+            offset: cursor.index.0.saturating_sub(usize::from(before)),
         })
     }
 
@@ -509,14 +571,25 @@ fn describe(ui: &Ui, surface: &egui::Response, view: &RichEditor, language: Lang
     });
 }
 
-/// A press places the caret, a drag extends it, Shift extends from where it is.
-/// The keys stay on the surface.
+/// A press places the caret, a drag extends it, Shift extends from where it is; a double click
+/// takes the word, a triple the paragraph. The keys stay on the surface.
 fn pointer(ui: &Ui, view: &mut RichEditor, surface: &egui::Response) {
     let Some(at) = surface.interact_pointer_pos() else {
         return;
     };
     let shift = ui.input(|input| input.modifiers.shift);
-    if (surface.drag_started() || surface.clicked())
+    // egui reports the click of a double click too, and both of a triple: the longest first.
+    if surface.triple_clicked()
+        && let Some(position) = view.position_at(at)
+    {
+        view.select_leaf(position.path);
+        surface.request_focus();
+    } else if surface.double_clicked()
+        && let Some(position) = view.char_at(at)
+    {
+        view.select_word(position, shift);
+        surface.request_focus();
+    } else if (surface.drag_started() || surface.clicked())
         && let Some(position) = view.position_at(at)
     {
         view.move_head(position, shift);

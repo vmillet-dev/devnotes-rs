@@ -507,14 +507,7 @@ impl Buffer {
     /// Over the spaces, then over one run of word characters or of punctuation; a line end
     /// alone is a step.
     fn word(&self, at: usize, direction: Direction) -> usize {
-        // 0 a space, 1 punctuation, 2 a word character.
-        let class = |c: char| {
-            if c.is_alphanumeric() || c == '_' {
-                2
-            } else {
-                u8::from(!c.is_whitespace())
-            }
-        };
+        let class = crate::words::class;
         let char_at = |i: usize| self.rope.char(i);
         let len = self.len();
         let mut i = at;

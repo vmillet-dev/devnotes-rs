@@ -1397,7 +1397,8 @@ and exporting write a Note as the Markdown it is, where a snippet is fenced.
   keymap did: Enter in an empty item leaves the list, Backspace at an item's start lifts it, Tab
   nests it under the one above. The view draws through `widgets::rich` (the reader's own
   layout), which says where each leaf was laid out: the caret, a click and ↑ ↓ are read from those
-  galleys. A Note opened and left is written back untouched — the Markdown is rewritten only once
+  galleys. A double click takes the word under the pointer — `text::word_around`, the code
+  editor's classes of a word — and a triple click the leaf. A Note opened and left is written back untouched — the Markdown is rewritten only once
   something changed. After a toolbar button the text takes the keys back, as the reference's
   `mousedown` kept them. A task's box is a control of its own (`rich-task`).
 - **A paste reads the clipboard itself**: egui hands the field the text alone, so the editor asks
