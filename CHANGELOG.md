@@ -23,12 +23,9 @@ the release notes the updater hands over.
 
 - Update prompt: notes keep to additions, changes and fixes (#1658)
 
-### 🧰 Under the hood
+### 🌐 Website
 
 - Website: new design with the app's capture and a developer's day (#1662)
-- Screens: the documentation window drawn in place of Getting started (#1661)
-- Release workflow: a dry run shows what changes and builds nothing (#1659)
-- Repository: migration plan and mockups removed, golden data reduced (#1657)
 - Website: language button and scrollable blocks named in full (#1652)
 - Website: accessibility statement, and every page checked (#1651)
 - Documentation: labels, shortcuts and links are checked (#1647)
@@ -37,6 +34,12 @@ the release notes the updater hands over.
 - Website: published when its sources change and after each release (#1640)
 - Documentation: pages written once in Markdown, in both languages (#1639)
 - Website: sources live in the repository, under website/ (#1638)
+
+### 🧰 Under the hood
+
+- Screens: the documentation window drawn in place of Getting started (#1661)
+- Release workflow: a dry run shows what changes and builds nothing (#1659)
+- Repository: migration plan and mockups removed, golden data reduced (#1657)
 
 ## [1.1.0] - 2026-11-25
 
@@ -83,9 +86,12 @@ the release notes the updater hands over.
 
 - Dependencies: url updated to 2.5.9 (RUSTSEC-2026-0592) (#1636)
 
-### 🧰 Under the hood
+### 📖 Documentation
 
 - README: the animated captures are redone in a single theme (#1634)
+
+### 🧰 Under the hood
+
 - Tabs: a dragged tab keeps the system's pointer (#1635)
 - E2E: passphrase typed once the unlock panel is at rest (#1619)
 
@@ -203,9 +209,12 @@ the release notes the updater hands over.
 
 - Advisories: SQLite's WAL advisory ignored until diesel accepts the fix (#1452)
 
-### 🧰 Under the hood
+### 📖 Documentation
 
 - Guides: architecture, security, contributing and README describe the egui application (#1453)
+
+### 🧰 Under the hood
+
 - Release check: clean install and update 1.0.0 to 1.0.1 tested in CI (#1447)
 - Scenarios: a click waits until its control has a place on screen (#1449)
 - Workspace: dependencies declared once, e2e at root, old front removed (#1444)
@@ -288,10 +297,13 @@ the release notes the updater hands over.
 
 - Advisories: tokio, ctutils patched; a failed audit stops no other run (#1097)
 
+### 📖 Documentation
+
+- Changelog: 0.13.0 to 0.15.0 list features as Added, fixes as Fixed (#996)
+
 ### 🧰 Under the hood
 
 - HTTP headers: the space typed after the colon is checked end to end (#1082)
-- Changelog: 0.13.0 to 0.15.0 list features as Added, fixes as Fixed (#996)
 
 ## [0.16.0] - 2026-10-21
 
@@ -398,6 +410,10 @@ the release notes the updater hands over.
 
 - TLS: update rustls to 0.23.46, fixing four RustSec advisories (#938)
 
+### 📖 Documentation
+
+- Tickets: titles say what changed, and name no other software (#935)
+
 ### 🧰 Under the hood
 
 - Keep commit kinds out of the area of a title
@@ -407,7 +423,6 @@ the release notes the updater hands over.
 - Drop versioning-strategy from Dependabot's Cargo entry
 - Dependabot: raise Cargo.toml with Cargo.lock in Rust updates (#936)
 - Pipeline: e2e scenarios in three groups per OS, not one job each (#937)
-- Tickets: titles say what changed, and name no other software (#935)
 
 ### 📦 Dependencies
 
@@ -487,10 +502,13 @@ the release notes the updater hands over.
 - Read a keydown with no key as no keystroke (#798)
 - Read what a version branch brings into the release notes (#709)
 
+### 📖 Documentation
+
+- Write the 0.10.1 section of the changelog with what the version branch brought (#786)
+
 ### 🧰 Under the hood
 
 - Give each CI job a cargo cache that holds what it compiles (#790)
-- Write the 0.10.1 section of the changelog with what the version branch brought (#786)
 
 ## [0.10.1] - 2026-10-12
 
@@ -792,12 +810,15 @@ the release notes the updater hands over.
 
 - Wipe an export's passphrase like the library's (#371)
 
-### 🧰 Under the hood
+### 📖 Documentation
 
-- Bump the version to 0.5.0 (#406)
 - Keep one short line per trap in CLAUDE.md, and the detail in architecture (#408)
 - Keep the reason in the front's comments and drop the story (#405)
 - Keep the reason in the crate's comments and drop the story (#404)
+
+### 🧰 Under the hood
+
+- Bump the version to 0.5.0 (#406)
 - Share the Rust test fixtures once, and let tempfile clean up (#401)
 - Let "library" mean one thing on each side (#400)
 - Put the Sonar marker on the try, where S4822 reports (#399)
@@ -1015,16 +1036,19 @@ the release notes the updater hands over.
 - Make fullscreen actually fill the screen (#92)
 - Align the attachments band with the editor's other bands (#90)
 
+### 📖 Documentation
+
+- Say which platforms DevNotes ships for, and stop implying macOS (#110)
+- Make the README a front door (#103)
+
 ### 🧰 Under the hood
 
 - Keep the comments that say what the code cannot (#128)
 - Refilm the README, and drop the screenshot the GIF repeats (#113)
 - Give a card title its width back, and plant the pin in the corner (#114)
-- Say which platforms DevNotes ships for, and stop implying macOS (#110)
 - Make the e2e suite pass, and fix the data loss it was reporting
 - Film the README on a full board (#105)
 - Show a note created while its editor was closing (#104)
-- Make the README a front door (#103)
 - Bump the rust-minor group across 1 directory with 8 updates (#91)
 - Bump eslint from 9.39.5 to 10.10.0 (#89)
 - Bump @eslint/js from 9.39.5 to 10.0.1 (#87)

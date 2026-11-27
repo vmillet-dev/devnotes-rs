@@ -16,7 +16,8 @@ import { pathToFileURL } from 'node:url';
  * when a pull request wears two mapped labels: the first section that claims one of them
  * wins, so `dependencies` + `enhancement` is an addition. Only the `dependencies` label
  * (Dependabot sets it itself) reaches the last section, so a month of bumps no longer
- * buries the refactors. `prompt`: the update prompt shows it.
+ * buries the refactors. `prompt`: the update prompt shows it. Documentation and Website are
+ * for github.com alone: "What's new" leaves them out too (`crates/engine/src/changelog.rs`).
  */
 export const SECTIONS = [
   { id: 'added', heading: '✨ Added', labels: ['enhancement', 'feature'], kinds: ['feat'], prompt: true },
@@ -30,11 +31,13 @@ export const SECTIONS = [
   { id: 'fixed', heading: '🐛 Fixed', labels: ['bug'], kinds: ['fix'], prompt: true },
   { id: 'removed', heading: '🗑️ Removed', labels: ['removal'], kinds: ['remove'], prompt: true },
   { id: 'security', heading: '🔒 Security', labels: ['security'], kinds: ['security'], prompt: true },
+  { id: 'documentation', heading: '📖 Documentation', labels: ['documentation'], kinds: ['docs'] },
+  { id: 'website', heading: '🌐 Website', labels: ['website'], kinds: [] },
   {
     id: 'internal',
     heading: '🧰 Under the hood',
-    labels: ['refactor', 'documentation', 'website', 'chore', 'ci', 'test'],
-    kinds: ['refactor', 'docs', 'test', 'chore', 'ci', 'build', 'deps'],
+    labels: ['refactor', 'chore', 'ci', 'test'],
+    kinds: ['refactor', 'test', 'chore', 'ci', 'build', 'deps'],
   },
   { id: 'dependencies', heading: '📦 Dependencies', labels: ['dependencies'], kinds: [] },
 ];

@@ -1680,9 +1680,11 @@ carried the key — so the block was dead markup that looked like a shipped feat
 `scripts/release-notes.mjs extract` writes two files from the section at the tag: the whole of it,
 for the GitHub release body, and the prompt's (`--prompt-out`), for the manifest. **The prompt keeps
 what the user will notice**: the summary, additions, changes, fixes, removals and security. The
-technical work (the tests, the documentation and the site with it) and the dependencies stay in
-`CHANGELOG.md`, on the release page and in "What's new". Which section is shown is said beside its
-labels, in `SECTIONS`. ⚠️ It is filtered in the manifest, not in the application: the prompt is drawn
+technical work and the dependencies stay in `CHANGELOG.md`, on the release page and in "What's new".
+The documentation and the site have sections of their own (📖 Documentation, 🌐 Website), for the
+release page alone: "What's new" leaves them out as well (`changelog::model::NOT_IN_THE_APP`, held
+against the script's headings by a test). Which section is shown is said beside its labels, in
+`SECTIONS`. ⚠️ It is filtered in the manifest, not in the application: the prompt is drawn
 by the version already installed. A release with nothing left to show says so in one line.
 
 ⚠️ **Shown open, at a fixed height.** Behind a `<details>` it was installed without being
@@ -6255,8 +6257,10 @@ three invariants `changelog::tests::the_shipped_file_parses_into_something_to_sh
 **The packages** are built by `cargo build -p app --release`, then `.github/actions/package`:
 `cargo packager` (NSIS per user on Windows; AppImage and deb on Linux; a `.dmg` and the updater's
 archive on macOS) and `cargo generate-rpm`,
-each signed with the minisign key, each checked to hold the application alone (→
-`docs/releasing.md`, "What gets published").
+each signed with the minisign key, each checked to hold the application alone and to carry the
+icon (→ `docs/releasing.md`, "What gets published"). On Windows the icon and the version are
+resources of `devnotes.exe`, embedded by `crates/app/build.rs` (`winresource`): the shell, the
+installer's shortcuts and the taskbar read the file, whatever the window sets.
 `packages.yml` runs the same action on a pull request that touches packaging, with a key made
 for the run, then installs 1.0.0 on a clean runner, refuses a 1.0.1 altered by one byte and
 installs the whole one through the application's own updater client
@@ -6804,8 +6808,8 @@ specs, `npm run lint` ESLint, `npm run test:scripts` the Node tests of the token
   readers, the site and the application, could draw differently. `DocBlocks` draws the blocks
   without `innerHTML`; the sidebar reads the index (`docs/doc-index.ts`), and the search runs in the
   browser section by section, accents aside (`docs/doc-search.ts`). A section's address is its text's
-  (`slug`), so it differs per language. `checkedOn` names the version the pages were last checked
-  against in the application, by hand.
+  (`slug`), so it differs per language. The version under the pages is the workspace's, to the minor,
+  read from `Cargo.toml` by `website/scripts/docs.mjs`.
 - **The application reads the same files** (`engine::docs`), embedded by `build.rs`, which lists the
   folder. Its tests hold the pages together — every link, the same shape in both languages — and
   `ui`'s `services::docs_quotes` holds them to the application: a label is one of its texts, a

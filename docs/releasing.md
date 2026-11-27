@@ -91,12 +91,14 @@ existed and now differs), `security` and `removal`.
 
 **The update prompt shows the sections a user can see**, so `enhancement`, `change`, `bug` and
 `removal` are for what someone using the application notices. A fix to the CI, the tests, the
-scripts, the release or the site wears `test`, `refactor`, `documentation` or `website`: filed
-under « Under the hood », it is in `CHANGELOG.md` and on the release page, and out of the prompt.
-The dry run says, entry by entry, whether the prompt shows it.
+scripts or the release wears `test` or `refactor`: filed under « Under the hood », it is in
+`CHANGELOG.md`, on the release page and in "What's new", and out of the prompt. The guides and the
+README wear `documentation`, the site and its pages `website`: each has a section of its own, on
+the release page alone — neither the prompt nor "What's new" shows them. The dry run says, entry by
+entry, whether the prompt shows it.
 
 The sections, in their order: ✨ Added, 🔧 Changed, 🐛 Fixed, 🗑️ Removed, 🔒 Security,
-🧰 Under the hood, 📦 Dependencies. The last one holds the pull requests labelled
+📖 Documentation, 🌐 Website, 🧰 Under the hood, 📦 Dependencies. The last one holds the pull requests labelled
 `dependencies` — Dependabot applies that label itself — and nothing else. When a pull request
 wears two mapped labels, the first section in that order wins: `dependencies` + `enhancement`
 is an addition.
@@ -134,7 +136,10 @@ more; the Linux ones depend on GTK (the tray alone), xkbcommon, Vulkan and the i
 library.
 
 Each package is checked to hold the application alone (one binary; the identity tool's lists are
-compiled into it) before anything is uploaded.
+compiled into it) before anything is uploaded, and to carry the icon: the hicolor icons and the
+`.desktop` entry on Linux, the `.icns` of the bundle and of the updater's archive on macOS. On
+Windows the icon is a resource of `devnotes.exe` itself, held by
+`crates/app/tests/windows_resources.rs`.
 
 **Signatures.** `cargo-packager` signs every package it writes with the minisign key, and the
 `.rpm` is signed by `cargo packager signer sign`. The key and its password are the release

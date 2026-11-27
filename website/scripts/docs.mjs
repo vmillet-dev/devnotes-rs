@@ -7,8 +7,11 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { Lexer } from 'marked';
 
+import { workspaceVersion } from '../../scripts/version.mjs';
+
 const CONTENT = fileURLToPath(new URL('../../docs/content', import.meta.url));
 const OUT = fileURLToPath(new URL('../src/app/docs/generated/pages.ts', import.meta.url));
+const CARGO = fileURLToPath(new URL('../../Cargo.toml', import.meta.url));
 const LANGS = ['fr', 'en'];
 /** A page of the site that is not documentation is named in full, and followed on the site itself. */
 const SITE = 'https://devnotes.fr/';
@@ -242,6 +245,8 @@ function main() {
       (id) => `docs/content/${lang}/${id}.md`,
     );
   const pages = Object.fromEntries(LANGS.map((lang) => [lang, read(lang)]));
+  const version = workspaceVersion(readFileSync(CARGO, 'utf8'));
+  if (!version) throw new Error('Cargo.toml: no version in [workspace.package]');
 
   mkdirSync(dirname(OUT), { recursive: true });
   writeFileSync(
@@ -253,6 +258,9 @@ import { DocPage } from '../doc.model';
 const PAGES: Readonly<Record<Lang, readonly DocPage[]>> = ${JSON.stringify(pages)};
 
 export const DOC_PAGES: Readonly<Record<Lang, readonly DocPage[]>> = { fr: french(PAGES.fr), en: PAGES.en };
+
+/** The version the pages describe, to the minor: the workspace's, in Cargo.toml. */
+export const CHECKED_ON = ${JSON.stringify(version.split('.').slice(0, 2).join('.'))};
 `,
   );
   console.log(`${entries.length} pages read from docs/content, in ${LANGS.join(' and ')}.`);

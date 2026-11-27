@@ -8,8 +8,6 @@ export type Tone = 'green' | 'blue' | 'purple' | 'teal' | 'olive' | 'pink' | 'gr
 
 /** `docs/content/index.json`, as it is written there. */
 interface DocsIndex {
-  /** The version the pages were last checked against, by hand, in the application itself. */
-  readonly checkedOn: string;
   readonly groups: readonly {
     readonly name: PerLang;
     readonly pages: readonly {
@@ -34,8 +32,6 @@ export interface DocEntry {
 }
 
 const INDEX: DocsIndex = index;
-
-export const CHECKED_ON = INDEX.checkedOn;
 
 /**
  * The documentation's pages, in reading order. Kept apart from their text so the routes

@@ -107,6 +107,14 @@ pub fn parse_section(markdown: &str) -> Vec<ChangelogSection> {
     sections.take()
 }
 
+/// The sections `scripts/release-notes.mjs` writes for github.com alone: the site and its pages
+/// are not news of the application.
+pub const NOT_IN_THE_APP: [&str; 2] = ["📖 Documentation", "🌐 Website"];
+
+pub fn drop_what_is_not_in_the_app(sections: &mut Vec<ChangelogSection>) {
+    sections.retain(|section| !NOT_IN_THE_APP.contains(&section.title.as_str()));
+}
+
 /// A release's categories as its lines arrive: a `### ` heading, a bullet, a blank line,
 /// and a continuation of the entry above.
 #[derive(Default)]
@@ -322,6 +330,22 @@ Everything above the first release is preamble.
                 .collect::<Vec<_>>(),
             ["Added", "Fixed"]
         );
+    }
+
+    #[test]
+    fn leaves_out_the_sections_written_for_github_alone() {
+        let mut sections = parse_section(
+            "### ✨ Added\n\n- A tab is raised.\n\n### 📖 Documentation\n\n- README redone.\n\n\
+             ### 🌐 Website\n\n- New design.\n\n### 🧰 Under the hood\n\n- E2E faster.\n",
+        );
+
+        drop_what_is_not_in_the_app(&mut sections);
+
+        let titles: Vec<_> = sections
+            .iter()
+            .map(|section| section.title.as_str())
+            .collect();
+        assert_eq!(titles, ["✨ Added", "🧰 Under the hood"]);
     }
 
     #[test]
