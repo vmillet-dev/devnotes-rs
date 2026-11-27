@@ -89,6 +89,8 @@ impl AppState {
         use crate::banners::update_prompt::Ask;
         match asked {
             Ask::Check => self.updates.check(backend, false),
+            Ask::Reopen => self.updates.reopen(),
+            Ask::ForgetCheck => self.updates.forget_check(),
             Ask::Install => {
                 self.ask_switch(
                     libraries::Goal::Install,

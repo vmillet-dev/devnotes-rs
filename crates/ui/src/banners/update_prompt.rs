@@ -29,8 +29,14 @@ pub(crate) struct UpdateView {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Ask {
     Check,
+    /// The known update's offer, put away by « Later », shown again.
+    Reopen,
+    /// The menu closed: what its check found is not said again.
+    ForgetCheck,
     Install,
-    Later { skip: bool },
+    Later {
+        skip: bool,
+    },
 }
 
 pub(crate) fn id() -> Id {

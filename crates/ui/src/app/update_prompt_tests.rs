@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use egui_kittest::Harness;
-use egui_kittest::kittest::Queryable;
+use egui_kittest::kittest::{NodeT, Queryable};
 
 use super::DevNotesApp;
 use super::tests::{click, open_library, present, settle};
@@ -118,4 +118,65 @@ fn an_unsaved_request_is_asked_about_before_the_install() {
 
     eframe::App::on_exit(harness.state_mut());
     assert!(*fake.relaunched.lock().unwrap());
+}
+
+/// The launch's check, silent, over the library open: then the menu.
+fn launched(directory: &std::path::Path, fake: Arc<FakeUpdater>) -> Harness<'static, DevNotesApp> {
+    let mut harness = open_library(directory);
+    harness.state_mut().state.updates = UpdateState::with(fake);
+    let app = harness.state_mut();
+    app.state.updates.check(&app.backend, true);
+    settle(&mut harness);
+    harness
+}
+
+fn rect(harness: &Harness<'_, DevNotesApp>, author_id: &str) -> egui::Rect {
+    harness
+        .get_by(|node| node.author_id() == Some(author_id))
+        .rect()
+}
+
+#[test]
+fn the_menu_says_nothing_of_a_check_it_did_not_ask_and_forgets_one_it_did() {
+    let directory = tempfile::tempdir().unwrap();
+    let mut harness = launched(directory.path(), Arc::new(FakeUpdater::default()));
+
+    click(&mut harness, "about-open");
+    assert!(
+        !present(&harness, "about-check-status"),
+        "nothing was asked"
+    );
+
+    click(&mut harness, "about-check-updates");
+    settle(&mut harness);
+    assert!(present(&harness, "about-check-status"));
+
+    harness.key_press(egui::Key::Escape);
+    settle(&mut harness);
+    click(&mut harness, "about-open");
+    assert!(
+        !present(&harness, "about-check-status"),
+        "what was found then is not said again"
+    );
+}
+
+#[test]
+fn an_update_known_is_named_by_its_entry_drawn_clear_of_the_next() {
+    let directory = tempfile::tempdir().unwrap();
+    let mut harness = launched(directory.path(), FakeUpdater::offering("0.26.0"));
+    click(&mut harness, "update-later");
+
+    click(&mut harness, "about-open");
+    let entry = harness.get_by(|node| node.author_id() == Some("about-check-updates"));
+    let label = entry.accesskit_node().label().unwrap_or_default();
+    assert!(label.contains("0.26.0"), "{label}");
+    let (entry, next) = (
+        rect(&harness, "about-check-updates"),
+        rect(&harness, "about-whats-new"),
+    );
+    // The separator between them is 7 points tall.
+    assert!(next.top() >= entry.bottom() + 6.0, "{entry:?} {next:?}");
+
+    click(&mut harness, "about-check-updates");
+    assert!(present(&harness, "update-prompt"), "the offer reopened");
 }

@@ -693,7 +693,8 @@
     "whatsNew": "What's new",
     "documentation": "Documentation",
     "shortcuts": "Keyboard shortcuts",
-    "updateWaiting": "An update is available"
+    "updateWaiting": "An update is available",
+    "updateAvailable": "An update is available: {{version}}"
   },
   "trash": {
     "title": "Trash",

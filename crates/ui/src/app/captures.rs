@@ -257,6 +257,8 @@ fn the_update_prompt() {
     click(&mut harness, "update-later");
     settle(&mut harness);
     capture(&mut harness, "update-dot");
+    click(&mut harness, "about-open");
+    capture(&mut harness, "about-menu-update-known");
 }
 
 /// A library holding `API Paiements`, the HTTP area shown.

@@ -693,7 +693,8 @@
     "whatsNew": "Nouveautés",
     "documentation": "Documentation",
     "shortcuts": "Raccourcis clavier",
-    "updateWaiting": "Une mise à jour est disponible"
+    "updateWaiting": "Une mise à jour est disponible",
+    "updateAvailable": "Une mise à jour est disponible : {{version}}"
   },
   "trash": {
     "title": "Corbeille",
