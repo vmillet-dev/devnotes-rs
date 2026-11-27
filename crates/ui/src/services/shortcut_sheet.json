@@ -72,6 +72,7 @@
       { "keys": ["Ctrl", "Shift", "9"], "label": "shortcuts.note.taskList" },
       { "keys": ["Ctrl", "Shift", "B"], "label": "shortcuts.note.quote" },
       { "keys": ["Ctrl", "Alt", "C"], "label": "shortcuts.note.codeBlock" },
+      { "keys": ["Ctrl", "Shift", "C"], "label": "shortcuts.note.copyMarkdown" },
       { "keys": ["#", "-", "1.", "[ ]", ">", "```"], "label": "shortcuts.note.markdown" }
     ]
   },

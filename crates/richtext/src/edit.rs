@@ -53,6 +53,156 @@ pub fn selected_text(document: &Document, selection: &Selection) -> String {
     out.join("\n")
 }
 
+/// What a copy puts on the clipboard: the selected text, each line led by the blocks it sits
+/// in — `- `, `3. `, `- [x] ` on an item's first line, two spaces a level of nesting, `> ` in a
+/// quote. Inline marks come out as their text. Within one leaf, its text alone.
+pub fn copied(document: &Document, selection: &Selection) -> String {
+    let (start, end) = ordered(selection);
+    if start.path == end.path {
+        return selected_text(document, selection);
+    }
+    let mut out = Vec::new();
+    lines(&fragment(document, selection).blocks, ("", ""), &mut out);
+    out.join("\n")
+}
+
+/// The selection as the Markdown a Note is stored in, marks included.
+pub fn copied_markdown(document: &Document, selection: &Selection) -> String {
+    crate::write(&fragment(document, selection))
+}
+
+/// The selected blocks, the first and the last leaf cut at the selection's ends.
+pub fn fragment(document: &Document, selection: &Selection) -> Document {
+    let (start, end) = ordered(selection);
+    let (from, to) = ((&start.path[..], start.offset), (&end.path[..], end.offset));
+    Document {
+        blocks: slice(&document.blocks, Some(from), Some(to)),
+    }
+}
+
+/// One end of a cut, as a path below the level it is read at and an offset; `None`, open.
+type End<'a> = Option<(&'a [usize], usize)>;
+
+/// The indices kept at this level.
+fn kept(from: End<'_>, to: End<'_>) -> std::ops::RangeInclusive<usize> {
+    let index = |end: End<'_>| end.and_then(|(path, _)| path.first().copied());
+    index(from).unwrap_or(0)..=index(to).unwrap_or(usize::MAX)
+}
+
+/// An end, one level down inside the block or item at `index`: open when it lies elsewhere.
+fn below(end: End<'_>, index: usize) -> End<'_> {
+    end.filter(|(path, _)| path.first() == Some(&index))
+        .map(|(path, offset)| (&path[1..], offset))
+}
+
+fn slice(blocks: &[Block], from: End<'_>, to: End<'_>) -> Vec<Block> {
+    let kept = kept(from, to);
+    blocks
+        .iter()
+        .enumerate()
+        .filter(|(index, _)| kept.contains(index))
+        .map(|(index, block)| cut_block(block, below(from, index), below(to, index)))
+        .collect()
+}
+
+fn cut_block(block: &Block, from: End<'_>, to: End<'_>) -> Block {
+    let (start, end) = (from.map(|(_, at)| at), to.map(|(_, at)| at));
+    match block {
+        Block::Paragraph(content) => Block::Paragraph(cut_inlines(content, start, end)),
+        Block::Heading { level, content } => Block::Heading {
+            level: *level,
+            content: cut_inlines(content, start, end),
+        },
+        Block::CodeBlock { language, text } => Block::CodeBlock {
+            language: language.clone(),
+            text: text
+                .chars()
+                .take(end.unwrap_or(usize::MAX))
+                .skip(start.unwrap_or(0))
+                .collect(),
+        },
+        Block::List { kind, items } => {
+            let kept = kept(from, to);
+            // A numbered item keeps its number.
+            let kind = match *kind {
+                ListKind::Ordered { start } => ListKind::Ordered {
+                    start: start + u64::try_from(*kept.start()).unwrap_or(0),
+                },
+                other => other,
+            };
+            let items = items
+                .iter()
+                .enumerate()
+                .filter(|(index, _)| kept.contains(index))
+                .map(|(index, item)| Item {
+                    checked: item.checked,
+                    blocks: slice(&item.blocks, below(from, index), below(to, index)),
+                })
+                .collect();
+            Block::List { kind, items }
+        }
+        Block::Quote(inner) => Block::Quote(slice(inner, from, to)),
+        Block::Table(_) | Block::Image { .. } | Block::Rule => block.clone(),
+    }
+}
+
+fn cut_inlines(content: &[Inline], start: Option<usize>, end: Option<usize>) -> Vec<Inline> {
+    let before_end = match end {
+        Some(end) => inlines::split(content, end).0,
+        None => content.to_vec(),
+    };
+    match start {
+        Some(start) => inlines::split(&before_end, start).1,
+        None => before_end,
+    }
+}
+
+/// The blocks as lines of text, `first` before the first line, `rest` before every other.
+fn lines(blocks: &[Block], (first, rest): (&str, &str), out: &mut Vec<String>) {
+    for (index, block) in blocks.iter().enumerate() {
+        let lead = if index == 0 { first } else { rest };
+        match block {
+            Block::Paragraph(content) | Block::Heading { content, .. } => {
+                text_lines(&inlines::plain(content), (lead, rest), out);
+            }
+            Block::CodeBlock { text, .. } => text_lines(text, (lead, rest), out),
+            Block::List { kind, items } => {
+                let nested = format!("{rest}  ");
+                for (at, item) in items.iter().enumerate() {
+                    let lead = if at == 0 { lead } else { rest };
+                    let marked = format!("{lead}{}", marker(*kind, at, item.checked));
+                    lines(&item.blocks, (&marked, &nested), out);
+                }
+            }
+            Block::Quote(inner) => {
+                lines(inner, (&format!("{lead}> "), &format!("{rest}> ")), out);
+            }
+            Block::Table(rows) => {
+                for (at, cell) in rows.iter().flatten().enumerate() {
+                    let lead = if at == 0 { lead } else { rest };
+                    text_lines(&inlines::plain(cell), (lead, rest), out);
+                }
+            }
+            Block::Image { .. } | Block::Rule => {}
+        }
+    }
+}
+
+fn text_lines(text: &str, (lead, rest): (&str, &str), out: &mut Vec<String>) {
+    for (at, line) in text.split('\n').enumerate() {
+        out.push(format!("{}{line}", if at == 0 { lead } else { rest }));
+    }
+}
+
+fn marker(kind: ListKind, at: usize, checked: bool) -> String {
+    match kind {
+        ListKind::Bullet => "- ".to_owned(),
+        ListKind::Ordered { start } => format!("{}. ", start + u64::try_from(at).unwrap_or(0)),
+        ListKind::Task if checked => "- [x] ".to_owned(),
+        ListKind::Task => "- [ ] ".to_owned(),
+    }
+}
+
 /// Text typed at the caret, in place of what is selected.
 pub fn insert_text(
     document: &mut Document,

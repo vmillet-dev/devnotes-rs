@@ -1407,6 +1407,11 @@ and exporting write a Note as the Markdown it is, where a snippet is fenced.
   blocks (`richtext::from_html`, on `html5ever`'s tokenizer; `golden/html-paste` passes
   whole); code pasted into an empty Note makes it a snippet, the conversion detecting its
   language; anything else is text. A pasted image becomes an attachment, as in every editor.
+- **Two copies**: Ctrl+C, Cut and the menu put text on the clipboard that keeps its blocks —
+  `- `, `3. `, `- [ ] ` on an item's first line, two spaces a level, `> ` in a quote — and none of the
+  inline marks (`richtext::edit::copied`); « Copy as Markdown » (Ctrl+Shift+C, the right-click
+  menu) writes the same selection as the Note's Markdown (`copied_markdown`). Both walk one
+  fragment, the selection cut out of the document; within one leaf, a copy is its text alone.
 - **An embedded drawing is read where it is shown**: `devnotes:drawing/<id>` asks
   `LibraryCaches.pictures` (the large picture, by id, decoded off the frame and kept with the
   thumbnails' limit); a drawing saved again drops it. Any other image stays as written: a Note

@@ -3,8 +3,9 @@
 //! and the find bar finding in it. Then a drawing: drawn on its stage, shown on its card from the
 //! picture kept beside it, written as a PNG, and Escape stepping back through it. Then Notes:
 //! the sample opens formatted and a box ticked there is kept, one typed from the toolbar keeps
-//! « 2 * 3 * 4 » as typed, and a double click takes a word to type over. The editor sits beside the cards: J steps to the next one, and
-//! Escape leaves full screen before it closes.
+//! « 2 * 3 * 4 » as typed, a double click takes a word to type over, and a list copied keeps its
+//! markers. The editor sits beside the cards: J steps to the next one, and Escape leaves full
+//! screen before it closes.
 
 use e2e::{App, Tree, step};
 use egui::{Key, Modifiers};
@@ -321,6 +322,26 @@ fn notes(app: &mut App) {
         app.eventually("the word typed over", |tree| {
             rich(tree) == "deux * 3 * 4\nfort"
         });
+        close(app);
+    });
+
+    step("a list copied keeps its markers, a long item whole", || {
+        let long = "un élément assez long pour passer à la ligne plus d’une fois ".repeat(4);
+        let long = long.trim_end();
+        app.click("new-note-kind");
+        app.click("new-note-note");
+        app.click("editor-rich");
+        for glyph in ["-", " "] {
+            app.type_text(glyph);
+        }
+        app.type_text(long);
+        app.press(Key::Enter, Modifiers::NONE);
+        app.type_text("court");
+        app.eventually("both items typed", |tree| rich(tree).ends_with("court"));
+        app.press(Key::A, Modifiers::COMMAND);
+        app.copy();
+        let expected = format!("- {long}\n- court");
+        app.clipboard_holds("the list with its markers", |held| held == expected);
         close(app);
     });
 }

@@ -741,3 +741,115 @@ fn shift_and_a_double_click_stretch_the_selection_to_the_word() {
     type_in(&mut harness, "Z");
     assert_eq!(surface_text(&harness), "Z gamma");
 }
+
+/// What the last frames put on the clipboard.
+fn clipboard(harness: &mut Harness<'_>) -> Option<String> {
+    let mut copied = None;
+    for _ in 0..5 {
+        harness.step();
+        copied = copied.or_else(|| {
+            let commands = &harness.output().platform_output.commands;
+            commands.iter().find_map(|command| match command {
+                egui::OutputCommand::CopyText(text) => Some(text.clone()),
+                _ => None,
+            })
+        });
+    }
+    copied
+}
+
+#[test]
+fn a_copied_list_keeps_its_markers_and_drops_the_inline_marks() {
+    let (mut harness, _) = note("- one **bold**\n- two\n\n1. first\n2. second");
+    click_id(&mut harness, "editor-rich");
+    press(&mut harness, Modifiers::COMMAND, Key::A);
+    harness.event(egui::Event::Copy);
+    assert_eq!(
+        clipboard(&mut harness).as_deref(),
+        Some("- one bold\n- two\n1. first\n2. second")
+    );
+}
+
+/// Clicked, the frame left to `clipboard`: its copy is read there.
+fn menu_entry(harness: &Harness<'_>, author_id: &str) {
+    harness
+        .get_by(|node| node.author_id() == Some(author_id))
+        .click();
+}
+
+#[test]
+fn ctrl_shift_c_and_the_menu_copy_the_selection_as_markdown() {
+    let (mut harness, _) = note("- one **bold**\n- two");
+    click_id(&mut harness, "editor-rich");
+    press(&mut harness, Modifiers::COMMAND, Key::A);
+    // Pressed alone: kittest gives a release a pass of its own, whose output would be the frame's.
+    let held = Modifiers::COMMAND | Modifiers::SHIFT;
+    harness.event(egui::Event::ModifiersChanged(held));
+    harness.event(egui::Event::Key {
+        key: Key::C,
+        physical_key: Some(Key::C),
+        pressed: true,
+        repeat: false,
+        modifiers: held,
+    });
+    assert_eq!(
+        clipboard(&mut harness).as_deref(),
+        Some("- one **bold**\n- two")
+    );
+    harness.event(egui::Event::ModifiersChanged(Modifiers::NONE));
+
+    harness
+        .get_by(|node| node.author_id() == Some("editor-rich"))
+        .click_secondary();
+    settle(&mut harness);
+    menu_entry(&harness, "rich-menu-copy-markdown");
+    assert_eq!(
+        clipboard(&mut harness).as_deref(),
+        Some("- one **bold**\n- two")
+    );
+    harness
+        .get_by(|node| node.author_id() == Some("editor-rich"))
+        .click_secondary();
+    settle(&mut harness);
+    menu_entry(&harness, "rich-menu-copy");
+    assert_eq!(
+        clipboard(&mut harness).as_deref(),
+        Some("- one bold\n- two")
+    );
+}
+
+#[test]
+fn select_all_lights_every_row_of_a_wrapped_item() {
+    let long = "a sentence long enough to wrap ".repeat(12);
+    let (mut harness, _) = note(&format!("- {}\n- short", long.trim_end()));
+    click_id(&mut harness, "editor-rich");
+    press(&mut harness, Modifiers::COMMAND, Key::A);
+
+    let shapes = &harness.output().shapes;
+    let item = shapes
+        .iter()
+        .find_map(|clipped| match &clipped.shape {
+            egui::Shape::Text(text) if text.galley.text().starts_with("a sentence") => Some(
+                text.galley
+                    .rows
+                    .iter()
+                    .map(|row| row.rect().translate(text.pos.to_vec2())),
+            ),
+            _ => None,
+        })
+        .expect("the item is painted")
+        .collect::<Vec<_>>();
+    assert!(item.len() >= 3, "wrapped on {} rows", item.len());
+    let lit = crate::theme::palette(&harness.ctx)
+        .amber_fill
+        .gamma_multiply(0.3);
+    for row in &item {
+        let covered = shapes.iter().any(|clipped| {
+            matches!(&clipped.shape, egui::Shape::Rect(shape)
+                if shape.fill == lit
+                    && (shape.rect.center().y - row.center().y).abs() < 1.0
+                    && shape.rect.width() > row.width() * 0.9)
+        });
+        assert!(covered, "row {row:?} is lit");
+    }
+}

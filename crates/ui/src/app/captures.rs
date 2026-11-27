@@ -2034,3 +2034,52 @@ fn an_empty_folder_opened() {
     settle(&mut harness);
     capture(&mut harness, "folder-empty");
 }
+
+#[test]
+fn a_wrapped_list_selected_whole() {
+    use engine::notes::kind::NoteKind;
+    use engine::notes::language::Language;
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch(profile.path());
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let backend = &harness.state().backend;
+    let space = crate::testing::note(backend, "seed").space_id.clone();
+    let long =
+        "Une tâche assez longue pour tenir sur plusieurs lignes de la Note ouverte. ".repeat(3);
+    let content = format!(
+        "- {}\n- Relire la procédure\n- {}",
+        long.trim_end(),
+        long.trim_end()
+    );
+    engine::db::run_here(backend.engine(), move |engine| {
+        let draft = engine::notes::model::NoteDraft {
+            kind: NoteKind::Note,
+            language: Language::Txt,
+            content,
+            ..crate::testing::snippet(space, "Mise en production".to_owned())
+        };
+        engine::notes::create_note(engine, draft)
+    })
+    .unwrap();
+    harness.state_mut().state.revision.bump();
+    settle(&mut harness);
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("note-card-open")
+                && node.label().as_deref() == Some("Mise en production")
+        })
+        .click();
+    settle(&mut harness);
+    click(&mut harness, "editor-rich");
+    harness.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::A);
+    settle(&mut harness);
+    capture(&mut harness, "note-list-selected");
+    harness
+        .get_by(|node| node.author_id() == Some("editor-rich"))
+        .click_secondary();
+    settle(&mut harness);
+    capture(&mut harness, "note-menu");
+}
