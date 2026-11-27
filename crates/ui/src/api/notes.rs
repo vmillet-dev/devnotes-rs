@@ -142,6 +142,11 @@ pub fn normalize_tags(tags: &[String]) -> Vec<String> {
     engine::notes::model::normalize_tags(tags)
 }
 
+/// What is left of a typed tag once brought to the rules, `None` when nothing readable is.
+pub fn normalize_tag(tag: &str) -> Option<&str> {
+    engine::notes::model::normalize_tag(tag)
+}
+
 /// Into another kind; the undo writes back the body the core answers it had.
 pub fn convert(
     backend: &Backend,
