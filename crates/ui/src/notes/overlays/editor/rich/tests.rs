@@ -672,3 +672,72 @@ fn the_down_arrow_on_the_last_line_of_a_final_code_block_opens_a_paragraph() {
         "```rust\nlet x = 1;\nlet y = 2;\n```\n\nAprès"
     );
 }
+
+/// Where the painted `words` show their char at `offset`, in the window.
+fn point_in(harness: &Harness<'_>, words: &str, offset: usize) -> egui::Pos2 {
+    let shapes = &harness.output().shapes;
+    let found = shapes.iter().find_map(|clipped| match &clipped.shape {
+        egui::Shape::Text(text) if text.galley.text() == words => {
+            let at = text
+                .galley
+                .pos_from_cursor(egui::text::CCursor::new(offset));
+            Some(text.pos + at.center().to_vec2())
+        }
+        _ => None,
+    });
+    found.unwrap_or_else(|| panic!("{words:?} is painted"))
+}
+
+/// `count` clicks at `at`. The bench gives each release a frame of its own, a quarter of a
+/// second: egui's delay between two clicks is stretched to count them as one gesture.
+fn clicks(harness: &mut Harness<'_>, at: egui::Pos2, count: usize, modifiers: Modifiers) {
+    harness
+        .ctx
+        .options_mut(|options| options.input_options.max_double_click_delay = 0.7);
+    // A second of frames first: no click before this gesture counts in it.
+    for _ in 0..4 {
+        harness.step();
+    }
+    harness.event(egui::Event::PointerMoved(at));
+    harness.event(egui::Event::ModifiersChanged(modifiers));
+    harness.step();
+    for _ in 0..count {
+        for pressed in [true, false] {
+            harness.event(egui::Event::PointerButton {
+                pos: at,
+                button: egui::PointerButton::Primary,
+                pressed,
+                modifiers,
+            });
+        }
+    }
+    settle(harness);
+    harness.event(egui::Event::ModifiersChanged(Modifiers::NONE));
+    harness.step();
+}
+
+#[test]
+fn a_double_click_takes_the_word_and_a_triple_the_paragraph() {
+    let (mut harness, id) = note("hello world\n\nsecond line");
+    let world = point_in(&harness, "hello world", 8);
+    clicks(&mut harness, world, 2, Modifiers::NONE);
+    type_in(&mut harness, "there");
+    assert_eq!(surface_text(&harness), "hello there\nsecond line");
+
+    let second = point_in(&harness, "second line", 2);
+    clicks(&mut harness, second, 3, Modifiers::NONE);
+    type_in(&mut harness, "third");
+    click_id(&mut harness, "editor-close");
+    assert_eq!(stored(&harness, &id), "hello there\n\nthird");
+}
+
+#[test]
+fn shift_and_a_double_click_stretch_the_selection_to_the_word() {
+    let (mut harness, _) = note("alpha beta gamma");
+    let alpha = point_in(&harness, "alpha beta gamma", 0);
+    clicks(&mut harness, alpha, 1, Modifiers::NONE);
+    let beta = point_in(&harness, "alpha beta gamma", 8);
+    clicks(&mut harness, beta, 2, Modifiers::SHIFT);
+    type_in(&mut harness, "Z");
+    assert_eq!(surface_text(&harness), "Z gamma");
+}

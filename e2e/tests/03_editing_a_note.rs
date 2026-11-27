@@ -2,8 +2,8 @@
 //! the code holds, full screen and the folded header keeping the draft, Tab staying in the code
 //! and the find bar finding in it. Then a drawing: drawn on its stage, shown on its card from the
 //! picture kept beside it, written as a PNG, and Escape stepping back through it. Then Notes:
-//! the sample opens formatted and a box ticked there is kept, and one typed from the toolbar
-//! keeps « 2 * 3 * 4 » as typed. The editor sits beside the cards: J steps to the next one, and
+//! the sample opens formatted and a box ticked there is kept, one typed from the toolbar keeps
+//! « 2 * 3 * 4 » as typed, and a double click takes a word to type over. The editor sits beside the cards: J steps to the next one, and
 //! Escape leaves full screen before it closes.
 
 use e2e::{App, Tree, step};
@@ -298,6 +298,31 @@ fn notes(app: &mut App) {
             close(app);
         },
     );
+
+    step("a double click in a Note takes the word under it", || {
+        // A click less than 0.3 s before a double click makes it a triple, for egui: the last
+        // one is the field's, two searches each wait out its pause, the card opens by the keys.
+        app.click("search-input");
+        app.press(Key::A, Modifiers::COMMAND);
+        app.type_text("nothing matches this");
+        app.eventually("nothing found", |tree| tree.has("canvas-no-results"));
+        app.press(Key::A, Modifiers::COMMAND);
+        app.type_text("fort");
+        app.eventually("the Note alone", |tree| tree.count("note-card") == 1);
+        app.press(Key::ArrowDown, Modifiers::NONE);
+        app.eventually("the card has the focus", |tree| {
+            tree.focused().starts_with("note-card-open")
+        });
+        app.press(Key::Enter, Modifiers::NONE);
+        app.wait_for("editor-rich");
+        // The first word: the page's margin is 28 points, 20 above the first line.
+        app.double_click_in("editor-rich", (31.0, 31.0));
+        app.type_text("deux");
+        app.eventually("the word typed over", |tree| {
+            rich(tree) == "deux * 3 * 4\nfort"
+        });
+        close(app);
+    });
 }
 
 #[test]

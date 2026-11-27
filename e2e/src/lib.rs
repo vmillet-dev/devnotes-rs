@@ -365,6 +365,27 @@ impl App {
         self.apply(vec![press(false)]);
     }
 
+    /// Two clicks at `at`, in points from the control's corner, sent together: one double click
+    /// however slowly the window paints.
+    pub fn double_click_in(&mut self, author_id: &str, at: (f32, f32)) {
+        self.wait_for(author_id);
+        let bounds = self
+            .tree()
+            .find(author_id)
+            .and_then(Node::bounds)
+            .unwrap_or_else(|| panic!("{author_id} has no place on screen"));
+        #[expect(clippy::cast_possible_truncation, reason = "points on a screen")]
+        let pos = Pos2::new(bounds.x0 as f32, bounds.y0 as f32) + at.into();
+        let press = |pressed| Event::PointerButton {
+            pos,
+            button: PointerButton::Primary,
+            pressed,
+            modifiers: Modifiers::NONE,
+        };
+        self.apply(vec![Event::PointerMoved(pos)]);
+        self.apply(vec![press(true), press(false), press(true), press(false)]);
+    }
+
     /// A press at `from` and a release at `to`, in points from the control's corner.
     pub fn drag_in(&mut self, author_id: &str, from: (f32, f32), to: (f32, f32)) {
         self.wait_for(author_id);
