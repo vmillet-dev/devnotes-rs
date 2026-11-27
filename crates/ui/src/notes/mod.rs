@@ -21,6 +21,7 @@ use i18n::{Key, keys};
 
 use engine::folders::model::FolderColour;
 use engine::notes::checklist::ChecklistItem;
+use engine::notes::model::HeldNotes;
 use engine::notes::view::NoteFilter;
 
 use crate::action::{Action as Asked, Actions, AppAction};
@@ -57,10 +58,11 @@ pub enum Action {
         id: String,
         pinned: bool,
     },
-    /// Its notes go to `refuge` first.
+    /// Its notes go to `refuge` first, kept or in the trash.
     DeleteSpace {
         id: String,
         refuge: String,
+        held: HeldNotes,
     },
     CreateFolder {
         space_id: String,
@@ -75,7 +77,12 @@ pub enum Action {
         id: String,
         colour: FolderColour,
     },
-    DeleteFolder(String),
+    /// What deleting it would keep or trash, for its panel.
+    CountFolder(String),
+    DeleteFolder {
+        id: String,
+        held: HeldNotes,
+    },
     /// Under `parent`, or at the top of `space` for `None`, with everything it holds; refused
     /// and said when it cannot go there.
     MoveFolder {

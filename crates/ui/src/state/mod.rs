@@ -383,15 +383,13 @@ impl AppState {
         }
         self.caches.thumbnails.update(ctx, backend);
         self.caches.pictures.update(ctx, backend);
-        let mut moved = self
-            .spaces
-            .update(backend, &mut self.revision, &mut self.errors);
+        let notifiers = (&mut self.status, &mut self.errors);
+        let mut moved = self.spaces.update(backend, &mut self.revision, notifiers);
         if moved {
             self.folders.leave();
         }
-        let answered = self
-            .folders
-            .update(backend, &mut self.revision, &mut self.errors);
+        let notifiers = (&mut self.status, &mut self.errors);
+        let answered = self.folders.update(backend, &mut self.revision, notifiers);
         for done in answered.done {
             self.undo.record(done, time);
         }

@@ -1,5 +1,6 @@
 //! Spaces from the library rail: made, renamed, pinned, chosen, remembered, and deleted with
-//! their notes moved out first. Only a real database proves the cascade never fires.
+//! their notes moved out first, or put in the trash. Only a real database proves the cascade
+//! never fires.
 //!
 //! Nothing compares a seeded word: the samples are in the system's language. The space made
 //! here is named by the scenario, and found by that name.
@@ -9,6 +10,7 @@ use egui::accesskit::{Node, Toggled};
 use egui::{Key, Modifiers};
 
 const CARDS: usize = 6;
+const DOOMED: &str = "Brouillon à jeter";
 
 fn named(name: &str) -> impl Fn(&Node) -> bool + '_ {
     move |node| node.label() == Some(name)
@@ -23,6 +25,38 @@ fn is_shown(tree: &e2e::Tree, name: &str) -> bool {
     tree.all("space-option")
         .into_iter()
         .any(|node| node.label() == Some(name) && node.toggled() == Some(Toggled::True))
+}
+
+fn deleted_with_its_notes(app: &mut App) {
+    step(
+        "a space deleted with its notes puts them in the trash",
+        || {
+            app.click("space-create-open");
+            app.fill("space-create-input", "Brouillons");
+            app.press(Key::Enter, Modifiers::NONE);
+            app.eventually("the new space is shown", |tree| {
+                is_shown(tree, "Brouillons") && tree.count("note-card") == 0
+            });
+            app.click("new-note");
+            app.fill("editor-title", DOOMED);
+            app.fill("editor-body", "à jeter");
+            app.click("editor-close");
+            app.eventually("its note is a card", |tree| tree.count("note-card") == 1);
+            app.click_where("space-edit", options_of("Brouillons"));
+            app.click("space-delete-held");
+            app.click("space-delete-held-1");
+            app.click("space-delete");
+            app.click("space-delete");
+            app.eventually("the space is gone, its note not in the refuge", |tree| {
+                tree.count("space-option") == 1 && tree.count("note-card") == CARDS
+            });
+            app.click("trash-open");
+            app.eventually("the note waits in the trash", |tree| {
+                tree.texts("trash-row-title").contains(&DOOMED.to_owned())
+            });
+            app.press(Key::Escape, Modifiers::NONE);
+        },
+    );
 }
 
 #[test]
@@ -123,6 +157,8 @@ fn spaces() {
             });
         },
     );
+
+    deleted_with_its_notes(&mut app);
 
     app.quit();
 }

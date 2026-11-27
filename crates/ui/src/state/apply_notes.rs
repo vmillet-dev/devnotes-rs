@@ -298,8 +298,8 @@ impl AppState {
             Notes::PinSpace { id, pinned } => {
                 self.spaces.pin_space(backend, id, pinned);
             }
-            Notes::DeleteSpace { id, refuge } => {
-                self.spaces.delete_space(backend, id, refuge);
+            Notes::DeleteSpace { id, refuge, held } => {
+                self.spaces.delete_space(backend, id, refuge, held);
             }
             Notes::CreateFolder {
                 space_id,
@@ -308,7 +308,10 @@ impl AppState {
             } => self.folders.create(backend, space_id, parent_id, &name),
             Notes::RenameFolder { id, name } => self.folders.rename(backend, id, &name),
             Notes::RecolourFolder { id, colour } => self.folders.recolour(backend, id, colour),
-            Notes::DeleteFolder(id) => self.folders.delete(backend, id, self.preview_lines),
+            Notes::CountFolder(id) => self.folders.count(id),
+            Notes::DeleteFolder { id, held } => {
+                self.folders.delete(backend, id, self.preview_lines, held);
+            }
             Notes::MoveFolder { id, parent, space } => {
                 self.move_folder(backend, id, (parent, space));
             }
@@ -376,7 +379,8 @@ impl AppState {
             | Notes::CreateFolder { .. }
             | Notes::RenameFolder { .. }
             | Notes::RecolourFolder { .. }
-            | Notes::DeleteFolder(_)
+            | Notes::CountFolder(_)
+            | Notes::DeleteFolder { .. }
             | Notes::MoveFolder { .. }
             | Notes::NudgeFolder { .. }) => self.apply_place(place, backend),
             Notes::SetView(mode) => self.set_view(mode, backend),

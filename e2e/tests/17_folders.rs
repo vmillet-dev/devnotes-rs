@@ -2,7 +2,8 @@
 //! out, the chip a card wears, a note filed from its card, the notes left standing when the
 //! folder goes — then folders inside folders: dragged onto another in the rail and offered back,
 //! the list of an opened folder gathering its sub-tree, its own board one level down, a
-//! sub-folder made from its panel, and the folder dragged onto another space with its notes.
+//! sub-folder made from its panel, the folder dragged onto another space with its notes, and one
+//! deleted with its notes, which wait in the trash.
 //!
 //! A space of its own, made here: the samples are in the system's language.
 
@@ -14,6 +15,7 @@ const SPACE: &str = "Dossiers";
 const FIRST: &str = "Requête lente";
 const SECOND: &str = "Plan d'exécution";
 const NESTED: &str = "Index partiel sur jobs";
+const DOOMED: &str = "Brouillon à jeter";
 
 fn named(name: &str) -> impl Fn(&Node) -> bool + '_ {
     move |node| node.label() == Some(name)
@@ -318,6 +320,36 @@ fn to_another_space(app: &mut App) {
     );
 }
 
+fn deleted_with_its_notes(app: &mut App) {
+    step(
+        "a folder deleted with its notes puts them in the trash",
+        || {
+            make_folder(app, "Jetable");
+            app.eventually("the folder is listed", |tree| {
+                rows_named(tree, "Jetable") == 1
+            });
+            app.click_where("folder-option", named("Jetable"));
+            app.wait_for("folder-breadcrumb-name");
+            write(app, DOOMED);
+            app.click_where("folder-edit", |node| {
+                node.label().is_some_and(|label| label.contains("Jetable"))
+            });
+            app.click("folder-delete-held");
+            app.click("folder-delete-held-1");
+            app.click("folder-delete");
+            app.click("folder-delete");
+            app.eventually("the folder is gone, its note with it", |tree| {
+                rows_named(tree, "Jetable") == 0 && !titles(tree).contains(&DOOMED.to_owned())
+            });
+            app.click("trash-open");
+            app.eventually("the note waits in the trash", |tree| {
+                tree.texts("trash-row-title").contains(&DOOMED.to_owned())
+            });
+            app.press(Key::Escape, Modifiers::NONE);
+        },
+    );
+}
+
 #[test]
 fn folders() {
     let profile = tempfile::tempdir().unwrap();
@@ -329,5 +361,6 @@ fn folders() {
     filing(&mut app);
     nested(&mut app);
     to_another_space(&mut app);
+    deleted_with_its_notes(&mut app);
     app.quit();
 }

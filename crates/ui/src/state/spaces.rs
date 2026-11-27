@@ -2,6 +2,7 @@
 //! and not a waiting state. Writes are not optimistic: each answer bumps the revision, and the
 //! list is asked again with it. The folders inside them are `state::folders`'.
 
+use engine::notes::model::HeldNotes;
 use engine::spaces::model::{Space, SpaceContents};
 use i18n::{Message, keys};
 
@@ -10,6 +11,7 @@ use crate::api;
 use crate::backend::{Backend, Pending};
 use crate::services::errors::ErrorNotifier;
 use crate::services::preferences::Preferences;
+use crate::services::status::StatusNotifier;
 
 /// The library's, like everything under `devnotes.notes.`: an id means nothing elsewhere.
 pub const ACTIVE_SPACE_KEY: &str = "devnotes.notes.activeSpace";
@@ -18,10 +20,12 @@ enum Write {
     /// Shown once made: its id arrives with the answer.
     Made(Pending<Space>),
     Changed(Pending<Space>),
-    /// Its refuge is shown once it is gone: the notes have just landed there.
+    /// Its refuge is shown once it is gone: the notes have just landed there. What it did is
+    /// said with the refuge's name.
     Deleted {
-        pending: Pending<()>,
-        refuge: String,
+        pending: Pending<u32>,
+        refuge: (String, String),
+        held: HeldNotes,
     },
 }
 
@@ -61,18 +65,26 @@ impl SpacesState {
         &mut self,
         backend: &Backend,
         revision: &mut Revision,
-        errors: &mut ErrorNotifier,
+        (status, errors): (&mut StatusNotifier, &mut ErrorNotifier),
     ) -> bool {
         let mut shown = Vec::new();
+        let mut said = Vec::new();
         self.writes.retain_mut(|writing| {
             let answer = match &mut writing.write {
                 Write::Made(pending) => pending
                     .poll()
                     .map(|answer| answer.map(|space| Some(space.id))),
                 Write::Changed(pending) => pending.poll().map(|answer| answer.map(|_| None)),
-                Write::Deleted { pending, refuge } => pending
-                    .poll()
-                    .map(|answer| answer.map(|()| Some(refuge.clone()))),
+                Write::Deleted {
+                    pending,
+                    refuge: (id, name),
+                    held,
+                } => pending.poll().map(|answer| {
+                    answer.map(|moved| {
+                        said.push(deleted(*held, name, moved));
+                        Some(id.clone())
+                    })
+                }),
             };
             match answer {
                 None => true,
@@ -87,6 +99,9 @@ impl SpacesState {
                 }
             }
         });
+        for message in said {
+            status.report(message);
+        }
         let moved = !shown.is_empty();
         if let Some(space) = shown.pop() {
             self.chosen = Some(space);
@@ -174,20 +189,37 @@ impl SpacesState {
     }
 
     /// The refuge is then shown: the notes have just landed there.
-    pub fn delete_space(&mut self, backend: &Backend, id: String, refuge: String) {
+    pub fn delete_space(&mut self, backend: &Backend, id: String, refuge: String, held: HeldNotes) {
         if id == refuge {
             return;
         }
         let failed = Message::new(keys::errors::SPACE_DELETE_FAILED);
+        let name = self
+            .spaces()
+            .iter()
+            .find(|space| space.id == refuge)
+            .map(|space| space.name.clone())
+            .unwrap_or_default();
         let write = Write::Deleted {
-            pending: api::spaces::delete(backend, id, refuge.clone()),
-            refuge,
+            pending: api::spaces::delete(backend, id, refuge.clone(), held),
+            refuge: (refuge, name),
+            held,
         };
         self.push(write, failed);
     }
 
     fn push(&mut self, write: Write, failed: Message) {
         self.writes.push(Writing { write, failed });
+    }
+}
+
+/// How many notes went where: into the refuge, or into the trash.
+fn deleted(held: HeldNotes, refuge: &str, moved: u32) -> Message {
+    match held {
+        HeldNotes::Keep => Message::new(keys::notes::SPACE_DELETED)
+            .with("count", moved)
+            .with("refuge", refuge),
+        HeldNotes::Trash => Message::new(keys::notes::SPACE_DELETED_TRASHED).with("count", moved),
     }
 }
 

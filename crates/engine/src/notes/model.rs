@@ -1205,3 +1205,12 @@ mod tests {
         assert_eq!(note.placeholders[0].name, "host");
     }
 }
+
+/// What deleting a space or a folder does to the notes it holds: they live on elsewhere, or go to
+/// the trash with it. Never erased: only emptying the trash, or its retention, is final.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum HeldNotes {
+    #[default]
+    Keep,
+    Trash,
+}

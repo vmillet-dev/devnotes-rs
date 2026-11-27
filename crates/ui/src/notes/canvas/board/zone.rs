@@ -13,6 +13,7 @@ use engine::folders::board::{
     BoardChild, BoardFrame, BoardNote, BoardZone, CARD_WIDTH, GAP, ZONE_BORDER, ZONE_HEADER,
     ZONE_PADDING, ZONE_SUBFOLDERS, columns_in,
 };
+use engine::folders::model::FolderContents;
 use i18n::keys;
 
 use super::gesture::{self, Kind};
@@ -82,7 +83,7 @@ pub(super) fn show(
     header(
         ui,
         head,
-        (zone, drawn),
+        (zone, drawn, context.folders.contents(&zone.folder.id)),
         (context.language, menu, hand),
         actions,
     );
@@ -118,7 +119,7 @@ pub(super) fn show(
 fn header(
     ui: &mut Ui,
     head: Rect,
-    (zone, drawn): (&BoardZone, &Drawn<'_>),
+    (zone, drawn, contents): (&BoardZone, &Drawn<'_>, Option<&FolderContents>),
     (language, menu_edit, hand): (i18n::Language, &mut Option<FolderEdit>, &mut Hand<'_>),
     actions: &mut Actions,
 ) {
@@ -201,7 +202,7 @@ fn header(
             ui,
             menu_room,
             (zone, drawn.notes.len()),
-            language,
+            (contents, language),
             menu_edit,
             actions,
         );
@@ -356,7 +357,7 @@ fn menu(
     ui: &mut Ui,
     room: Rect,
     (zone, held): (&BoardZone, usize),
-    language: i18n::Language,
+    (contents, language): (Option<&FolderContents>, i18n::Language),
     menu_edit: &mut Option<FolderEdit>,
     actions: &mut Actions,
 ) {
@@ -395,7 +396,7 @@ fn menu(
                 Some(edit) if edit.id == folder.id => edit,
                 other => other.insert(FolderEdit::open(folder)),
             };
-            if panel::folder(ui, edit, folder, language, actions) {
+            if panel::folder(ui, edit, (folder, contents), language, actions) {
                 ui.close();
             }
         });

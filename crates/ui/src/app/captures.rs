@@ -2106,3 +2106,47 @@ fn an_update_found_at_the_gate() {
     settle(&mut harness);
     capture(&mut harness, "gate-update");
 }
+
+/// The options of a space and of a folder, their deletion asked: what each does to its notes.
+#[test]
+fn deleting_a_space_and_a_folder() {
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch(profile.path());
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let backend = &harness.state().backend;
+    crate::notes::bench::space(backend, "Archives");
+    harness.state_mut().state.revision.bump();
+    settle(&mut harness);
+    let options = |harness: &mut Harness<'static, DevNotesApp>, author_id: &str, name: &str| {
+        harness
+            .get_by(|node| {
+                node.author_id() == Some(author_id)
+                    && node.label().is_some_and(|label| label.ends_with(name))
+            })
+            .click();
+        settle(harness);
+    };
+    // The samples space, whatever the system language names it.
+    let samples = crate::notes::bench::spaces_of_backend(&harness.state().backend)
+        .into_iter()
+        .find(|space| space.name != "Archives")
+        .unwrap()
+        .name;
+    options(&mut harness, "space-edit", &samples);
+    click(&mut harness, "space-delete");
+    capture(&mut harness, "space-delete");
+    click(&mut harness, "space-delete-held");
+    click(&mut harness, "space-delete-held-1");
+    capture(&mut harness, "space-delete-trash");
+    harness.key_press(egui::Key::Escape);
+    settle(&mut harness);
+    options(&mut harness, "folder-edit", "Snippets");
+    click(&mut harness, "folder-delete");
+    capture(&mut harness, "folder-delete");
+    click(&mut harness, "folder-delete-held");
+    click(&mut harness, "folder-delete-held-1");
+    capture(&mut harness, "folder-delete-trash");
+}

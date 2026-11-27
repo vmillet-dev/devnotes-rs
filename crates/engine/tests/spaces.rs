@@ -203,7 +203,7 @@ fn deleting_a_space_moves_its_notes_to_the_target() {
     let refuge = create(&mut connection, "Boulot").unwrap();
     note_in(&mut connection, &doomed.id);
 
-    delete(&mut connection, &doomed.id, &refuge.id).unwrap();
+    delete(&mut connection, &doomed.id, &refuge.id, None).unwrap();
 
     let space_id = notes::table
         .find("n-1")
@@ -221,7 +221,7 @@ fn moving_notes_out_of_a_deleted_space_does_not_touch_their_timestamps() {
     let refuge = create(&mut connection, "Boulot").unwrap();
     note_in(&mut connection, &doomed.id);
 
-    delete(&mut connection, &doomed.id, &refuge.id).unwrap();
+    delete(&mut connection, &doomed.id, &refuge.id, None).unwrap();
 
     let updated_at = notes::table
         .find("n-1")
@@ -237,7 +237,7 @@ fn deleting_an_empty_space_leaves_the_others_alone() {
     let doomed = create(&mut connection, "Personal").unwrap();
     let refuge = create(&mut connection, "Boulot").unwrap();
 
-    delete(&mut connection, &doomed.id, &refuge.id).unwrap();
+    delete(&mut connection, &doomed.id, &refuge.id, None).unwrap();
 
     assert_eq!(names(&mut connection), ["Boulot"]);
 }
@@ -247,7 +247,7 @@ fn deleting_an_unknown_space_reports_an_error() {
     let mut connection = open_in_memory().unwrap();
     let refuge = create(&mut connection, "Boulot").unwrap();
 
-    let error = delete(&mut connection, "unknown", &refuge.id).unwrap_err();
+    let error = delete(&mut connection, "unknown", &refuge.id, None).unwrap_err();
 
     assert!(matches!(error, StorageError::SpaceNotFound(_)));
 }
@@ -258,7 +258,7 @@ fn deleting_into_an_unknown_space_changes_nothing() {
     let doomed = create(&mut connection, "Personal").unwrap();
     note_in(&mut connection, &doomed.id);
 
-    let error = delete(&mut connection, &doomed.id, "unknown").unwrap_err();
+    let error = delete(&mut connection, &doomed.id, "unknown", None).unwrap_err();
 
     assert!(matches!(error, StorageError::SpaceNotFound(_)));
     assert_eq!(list(&mut connection).unwrap().len(), 1);

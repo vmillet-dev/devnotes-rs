@@ -3,8 +3,9 @@
 use engine::folders::{
     self,
     board::PreviewLines,
-    model::{Folder, FolderColour, FolderDraft, FolderMove},
+    model::{Folder, FolderColour, FolderContents, FolderDraft, FolderMove},
 };
+use engine::notes::model::HeldNotes;
 
 use super::undo::Reversible;
 use crate::backend::{Backend, Pending};
@@ -36,9 +37,15 @@ pub fn recolour(backend: &Backend, id: String, colour: FolderColour) -> Pending<
     backend.db(move |engine| folders::recolour_folder(engine, &id, colour))
 }
 
-/// What it holds goes up a level.
-pub fn delete(backend: &Backend, id: String, lines: PreviewLines) -> Pending<()> {
-    backend.db(move |engine| folders::delete_folder(engine, &id, lines))
+/// What deleting it would keep or trash, said before the second click.
+pub fn contents(backend: &Backend, id: String) -> Pending<FolderContents> {
+    backend.db(move |engine| folders::count_folder_contents(engine, &id))
+}
+
+/// What it holds goes up a level, or to the trash with its sub-folders: answers how many live
+/// notes it held.
+pub fn delete(backend: &Backend, id: String, lines: PreviewLines, held: HeldNotes) -> Pending<u32> {
+    backend.db(move |engine| folders::delete_folder(engine, &id, lines, held))
 }
 
 /// Under `parent_id`, or at the top of its space, with what it holds: answers where it was.

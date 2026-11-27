@@ -75,6 +75,14 @@ pub struct FolderMove {
     pub notes: Vec<String>,
 }
 
+/// What a folder's deletion would keep or trash: the live notes under it, sub-folders included,
+/// and how many sub-folders it has.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct FolderContents {
+    pub notes: u32,
+    pub folders: u32,
+}
+
 /// Which folder each note left, the only thing that can put a filing back; `None` was loose.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NoteFiling {

@@ -226,7 +226,7 @@ fn a_space_gone_since_the_move_does_not_take_the_rest_of_the_undo_with_it() {
         &target,
     )
     .unwrap();
-    spaces::delete(&mut connection, &doomed, &target).unwrap();
+    spaces::delete(&mut connection, &doomed, &target, None).unwrap();
 
     let restored = restore_placements(&mut connection, &previous).unwrap();
 
@@ -289,7 +289,7 @@ fn a_folder_gone_since_the_move_leaves_the_note_loose() {
     )
     .unwrap();
     let previous = move_many(&mut connection, std::slice::from_ref(&note.id), &target).unwrap();
-    folders::delete(&mut connection, &folder.id, crate::CARD).unwrap();
+    folders::delete(&mut connection, &folder.id, crate::CARD, None).unwrap();
 
     assert_eq!(restore_placements(&mut connection, &previous).unwrap(), 1);
 

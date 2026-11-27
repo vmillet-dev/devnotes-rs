@@ -10,6 +10,7 @@ use diesel::prelude::*;
 use uuid::Uuid;
 
 use super::model::{Folder, FolderColour, FolderMove, Lineage, NoteFiling, NoteFolder};
+use crate::count::saturating_u32;
 use crate::db::schema::{folders, notes};
 use crate::db::{Library, iso8601};
 use crate::error::StorageError;
@@ -413,33 +414,89 @@ fn place(
 /// What it held goes to its parent — its notes, filed there, and its sub-folders, each to a
 /// free slot on that board — or loose at the top of the space. `updated_at` is not touched:
 /// the user aimed at the folder.
-pub fn delete(connection: &mut Library, id: &str, card: i32) -> Result<(), StorageError> {
+pub fn contents(
+    connection: &mut Library,
+    id: &str,
+) -> Result<super::model::FolderContents, StorageError> {
+    let (connection, _vault) = connection.split();
+    let under = lineage_of(connection, id)?.subtree(id);
+    Ok(super::model::FolderContents {
+        notes: saturating_u32(count_filed(connection, &under)?),
+        folders: saturating_u32(under.len().saturating_sub(1)),
+    })
+}
+
+/// Answers how many live notes it held; `trashed_at`, they and its sub-folders go with it.
+pub fn delete(
+    connection: &mut Library,
+    id: &str,
+    card: i32,
+    trashed_at: Option<DateTime<Utc>>,
+) -> Result<usize, StorageError> {
     connection.transaction(|connection, _vault| {
         let lineage = lineage_of(connection, id)?;
         let parent = lineage.parent(id).map(str::to_string);
-
-        for child in lineage.children(Some(id)) {
-            place(connection, child, parent.as_deref(), None)?;
+        let under = lineage.subtree(id);
+        let held = count_filed(connection, &under)?;
+        match trashed_at {
+            Some(at) => trash_under(connection, &under, at)?,
+            None => hand_up(connection, &lineage, id, parent.as_deref())?,
         }
-
-        let held: Vec<String> = notes::table
-            .filter(notes::folder_id.eq(id))
-            .select(notes::id)
-            .load::<String>(connection)?;
-        // A place on the deleted folder's board means nothing on its parent's.
-        board::forget_positions(connection, &held)?;
-        diesel::update(notes::table.filter(notes::folder_id.eq(id)))
-            .set(notes::folder_id.eq(parent.as_deref()))
-            .execute(connection)?;
-
-        diesel::delete(folders::table.find(id)).execute(connection)?;
 
         if let Some(parent) = &parent {
             let after = lineage_of(connection, parent)?;
             grow_with_ancestors(connection, &after, parent, card)?;
         }
-        Ok(())
+        Ok(held)
     })
+}
+
+/// Its sub-folders and its notes to its parent, or loose at the top; then the folder goes.
+fn hand_up(
+    connection: &mut SqliteConnection,
+    lineage: &Lineage,
+    id: &str,
+    parent: Option<&str>,
+) -> Result<(), StorageError> {
+    for child in lineage.children(Some(id)) {
+        place(connection, child, parent, None)?;
+    }
+
+    let held: Vec<String> = notes::table
+        .filter(notes::folder_id.eq(id))
+        .select(notes::id)
+        .load::<String>(connection)?;
+    // A place on the deleted folder's board means nothing on its parent's.
+    board::forget_positions(connection, &held)?;
+    diesel::update(notes::table.filter(notes::folder_id.eq(id)))
+        .set(notes::folder_id.eq(parent))
+        .execute(connection)?;
+
+    diesel::delete(folders::table.find(id)).execute(connection)?;
+    Ok(())
+}
+
+/// Every note under the folders `under` to the trash, then the folders: the notes' `folder_id`
+/// is emptied by its key, so a restore brings them back loose in the space.
+fn trash_under(
+    connection: &mut SqliteConnection,
+    under: &[String],
+    at: DateTime<Utc>,
+) -> Result<(), StorageError> {
+    let held: Vec<String> = notes::table
+        .filter(notes::folder_id.eq_any(under))
+        .select(notes::id)
+        .load::<String>(connection)?;
+    board::forget_positions(connection, &held)?;
+    diesel::update(
+        notes::table
+            .filter(notes::folder_id.eq_any(under))
+            .filter(notes::deleted_at.is_null()),
+    )
+    .set(notes::deleted_at.eq(iso8601::format(at)))
+    .execute(connection)?;
+    diesel::delete(folders::table.filter(folders::id.eq_any(under))).execute(connection)?;
+    Ok(())
 }
 
 /// Every zone that shows a folder's notes grows to fit them: its own, and its ancestors',
