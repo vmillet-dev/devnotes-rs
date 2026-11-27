@@ -25,7 +25,8 @@ pub enum Status {
     Installed,
 }
 
-/// Apart from `Status`: the prompt must not depend on a check that led nowhere.
+/// Apart from `Status`: the prompt must not depend on a check that led nowhere. A check asked
+/// from the menu alone writes it, and the menu forgets it once closed.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum CheckState {
     #[default]
@@ -98,7 +99,27 @@ impl UpdateState {
 
     /// Something exists and is not installed: outlives the prompt it opened.
     pub fn has_pending(&self) -> bool {
-        self.update.is_some() && self.status != Status::Installed
+        self.pending().is_some()
+    }
+
+    pub fn pending(&self) -> Option<&AvailableUpdate> {
+        self.update
+            .as_ref()
+            .filter(|_| self.status != Status::Installed)
+    }
+
+    /// The offer put away by « Later », shown again: no new check.
+    pub fn reopen(&mut self) {
+        if self.update.is_some() && self.status == Status::Idle {
+            self.status = Status::Available;
+        }
+    }
+
+    /// What a check asked from the menu found, once the menu is closed.
+    pub fn forget_check(&mut self) {
+        if matches!(self.check, CheckState::UpToDate | CheckState::Failed) {
+            self.check = CheckState::Idle;
+        }
     }
 
     pub fn progress(&self) -> Option<u32> {
@@ -115,7 +136,9 @@ impl UpdateState {
         if !self.can_check() || self.status != Status::Idle || self.asked.is_some() {
             return;
         }
-        self.check = CheckState::Checking;
+        if !silent {
+            self.check = CheckState::Checking;
+        }
         let updater = Arc::clone(&self.updater);
         let pending = backend.compute(move |_| Ok(updater.check()));
         self.asked = Some((silent, pending));
@@ -215,11 +238,12 @@ impl UpdateState {
                 self.update = Some(update);
                 self.check = CheckState::Idle;
             }
-            Ok(None) => self.check = CheckState::UpToDate,
+            Ok(None) if !silent => self.check = CheckState::UpToDate,
+            Ok(None) => {}
             Err(detail) => {
-                self.check = CheckState::Failed;
                 log::warn!("The update check failed: {detail}");
                 if !silent {
+                    self.check = CheckState::Failed;
                     errors.notify(Message::new(keys::errors::UPDATE_CHECK_FAILED));
                 }
             }
@@ -401,10 +425,15 @@ mod tests {
         let mut bench = bench(fake);
 
         bench.check(true);
-        assert_eq!(bench.updates.check_state(), CheckState::Failed);
+        assert_eq!(
+            bench.updates.check_state(),
+            CheckState::Idle,
+            "the menu says nothing"
+        );
         assert!(bench.errors.notice().is_none());
 
         bench.check(false);
+        assert_eq!(bench.updates.check_state(), CheckState::Failed);
         assert!(bench.errors.notice().is_some());
     }
 
