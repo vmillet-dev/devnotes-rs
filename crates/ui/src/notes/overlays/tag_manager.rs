@@ -28,6 +28,28 @@ const LIST_SHARE: f32 = 0.45;
 #[derive(Default)]
 pub(in crate::notes) struct TagManagerView {
     target: String,
+    /// The name a tick put in the field, while nothing was typed over it: the next tick may
+    /// replace it, never what was typed.
+    filled: Option<String>,
+    /// Focus the field and select what it holds, on the next frame it is drawn.
+    select: bool,
+}
+
+impl TagManagerView {
+    fn clear(&mut self) {
+        self.target.clear();
+        self.filled = None;
+    }
+
+    /// Ticking `tag` leaves one tag ticked, `only`: its name comes into the field, to be edited.
+    fn fill(&mut self, only: &str) {
+        if !self.target.is_empty() && self.filled.as_deref() != Some(self.target.as_str()) {
+            return;
+        }
+        only.clone_into(&mut self.target);
+        self.filled = Some(only.to_owned());
+        self.select = true;
+    }
 }
 
 fn ask(actions: &mut Actions, asked: Tags) {
@@ -41,7 +63,7 @@ pub(in crate::notes) fn show(
     actions: &mut Actions,
 ) {
     if !state.tags.is_open() {
-        view.target.clear();
+        view.clear();
         return;
     }
     let _p = palette(ui.ctx());
@@ -104,7 +126,7 @@ fn panel(ui: &mut Ui, state: &AppState, view: &mut TagManagerView, actions: &mut
         );
         return closed;
     }
-    list(ui, state, language, actions);
+    list(ui, state, view, actions);
     if let Some(change) = tags.pending() {
         confirmation(ui, change, language, view, actions);
     } else {
@@ -120,8 +142,8 @@ fn say(ui: &mut Ui, words: &str, colour: Color32, author_id: &str) {
 }
 
 /// The tags as a cloud that scrolls, only its lines in view drawn.
-fn list(ui: &mut Ui, state: &AppState, language: i18n::Language, actions: &mut Actions) {
-    let tags = &state.tags;
+fn list(ui: &mut Ui, state: &AppState, view: &mut TagManagerView, actions: &mut Actions) {
+    let (tags, language) = (&state.tags, state.language);
     let widths: Vec<f32> = tags
         .tags()
         .iter()
@@ -140,6 +162,9 @@ fn list(ui: &mut Ui, state: &AppState, language: i18n::Language, actions: &mut A
                     ui.spacing_mut().item_spacing.x = gap::SNUG;
                     for usage in &tags.tags()[line.clone()] {
                         if item(ui, usage, tags.is_selected(&usage.tag), language) {
+                            if let Some(only) = only_after_toggle(state, &usage.tag) {
+                                view.fill(only);
+                            }
                             ask(actions, Tags::Toggle(usage.tag.clone()));
                         }
                     }
@@ -147,6 +172,35 @@ fn list(ui: &mut Ui, state: &AppState, language: i18n::Language, actions: &mut A
             }
         });
     ui.spacing_mut().item_spacing.y = gap::INSET;
+}
+
+/// The one tag ticked once `tag` is toggled, if one alone is.
+fn only_after_toggle<'a>(state: &'a AppState, tag: &'a str) -> Option<&'a str> {
+    let tags = &state.tags;
+    match (tags.is_selected(tag), tags.selected()) {
+        (false, 0) => Some(tag),
+        (true, 2) => tags
+            .tags()
+            .iter()
+            .map(|usage| usage.tag.as_str())
+            .find(|other| *other != tag && tags.is_selected(other)),
+        _ => None,
+    }
+}
+
+/// Why « Rename » or « Merge » would change nothing, when it would not.
+fn refusal(state: &AppState, target: &str) -> Option<i18n::Key> {
+    let Some(into) = crate::api::notes::normalize_tag(target) else {
+        return Some(keys::tag_manager::NO_NAME);
+    };
+    let tags = &state.tags;
+    // Exactly: a change of case alone is written.
+    let same = tags.selected() == 1
+        && tags
+            .tags()
+            .iter()
+            .any(|usage| tags.is_selected(&usage.tag) && usage.tag == into);
+    same.then_some(keys::tag_manager::SAME_NAME)
 }
 
 /// The chips each line holds, filled left to right.
@@ -282,6 +336,7 @@ fn form(ui: &mut Ui, state: &AppState, view: &mut TagManagerView, actions: &mut 
         .hline(ui.max_rect().x_range(), top, Stroke::new(1.0, p.line_soft));
     ui.add_space(gap::TIGHT);
     let ticked = state.tags.selected() > 0;
+    let refused = refusal(state, &view.target).filter(|_| ticked);
     let apply = tr(if state.tags.selected() > 1 {
         keys::tag_manager::MERGE
     } else {
@@ -304,12 +359,18 @@ fn form(ui: &mut Ui, state: &AppState, view: &mut TagManagerView, actions: &mut 
                     .show(ui)
             })
             .inner;
+        if std::mem::take(&mut view.select) {
+            select_all(ui, &field, &view.target);
+        }
+        if field.changed() {
+            view.filled = None;
+        }
         let entered = field.lost_focus() && ui.input(|input| input.key_pressed(egui::Key::Enter));
         let applied = Button::new(&apply, "tag-apply")
-            .enabled(ticked)
+            .enabled(ticked && refused.is_none())
             .show(ui)
             .clicked();
-        if ticked && (applied || entered) && !view.target.trim().is_empty() {
+        if ticked && refused.is_none() && (applied || entered) {
             ask(actions, Tags::Rename(view.target.clone()));
         }
         if Button::new(&delete, "tag-delete")
@@ -321,6 +382,19 @@ fn form(ui: &mut Ui, state: &AppState, view: &mut TagManagerView, actions: &mut 
             ask(actions, Tags::Delete);
         }
     });
+    if let Some(refused) = refused {
+        say(ui, &tr(refused), p.text_2, "tag-target-reason");
+    }
+}
+
+/// The field focused, all it holds selected: what is typed replaces it.
+fn select_all(ui: &Ui, field: &egui::Response, text: &str) {
+    use egui::text::{CCursor, CCursorRange};
+    field.request_focus();
+    let mut state = egui::text_edit::TextEditState::load(ui.ctx(), field.id).unwrap_or_default();
+    let all = CCursorRange::two(CCursor::new(0), CCursor::new(text.chars().count()));
+    state.cursor.set_char_range(Some(all));
+    state.store(ui.ctx(), field.id);
 }
 
 /// What it would do, to how many notes, said once more before it runs.
@@ -374,7 +448,7 @@ fn confirmation(
                 .show(ui)
                 .clicked()
             {
-                view.target.clear();
+                view.clear();
                 ask(actions, Tags::Confirm);
             }
             if Button::new(&tr(keys::tag_manager::CONFIRM_CANCEL), "tag-confirm-cancel")
@@ -443,13 +517,32 @@ mod tests {
         settle(harness);
     }
 
+    /// Over what the field holds: a tick fills it.
     fn propose(harness: &mut Harness<'_, Bench>, into: &str) {
         click_id(harness, "tag-target");
+        harness.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::A);
+        harness.key_press(egui::Key::Backspace);
         harness
             .get_by(|node| node.author_id() == Some("tag-target"))
             .type_text(into);
         settle(harness);
         click_id(harness, "tag-apply");
+    }
+
+    fn field(harness: &Harness<'_, Bench>) -> String {
+        let node = harness.get_by(|node| node.author_id() == Some("tag-target"));
+        node.accesskit_node().value().unwrap_or_default()
+    }
+
+    fn applies(harness: &Harness<'_, Bench>) -> bool {
+        let apply = harness.get_by(|node| node.author_id() == Some("tag-apply"));
+        !apply.accesskit_node().is_disabled()
+    }
+
+    fn reason(harness: &Harness<'_, Bench>) -> Option<String> {
+        let node = harness.query_by(|node| node.author_id() == Some("tag-target-reason"))?;
+        let node = node.accesskit_node();
+        node.label().or_else(|| node.value())
     }
 
     fn said(harness: &Harness<'_, Bench>) -> String {
@@ -516,6 +609,45 @@ mod tests {
             .get_by(|node| node.author_id() == Some("tag-confirm-apply"))
             .rect();
         assert!(window.contains_rect(confirm), "{confirm:?}");
+    }
+
+    #[test]
+    fn a_ticked_tag_fills_the_field_selected_and_a_second_keeps_it() {
+        let mut harness = tagged();
+        tick(&mut harness, "staging");
+        assert_eq!(field(&harness), "staging");
+        let focused = harness.get_by(|node| node.author_id() == Some("tag-target"));
+        assert!(focused.accesskit_node().is_focused(), "edited in place");
+        assert!(!applies(&harness), "nothing would change yet");
+        assert!(reason(&harness).is_some());
+
+        harness
+            .get_by(|node| node.author_id() == Some("tag-target"))
+            .type_text("-eu");
+        settle(&mut harness);
+        assert_eq!(field(&harness), "-eu", "typed over the selection");
+        assert!(applies(&harness));
+
+        tick(&mut harness, "urgent");
+        assert_eq!(field(&harness), "-eu", "what was typed is kept");
+    }
+
+    #[test]
+    fn a_field_emptied_or_holding_no_name_says_why_nothing_applies() {
+        let mut harness = tagged();
+        tick(&mut harness, "staging");
+        for typed in ["", "#", "# staging "] {
+            propose(&mut harness, typed);
+            assert!(!applies(&harness), "{typed:?} changes nothing");
+            assert!(reason(&harness).is_some(), "{typed:?} is said");
+            assert!(
+                harness
+                    .query_by(|node| node.author_id() == Some("tag-confirm-text"))
+                    .is_none()
+            );
+        }
+        propose(&mut harness, "#recette");
+        assert!(said(&harness).contains("recette"), "{}", said(&harness));
     }
 
     #[test]

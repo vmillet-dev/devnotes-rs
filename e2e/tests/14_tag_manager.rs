@@ -1,5 +1,5 @@
-//! The library's tags managed from the tag rail: renamed, merged onto an existing tag, corrected
-//! in case alone, deleted — each said before it runs. The tags are the scenario's own, given
+//! The library's tags managed from the tag rail: a ticked tag's name filled in the field, renamed,
+//! merged onto an existing tag, corrected in case alone, deleted — each said before it runs. The tags are the scenario's own, given
 //! from the selection bar: the samples' are in the system's language.
 
 use e2e::{App, step};
@@ -35,9 +35,19 @@ fn tick(app: &mut App, tag: &str) {
     app.click_where("tag-item", |node| node.label() == Some(name.as_str()));
 }
 
-/// The ticked tags under `into`, proposed then confirmed.
+fn target(tree: &e2e::Tree) -> String {
+    let field = tree.find("tag-target");
+    field
+        .and_then(|node| node.value())
+        .unwrap_or_default()
+        .to_owned()
+}
+
+/// The ticked tags under `into`, typed over what the field holds, proposed then confirmed.
 fn rename(app: &mut App, into: &str) {
-    app.fill("tag-target", into);
+    app.fill("tag-target", "");
+    app.press(Key::A, Modifiers::COMMAND);
+    app.type_text(into);
     app.click("tag-apply");
     app.click("tag-confirm-apply");
 }
@@ -74,7 +84,19 @@ fn tag_manager() {
         "a rename says what it touches, and cancelling writes nothing",
         || {
             tick(&mut app, "staging");
-            app.fill("tag-target", "recette");
+            app.eventually("its name fills the field, which has the focus", |tree| {
+                target(tree) == "staging" && tree.focused().starts_with("tag-target")
+            });
+            assert!(
+                app.tree()
+                    .find("tag-apply")
+                    .is_some_and(egui::accesskit::Node::is_disabled),
+                "its own name changes nothing"
+            );
+            assert!(app.tree().has("tag-target-reason"));
+            // Selected: what is typed replaces it.
+            app.type_text("recette");
+            app.eventually("edited in place", |tree| target(tree) == "recette");
             app.click("tag-apply");
             app.eventually("two notes carry it, and the sentence says so", |tree| {
                 tree.text("tag-confirm-text")
