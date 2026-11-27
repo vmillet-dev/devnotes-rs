@@ -1680,9 +1680,11 @@ carried the key — so the block was dead markup that looked like a shipped feat
 `scripts/release-notes.mjs extract` writes two files from the section at the tag: the whole of it,
 for the GitHub release body, and the prompt's (`--prompt-out`), for the manifest. **The prompt keeps
 what the user will notice**: the summary, additions, changes, fixes, removals and security. The
-technical work (the tests, the documentation and the site with it) and the dependencies stay in
-`CHANGELOG.md`, on the release page and in "What's new". Which section is shown is said beside its
-labels, in `SECTIONS`. ⚠️ It is filtered in the manifest, not in the application: the prompt is drawn
+technical work and the dependencies stay in `CHANGELOG.md`, on the release page and in "What's new".
+The documentation and the site have sections of their own (📖 Documentation, 🌐 Website), for the
+release page alone: "What's new" leaves them out as well (`changelog::model::NOT_IN_THE_APP`, held
+against the script's headings by a test). Which section is shown is said beside its labels, in
+`SECTIONS`. ⚠️ It is filtered in the manifest, not in the application: the prompt is drawn
 by the version already installed. A release with nothing left to show says so in one line.
 
 ⚠️ **Shown open, at a fixed height.** Behind a `<details>` it was installed without being

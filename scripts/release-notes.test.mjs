@@ -121,11 +121,26 @@ describe('sectionFor', () => {
     assert.equal(via, 'préfixe (fix)');
   });
 
-  it('files the website under the hood, by its label', () => {
+  it('files the website and the documentation in sections of their own, by their labels', () => {
     assert.deepEqual(sectionFor({ issueLabels: [{ issue: 632, label: 'website' }] }), {
-      section: 'internal',
+      section: 'website',
       via: 'label ticket #632 (website)',
     });
+    assert.equal(sectionFor({ labels: ['documentation'] }).section, 'documentation');
+    assert.equal(sectionFor({ title: 'docs: a guide' }).section, 'documentation');
+  });
+
+  it('puts them after Security and before Under the hood, Documentation first', () => {
+    const groups = groupEntries([
+      { section: 'internal', text: 'E2E: faster (#4)' },
+      { section: 'website', text: 'Website: new design (#3)' },
+      { section: 'documentation', text: 'README: new captures (#2)' },
+      { section: 'security', text: 'TLS: updated (#1)' },
+    ]);
+    assert.deepEqual(
+      groups.map((group) => group.heading),
+      ['🔒 Security', '📖 Documentation', '🌐 Website', '🧰 Under the hood'],
+    );
   });
 
   it('files what nothing classifies under the hood', () => {
@@ -443,6 +458,10 @@ describe('promptNotes', () => {
     '',
     '- E2E: passphrase typed once the panel rests (#2)',
     '',
+    '### 🌐 Website',
+    '',
+    '- Website: new design (#5)',
+    '',
     '### 🔒 Security',
     '',
     '- Log: errors no longer write what the user typed (#3)',
@@ -453,7 +472,7 @@ describe('promptNotes', () => {
     '',
   ].join('\n');
 
-  it('leaves out the technical work and the dependencies, wherever they stand', () => {
+  it('leaves out the technical work, the site and the dependencies, wherever they stand', () => {
     assert.equal(
       promptNotes(body),
       [
@@ -481,7 +500,8 @@ describe('promptNotes', () => {
   });
 
   it('says so when nothing is left to show', () => {
-    const internal = '### 🧰 Under the hood\n\n- E2E: faster (#2)\n';
+    const internal =
+      '### 🧰 Under the hood\n\n- E2E: faster (#2)\n\n### 📖 Documentation\n\n- README: redone (#3)\n';
 
     assert.equal(promptNotes(internal), `${NOTHING_TO_SEE}\n`);
   });
