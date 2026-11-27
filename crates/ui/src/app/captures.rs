@@ -2002,3 +2002,35 @@ fn reports_in_the_corner() {
     settle(&mut harness);
     capture(&mut harness, "error-toast");
 }
+
+#[test]
+fn an_empty_folder_opened() {
+    use engine::folders::model::FolderDraft;
+    let profile = tempfile::tempdir().unwrap();
+    let mut harness = launch(profile.path());
+    type_into(&mut harness, "vault-passphrase", PASSPHRASE);
+    type_into(&mut harness, "vault-confirmation", PASSPHRASE);
+    click(&mut harness, "vault-submit");
+    settle(&mut harness);
+    let backend = &harness.state().backend;
+    engine::db::run_here(backend.engine(), |engine| {
+        let space = engine::spaces::list_spaces(engine)?.remove(0);
+        let draft = FolderDraft {
+            space_id: space.id,
+            name: "Brouillons".to_owned(),
+            parent_id: None,
+        };
+        engine::folders::create_folder(engine, &draft)
+    })
+    .unwrap();
+    harness.state_mut().state.revision.bump();
+    settle(&mut harness);
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("folder-option")
+                && node.label().as_deref() == Some("Brouillons")
+        })
+        .click();
+    settle(&mut harness);
+    capture(&mut harness, "folder-empty");
+}

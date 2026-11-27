@@ -1,4 +1,5 @@
-//! Opening a folder: from a zone's title on the board, a flat grid of its notes named after it,
+//! Opening a folder: empty, it offers the card a note is made from, not « nothing matches »; from
+//! a zone's title on the board, a flat grid of its notes named after it,
 //! the switchers put away for its breadcrumb, a note made inside it filed there, renamed from
 //! beside the breadcrumb, and left again — Escape giving the search back first, then the folder
 //! — down to the board it was opened from, or through the breadcrumb, or by deleting it.
@@ -33,8 +34,9 @@ fn heading(tree: &Tree) -> String {
     tree.texts("note-section").join(" ")
 }
 
-fn write(app: &mut App, title: &str) {
-    app.click("new-note");
+/// A note made from `from`: « + New note », or the card that offers it.
+fn write(app: &mut App, from: &str, title: &str) {
+    app.click(from);
     app.fill("editor-title", title);
     app.fill("editor-body", "SELECT 1;");
     app.click("editor-close");
@@ -69,11 +71,18 @@ fn seed(app: &mut App) {
             app.press(Key::Enter, Modifiers::NONE);
             app.eventually("the folder is listed", |tree| tree.has("folder-option"));
             app.click_where("folder-option", named("Perf"));
-            app.wait_for("folder-breadcrumb-name");
-            write(app, INSIDE);
+            app.eventually(
+                "empty, it offers the card to create from, not a search",
+                |tree| {
+                    tree.has("create-ghost")
+                        && !tree.has("canvas-no-results")
+                        && heading(tree).to_uppercase().starts_with("PERF")
+                },
+            );
+            write(app, "create-ghost", INSIDE);
             app.click_where("space-option", named(SPACE));
             app.eventually("the space is shown", |tree| crumb(tree).is_none());
-            write(app, LOOSE);
+            write(app, "new-note", LOOSE);
             app.click("view-board");
             app.wait_for("board-zone");
         },
@@ -124,7 +133,7 @@ fn inside(app: &mut App) {
     );
 
     step("a note made here arrives filed", || {
-        write(app, MADE);
+        write(app, "new-note", MADE);
         app.eventually("both notes are in it", |tree| titles(tree).len() == 2);
     });
 

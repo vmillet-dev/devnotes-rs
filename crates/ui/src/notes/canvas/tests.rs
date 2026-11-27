@@ -103,13 +103,18 @@ fn of_thirty_thousand_notes_only_the_rows_in_view_are_drawn() {
 }
 
 #[test]
-fn a_library_without_notes_says_nothing_matches() {
+fn a_library_without_notes_offers_the_card_to_create_one() {
     let (backend, profile) = testing::unlocked();
 
     let harness = canvas(backend, profile);
 
     assert_eq!(cards(&harness), 0);
-    harness.get_by(|node| node.author_id() == Some("canvas-no-results"));
+    harness.get_by(|node| node.author_id() == Some("create-ghost"));
+    assert!(
+        harness
+            .query_by(|node| node.author_id() == Some("canvas-no-results"))
+            .is_none()
+    );
 }
 
 #[test]
@@ -125,4 +130,29 @@ fn a_view_that_failed_offers_to_retry() {
     harness.run();
 
     assert_ne!(harness.state().state.revision, before);
+}
+
+#[test]
+fn an_empty_folder_offers_the_card_a_note_is_created_from() {
+    let (backend, profile) = testing::unlocked();
+    testing::note(&backend, "loose");
+    let spaces = crate::notes::bench::spaces_of_backend(&backend);
+    let runbooks = crate::notes::bench::folder(&backend, &spaces[0], None, "Runbooks");
+    let mut harness = crate::notes::bench::area(backend, profile);
+
+    crate::notes::bench::click(&mut harness, "folder-option", "Runbooks");
+
+    let present = |author_id: &str| {
+        harness
+            .query_by(|node| node.author_id() == Some(author_id))
+            .is_some()
+    };
+    assert!(!present("canvas-no-results"), "nothing was searched");
+    assert!(present("create-ghost"));
+    crate::notes::bench::click_id(&mut harness, "create-ghost");
+    let opened = harness.state().state.editor.opened();
+    let draft = opened
+        .and_then(|opened| opened.note())
+        .expect("a draft opens");
+    assert_eq!(draft.folder_id.as_deref(), Some(runbooks.id.as_str()));
 }
