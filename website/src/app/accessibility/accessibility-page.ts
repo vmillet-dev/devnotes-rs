@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 
-import { Lang, accessibilityPath } from '../core/lang';
+import { Lang, accessibilityPath, french } from '../core/lang';
 import { Language } from '../core/language';
 import { Seo } from '../core/seo';
 import { REPOSITORY } from '../core/site';
@@ -57,7 +57,7 @@ const EN: typeof FR = {
   reportAfter: ', saying which page, what you use and what stood in your way.',
 };
 
-const TEXT: Readonly<Record<Lang, typeof FR>> = { fr: FR, en: EN };
+const TEXT: Readonly<Record<Lang, typeof FR>> = { fr: french(FR), en: EN };
 
 @Component({
   selector: 'app-accessibility-page',

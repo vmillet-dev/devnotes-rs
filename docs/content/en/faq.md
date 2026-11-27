@@ -8,7 +8,7 @@ Yes, and open source: it is published under the GPL-3.0 licence, its code is on 
 
 ## Is there a macOS version?
 
-Yes, from the version after 1.1.0: one file for Macs with an Apple chip, another for Intel Macs. On first launch, macOS blocks it, DevNotes having no publisher certificate: open System Settings, Privacy & Security, then Open Anyway.
+Yes, since version 1.2.0: one file for Macs with an Apple chip, another for Intel Macs. On first launch, macOS blocks it, DevNotes having no publisher certificate: open System Settings, Privacy & Security, then Open Anyway.
 
 ## Can I sync two computers?
 
@@ -28,7 +28,7 @@ Entirely. Only the API client, which contacts the servers you give it, and the u
 
 ## How do I update?
 
-DevNotes offers new versions itself, with their notes, and installs them for the Windows installer and the AppImage. A `.deb` or `.rpm` is updated by your distribution’s package manager. You can also download [the latest version](https://devnotes.fr/en/download) and install it over the old one: your libraries are not touched.
+DevNotes offers new versions itself, with their notes, and installs them for the Windows installer, the macOS application and the AppImage. A `.deb` or `.rpm` is updated by your distribution’s package manager. You can also download [the latest version](https://devnotes.fr/en/download) and install it over the old one: your libraries are not touched.
 
 ## Will my libraries from an earlier version open?
 

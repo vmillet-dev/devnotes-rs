@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import { Lang, accessibilityPath, downloadPath } from '../core/lang';
+import { Lang, accessibilityPath, downloadPath, french } from '../core/lang';
 import { Language } from '../core/language';
 import { VERSION } from '../core/release';
 import { CHANGELOG, LICENSE, REPOSITORY } from '../core/site';
@@ -40,7 +40,7 @@ const EN: typeof FR = {
   accessibility: 'Accessibility',
 };
 
-const TEXT: Readonly<Record<Lang, typeof FR>> = { fr: FR, en: EN };
+const TEXT: Readonly<Record<Lang, typeof FR>> = { fr: french(FR), en: EN };
 
 @Component({
   selector: 'app-site-footer',

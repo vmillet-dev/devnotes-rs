@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import { Lang, homePath } from '../core/lang';
+import { Lang, french, homePath } from '../core/lang';
 import { Language } from '../core/language';
 import { Seo } from '../core/seo';
 import { docPath } from '../docs/doc-index';
@@ -26,7 +26,7 @@ const EN: typeof FR = {
   docs: 'Read the documentation',
 };
 
-const TEXT: Readonly<Record<Lang, typeof FR>> = { fr: FR, en: EN };
+const TEXT: Readonly<Record<Lang, typeof FR>> = { fr: french(FR), en: EN };
 
 @Component({
   selector: 'app-not-found-page',

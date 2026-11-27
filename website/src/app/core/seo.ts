@@ -1,7 +1,7 @@
 import { DOCUMENT, Injectable, inject } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
 
-import { LOCALES, Lang, OTHER } from './lang';
+import { LOCALES, Lang, OTHER, french } from './lang';
 import { translatedPath } from './pages';
 import { absolute } from './site';
 
@@ -23,7 +23,9 @@ const SITE_NAME = 'DevNotes';
 const SOCIAL: Readonly<Record<Lang, { readonly file: string; readonly alt: string }>> = {
   fr: {
     file: '/social-fr.png',
-    alt: 'DevNotes : « Vos snippets, vos notes, vos requêtes. », au-dessus de la liste des notes de l’application.',
+    alt: french(
+      'DevNotes : « Vos snippets, vos notes, vos requêtes. », au-dessus de la liste des notes de l’application.',
+    ),
   },
   en: {
     file: '/social-en.png',

@@ -17,44 +17,46 @@
         <a class="btn btn-ghost" [routerLink]="downloadPath()">{{ text.others }}</a>
       </div>
       }
-      <ul class="facts">
-        <li><a [href]="repository">{{ text.free }}</a></li>
-        @for (fact of text.facts; track fact) {
-        <li>{{ fact }}</li>
-        }
-        <li>{{ systems() }}</li>
-      </ul>
     </div>
+    <ul class="facts">
+      <li><a [href]="repository">{{ text.free }}</a></li>
+      @for (fact of text.facts; track fact) {
+      <li>{{ fact }}</li>
+      }
+      <li>{{ systems() }}</li>
+    </ul>
   </div>
   <div class="screen col">
     <figure class="shot">
-      <picture>
-        <source
-          type="image/webp"
-          [attr.media]="lightWhen()"
-          [attr.srcset]="srcset('light')"
-          sizes="(min-width: 1380px) 1300px, 100vw"
-        />
-        <img
-          [src]="file('dark', shot.width)"
-          [attr.srcset]="srcset('dark')"
-          sizes="(min-width: 1380px) 1300px, 100vw"
-          width="2168"
-          height="1362"
-          [alt]="text.alt"
-          fetchpriority="high"
-        />
-      </picture>
-      @for (mark of marks(); track $index; let i = $index) {
-      <span
-        class="mark"
-        [class.on]="pointed() === i"
-        [style.left.%]="mark[0]"
-        [style.top.%]="mark[1]"
-        aria-hidden="true"
-        >{{ i + 1 }}</span
-      >
-      }
+      <div class="frame">
+        <picture>
+          <source
+            type="image/webp"
+            [attr.media]="lightWhen()"
+            [attr.srcset]="srcset('light')"
+            [attr.sizes]="sizes"
+          />
+          <img
+            [src]="file('dark', shot.width)"
+            [attr.srcset]="srcset('dark')"
+            [attr.sizes]="sizes"
+            width="2168"
+            height="1362"
+            [alt]="text.alt"
+            fetchpriority="high"
+          />
+        </picture>
+        @for (mark of marks(); track $index; let i = $index) {
+        <span
+          class="mark"
+          [class.on]="pointed() === i"
+          [style.left.%]="mark[0]"
+          [style.top.%]="mark[1]"
+          aria-hidden="true"
+          >{{ i + 1 }}</span
+        >
+        }
+      </div>
     </figure>
   </div>
   <ol class="legend cells" [attr.aria-label]="text.legendName">
@@ -97,7 +99,7 @@
     </div>
     }
     <div class="os">
-      <h3>{{ text.code }}</h3>
+      <h3>{{ text.codeHeading }}</h3>
       <p>{{ text.codeText }}</p>
       <a [href]="repository"><span>{{ text.source }}</span><span>GitHub</span></a>
       <a [href]="releasePage"><span>{{ text.notes }}</span><span>{{ version }}</span></a>

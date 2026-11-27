@@ -18,6 +18,9 @@ import { DAY_TEXT, Scene } from './day-text';
 const FIRST = 8 * 60;
 const LAST = 19 * 60;
 
+/** The scenes drawn across the row, under their words: the widest pieces, and a change of pace. */
+const WIDE: ReadonlySet<Scene> = new Set(['drawing', 'diff']);
+
 const minutes = (time: string) => {
   const [hours = 0, rest = 0] = time.split(':').map(Number);
   return hours * 60 + rest;
@@ -95,5 +98,9 @@ export class DaySection {
 
   protected loop(scene: Scene): number {
     return LOOPS[scene];
+  }
+
+  protected wide(scene: Scene): boolean {
+    return WIDE.has(scene);
   }
 }

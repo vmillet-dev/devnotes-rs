@@ -4,7 +4,7 @@ Installing DevNotes, choosing your library’s passphrase, and a tour of the sam
 
 ## Installing
 
-DevNotes runs on Windows, on macOS (from the version after 1.1.0) and on Linux. Every file is on [the download page](https://devnotes.fr/en/download), each as a direct link: take the one that matches your system. There is no browser engine inside, so nothing else to install.
+DevNotes runs on Windows, on macOS (since version 1.2.0) and on Linux. Every file is on [the download page](https://devnotes.fr/en/download), each as a direct link: take the one that matches your system. There is no browser engine inside, so nothing else to install.
 
 **The files of each version**
 
@@ -67,4 +67,4 @@ The title bar switches from one area to another:
 
 ## Updates
 
-DevNotes checks by itself whether a newer version exists and offers it, with its release notes: *Install now*, *Later* or *Do not offer version … again*. The *About* menu also offers to *Check for updates*. Nothing else leaves your machine: the check only asks GitHub whether a new version exists. The Windows installer and the AppImage install the update themselves, signed and verified first; a .deb or .rpm is updated by your package manager.
+DevNotes checks by itself whether a newer version exists and offers it, with its release notes: *Install now*, *Later* or *Do not offer version … again*. The *About* menu also offers to *Check for updates*. Nothing else leaves your machine: the check only asks GitHub whether a new version exists. The Windows installer, the macOS application and the AppImage install the update themselves, signed and verified first; a .deb or .rpm is updated by your package manager.

@@ -56,7 +56,8 @@ export class DayScene {
   protected readonly indent = '    ';
   protected readonly open = 'server {';
   protected readonly close = '}';
-  protected readonly header = '{ "alg": "HS256", "typ": "JWT" }';
+  /** On two lines, as the claims beside it: on one, it ran past its box. */
+  protected readonly header = '{ "alg": "HS256",\n  "typ": "JWT" }';
   protected readonly claims = computed(() => {
     const [sub, scope] = this.words().jwt.claims;
     return `{ ${sub}\n  ${scope} }`;

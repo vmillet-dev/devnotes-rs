@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, afterNextRender, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import { Lang, downloadPath, homePath } from '../core/lang';
+import { Lang, downloadPath, french, homePath } from '../core/lang';
 import { Language } from '../core/language';
 import { Offer, RELEASE_PAGE, System, VERSION, offers, systems, visitorSystem } from '../core/release';
 import { Seo } from '../core/seo';
@@ -27,7 +27,7 @@ interface HomeText {
   readonly get: string;
   readonly getHeading: (version: string) => string;
   readonly getLede: string;
-  readonly code: string;
+  readonly codeHeading: string;
   readonly codeText: string;
   readonly source: string;
   readonly notes: string;
@@ -44,7 +44,7 @@ const FR: HomeText = {
   others: 'Autres systèmes et formats',
   free: 'Gratuit, sous GPL-3.0',
   facts: ['Sans compte', 'Hors ligne'],
-  alt: 'DevNotes : la liste des notes, avec ses espaces à gauche, la recherche en haut et des cartes de snippet, de Calcul et de liste à cocher.',
+  alt: 'DevNotes : la liste des notes, avec ses espaces à gauche, la recherche en haut et des cartes de snippet, de requête SQL, de schéma, de Calcul et de liste à cocher.',
   legendName: 'Ce que montre la capture',
   legend: [
     { name: 'Trois zones', text: ['Les notes, les 32 outils et le client API, dans la même fenêtre.'] },
@@ -78,7 +78,7 @@ const FR: HomeText = {
   getHeading: (version) => `DevNotes ${version}, pour ${systems('fr')}`,
   getLede:
     "Une application, sans compte ni serveur. Votre bibliothèque reste sur votre machine, chiffrée, et l'application se met à jour d'elle-même.",
-  code: 'Le code',
+  codeHeading: 'Le code',
   codeText:
     'DevNotes est écrit en Rust et publié sous GPL-3.0 : tout le code est lisible, et chaque version a ses notes.',
   source: 'Code source',
@@ -96,7 +96,7 @@ const EN: HomeText = {
   others: 'Other systems and formats',
   free: 'Free, under the GPL-3.0',
   facts: ['No account', 'Works offline'],
-  alt: 'DevNotes: the list of notes, with its spaces on the left, the search at the top, and cards of a snippet, a calculation and a to-do list.',
+  alt: 'DevNotes: the list of notes, with its spaces on the left, the search at the top, and cards of a snippet, an SQL query, a diagram, a calculation and a to-do list.',
   legendName: 'What the capture shows',
   legend: [
     { name: 'Three areas', text: ['The notes, the 32 tools and the API client, in the same window.'] },
@@ -127,40 +127,45 @@ const EN: HomeText = {
   getHeading: (version) => `DevNotes ${version}, for ${systems('en')}`,
   getLede:
     'One application, no account and no server. Your library stays on your machine, encrypted, and the application updates itself.',
-  code: 'The code',
+  codeHeading: 'The code',
   codeText:
     'DevNotes is written in Rust and released under the GPL-3.0: all of its code can be read, and every version has its notes.',
   source: 'Source code',
   notes: 'Release notes',
 };
 
-const TEXT: Readonly<Record<Lang, HomeText>> = { fr: FR, en: EN };
+const TEXT: Readonly<Record<Lang, HomeText>> = { fr: french(FR), en: EN };
 
 /**
- * Where each legend's mark stands on the capture, in percent of its width and height. The two
- * languages lay the toolbar out differently: English keeps the search on the first row.
+ * Where each legend's mark stands on the capture, in percent of its width and height: on the
+ * corner of what it names, never over its words. The two languages lay the toolbar out
+ * differently: English keeps the search on the first row.
  */
 const MARKS: Readonly<Record<Lang, readonly (readonly [number, number])[]>> = {
   fr: [
-    [16, 8],
-    [16, 33],
-    [67, 13.6],
-    [42.5, 36],
-    [70.6, 56.5],
-    [70.6, 83.5],
+    [16, 7.8],
+    [16, 23.1],
+    [19.3, 13.2],
+    [19.7, 26.9],
+    [19.7, 77.8],
+    [45.7, 77.8],
   ],
   en: [
-    [16, 8],
-    [16, 33],
-    [61, 8],
-    [42.5, 30],
-    [70.6, 50.5],
-    [96.5, 77.5],
+    [16, 7.8],
+    [16, 23.1],
+    [37.9, 7.3],
+    [19.7, 21],
+    [19.7, 72],
+    [45.7, 72],
   ],
 };
 
-/** The capture is `app::screens`' notes list, drawn at twice its size, in each language and theme. */
+/**
+ * The capture is `app::screens`' notes list, drawn at twice its size, in each language and theme.
+ * A phone shows its top left corner at more than twice the width of the screen (home-page.scss).
+ */
 const SHOT = { width: 2168, height: 1362, widths: [1084, 2168] } as const;
+const SIZES = '(min-width: 1380px) 1300px, (max-width: 640px) 242vw, 100vw';
 
 @Component({
   selector: 'app-home-page',
@@ -174,6 +179,7 @@ export class HomePage {
   protected readonly repository = REPOSITORY;
   protected readonly releasePage = RELEASE_PAGE;
   protected readonly shot = SHOT;
+  protected readonly sizes = SIZES;
   protected readonly lang = inject(Language).lang;
   protected readonly t = computed(() => TEXT[this.lang()]);
   protected readonly marks = computed(() => MARKS[this.lang()]);
