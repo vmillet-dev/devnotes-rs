@@ -1,5 +1,6 @@
 //! Spaces: the rail's top level, and where a note lives.
 
+use engine::notes::model::HeldNotes;
 use engine::spaces::{self, model::Space, model::SpaceContents, model::SpaceDraft};
 
 use crate::backend::{Backend, Pending};
@@ -26,7 +27,8 @@ pub fn contents(backend: &Backend, id: String) -> Pending<SpaceContents> {
     backend.db(move |engine| spaces::count_space_contents(engine, &id))
 }
 
-/// Its notes go to `refuge` first: the space leaves with whatever nobody takes in.
-pub fn delete(backend: &Backend, id: String, refuge: String) -> Pending<()> {
-    backend.db(move |engine| spaces::delete_space(engine, &id, &refuge))
+/// Its notes go to `refuge` first, kept or in the trash: the space leaves with whatever nobody
+/// takes in. Answers how many live notes it moved.
+pub fn delete(backend: &Backend, id: String, refuge: String, held: HeldNotes) -> Pending<u32> {
+    backend.db(move |engine| spaces::delete_space(engine, &id, &refuge, held))
 }

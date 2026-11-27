@@ -365,7 +365,7 @@ fn deleting_a_folder_leaves_its_notes_loose_rather_than_deleting_them() {
     )
     .unwrap();
 
-    delete(&mut connection, &perf.id, CARD).unwrap();
+    delete(&mut connection, &perf.id, CARD, None).unwrap();
 
     assert!(list(&mut connection, Some(&sql)).unwrap().is_empty());
     assert_eq!(folder_of(&mut connection, &note.id), None);
@@ -376,7 +376,7 @@ fn deleting_an_unknown_folder_says_so_rather_than_answering_ok() {
     let mut connection = open_in_memory().unwrap();
 
     assert!(matches!(
-        delete(&mut connection, "nowhere", CARD),
+        delete(&mut connection, "nowhere", CARD, None),
         Err(StorageError::FolderNotFound(_))
     ));
 }
@@ -398,7 +398,7 @@ fn deleting_a_space_takes_its_folders_and_unfiles_the_notes_it_hands_over() {
     )
     .unwrap();
 
-    spaces::delete(&mut connection, &sql, &refuge).unwrap();
+    spaces::delete(&mut connection, &sql, &refuge, None).unwrap();
 
     assert!(list(&mut connection, Some(&sql)).unwrap().is_empty());
     assert_eq!(folder_of(&mut connection, &note.id), None);
@@ -1869,7 +1869,7 @@ mod nesting {
         let mut connection = open_in_memory().unwrap();
         let tree = tree(&mut connection);
         let was = move_to(&mut connection, &tree.migrations.id, (&tree.space, None)).unwrap();
-        delete(&mut connection, &tree.sql.id, CARD).unwrap();
+        delete(&mut connection, &tree.sql.id, CARD, None).unwrap();
 
         assert!(move_back(&mut connection, &was).unwrap().is_none());
         assert_eq!(parent_of(&mut connection, &tree.migrations.id), None);
@@ -1883,7 +1883,7 @@ mod nesting {
         let held = filed(&mut connection, &tree, "EXPLAIN", &tree.perf);
         let below = filed(&mut connection, &tree, "Index partiel", &tree.index);
 
-        delete(&mut connection, &tree.perf.id, CARD).unwrap();
+        delete(&mut connection, &tree.perf.id, CARD, None).unwrap();
 
         assert_eq!(
             folder_of(&mut connection, &held.id),
@@ -1905,7 +1905,7 @@ mod nesting {
         let tree = tree(&mut connection);
         let held = filed(&mut connection, &tree, "Requête", &tree.sql);
 
-        delete(&mut connection, &tree.sql.id, CARD).unwrap();
+        delete(&mut connection, &tree.sql.id, CARD, None).unwrap();
 
         assert_eq!(folder_of(&mut connection, &held.id), None);
         assert_eq!(parent_of(&mut connection, &tree.perf.id), None);

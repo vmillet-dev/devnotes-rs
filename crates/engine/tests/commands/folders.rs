@@ -4,15 +4,18 @@ use engine::folders::board::{
     BoardFrame, BoardQuery, BoardScope, MIN_ZONE_HEIGHT, MIN_ZONE_WIDTH, PreviewLines,
     ZonePlacement,
 };
+use engine::folders::count_folder_contents;
 use engine::folders::model::{FolderColour, FolderDraft};
 use engine::folders::{
     arrange_board, board_view, create_folder, delete_folder, file_notes, file_notes_back,
     list_folders, move_folder, move_folder_back, move_notes_into, recolour_folder, rename_folder,
     save_board_layout,
 };
+use engine::notes::model::HeldNotes;
 use engine::notes::view::{Grouping, NoteFilter, NoteOrder, NotesQuery};
 use engine::notes::{
-    create_note, delete_notes, get_note, move_notes, move_notes_back, query_notes, restore_notes,
+    create_note, delete_notes, get_note, list_trash, move_notes, move_notes_back, query_notes,
+    restore_notes,
 };
 
 use super::common::snippet;
@@ -56,7 +59,7 @@ fn a_folder_is_created_renamed_recoloured_and_deleted() {
         .unwrap();
     let listed = session.call(|e| list_folders(e, Some(&space))).unwrap();
     session
-        .call(|e| delete_folder(e, &id, PreviewLines::default()))
+        .call(|e| delete_folder(e, &id, PreviewLines::default(), HeldNotes::Keep))
         .unwrap();
 
     assert_eq!(renamed.name, "Shell");
@@ -479,4 +482,94 @@ fn the_board_reads_today_as_the_list_does() {
     let list_card = listed.display(listed.cards().next().unwrap()).calc.clone();
     let board_card = on_board.loose[0].note.calc.clone();
     assert_eq!(board_card, list_card);
+}
+
+fn nested(session: &Session, space_id: &str, parent: &str, name: &str) -> String {
+    let draft = FolderDraft {
+        space_id: space_id.to_string(),
+        parent_id: Some(parent.to_string()),
+        name: name.to_string(),
+    };
+
+    session.call(|e| create_folder(e, &draft)).unwrap().id
+}
+
+fn filed(session: &Session, space_id: &str, folder: &str) -> String {
+    let id = session
+        .call(|e| create_note(e, snippet(space_id)))
+        .unwrap()
+        .note
+        .id;
+    let ids = [id.clone()];
+    let into = folder.to_string();
+    session
+        .call(|e| file_notes(e, &ids, Some(&into), PreviewLines::default()))
+        .unwrap();
+    id
+}
+
+/// What the panel names before the second click: every live note under it, and its sub-folders.
+#[test]
+fn a_folder_counts_what_is_under_it() {
+    let session = Session::open();
+    let space = session.space("Personal");
+    let ops = folder(&session, &space, "Ops");
+    let deep = nested(&session, &space, &ops, "Deep");
+    filed(&session, &space, &ops);
+    filed(&session, &space, &deep);
+
+    let contents = session.call(|e| count_folder_contents(e, &ops)).unwrap();
+
+    assert_eq!((contents.notes, contents.folders), (2, 1));
+}
+
+/// Its whole subtree goes, every note under it waits in the trash, and comes back loose.
+#[test]
+fn a_folder_deleted_with_its_notes_takes_its_sub_folders_and_trashes_them() {
+    let session = Session::open();
+    let space = session.space("Personal");
+    let ops = folder(&session, &space, "Ops");
+    let deep = nested(&session, &space, &ops, "Deep");
+    let kept = folder(&session, &space, "Kept");
+    let mut held = vec![
+        filed(&session, &space, &ops),
+        filed(&session, &space, &deep),
+    ];
+    let other = filed(&session, &space, &kept);
+    let loose = session
+        .call(|e| create_note(e, snippet(&space)))
+        .unwrap()
+        .note
+        .id;
+
+    let trashed = session
+        .call(|e| delete_folder(e, &ops, PreviewLines::default(), HeldNotes::Trash))
+        .unwrap();
+
+    assert_eq!(trashed, 2);
+    let left: Vec<String> = session
+        .call(|e| list_folders(e, Some(&space)))
+        .unwrap()
+        .into_iter()
+        .map(|folder| folder.id)
+        .collect();
+    assert_eq!(left, std::slice::from_ref(&kept));
+    let mut in_trash: Vec<String> = session
+        .call(|e| list_trash(e, ""))
+        .unwrap()
+        .into_iter()
+        .map(|row| row.note.id)
+        .collect();
+    in_trash.sort();
+    held.sort();
+    assert_eq!(in_trash, held);
+    assert!(session.call(|e| get_note(e, &other)).is_ok());
+    assert!(session.call(|e| get_note(e, &loose)).is_ok());
+
+    session.call(|e| restore_notes(e, &held)).unwrap();
+    for id in &held {
+        let back = session.call(|e| get_note(e, id)).unwrap();
+        assert_eq!(back.note.space_id, space);
+        assert_eq!(back.note.folder_id, None, "loose in its space");
+    }
 }

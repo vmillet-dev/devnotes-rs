@@ -9,11 +9,12 @@ use diesel::prelude::*;
 
 use super::model::{Space, SpaceContents};
 use crate::count::saturating_u32 as count;
-use crate::db::Library;
 use crate::db::schema::{folders, notes, spaces};
+use crate::db::{Library, iso8601};
 use crate::error::StorageError;
 use crate::name;
 use crate::vault::key::Vault;
+use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 /// Pinned first, then by name — the same shape the canvas gives notes. Folded for the
@@ -191,12 +192,28 @@ pub fn contents(connection: &mut Library, id: &str) -> Result<SpaceContents, Sto
     })
 }
 
-pub fn delete(connection: &mut Library, id: &str, target_id: &str) -> Result<(), StorageError> {
+/// Answers how many live notes it moved; `trashed_at`, they are trashed on the way.
+pub fn delete(
+    connection: &mut Library,
+    id: &str,
+    target_id: &str,
+    trashed_at: Option<DateTime<Utc>>,
+) -> Result<usize, StorageError> {
     connection.transaction(|connection, _vault| {
         if !exists(connection, target_id)? {
             return Err(StorageError::SpaceNotFound(target_id.to_string()));
         }
 
+        let live = notes::table
+            .filter(notes::space_id.eq(id))
+            .filter(notes::deleted_at.is_null());
+        // Before the move: after it, the refuge's own notes would be among them.
+        let moved = match trashed_at {
+            Some(at) => diesel::update(live)
+                .set(notes::deleted_at.eq(iso8601::format(at)))
+                .execute(connection)?,
+            None => usize::try_from(live.count().get_result::<i64>(connection)?).unwrap_or(0),
+        };
         diesel::update(notes::table.filter(notes::space_id.eq(id)))
             .set(notes::space_id.eq(target_id))
             .execute(connection)?;
@@ -204,6 +221,6 @@ pub fn delete(connection: &mut Library, id: &str, target_id: &str) -> Result<(),
             return Err(StorageError::SpaceNotFound(id.to_string()));
         }
 
-        Ok(())
+        Ok(moved)
     })
 }

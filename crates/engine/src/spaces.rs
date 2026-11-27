@@ -1,10 +1,14 @@
 pub mod model;
 pub mod store;
 
+use chrono::Utc;
+
 use crate::Engine;
+use crate::count::saturating_u32 as count;
 use crate::db::lock;
 use crate::error::AppError;
 use crate::index::Changed;
+use crate::notes::model::HeldNotes;
 use model::{Space, SpaceContents, SpaceDraft};
 
 pub fn list_spaces(engine: &Engine) -> Result<Vec<Space>, AppError> {
@@ -47,7 +51,14 @@ pub fn count_space_contents(engine: &Engine, id: &str) -> Result<SpaceContents, 
     Ok(store::contents(&mut connection, id)?)
 }
 
-pub fn delete_space(engine: &Engine, id: &str, target_space_id: &str) -> Result<(), AppError> {
+/// Its notes go to `target_space_id`, out of any folder; with `HeldNotes::Trash` they go to the
+/// trash as well, and a restore brings them back there. Answers how many live notes it moved.
+pub fn delete_space(
+    engine: &Engine,
+    id: &str,
+    target_space_id: &str,
+    held: HeldNotes,
+) -> Result<u32, AppError> {
     engine.write(|db| {
         // A space as its own refuge would see its notes swept away by the cascade right
         // after the transfer.
@@ -55,8 +66,9 @@ pub fn delete_space(engine: &Engine, id: &str, target_space_id: &str) -> Result<
 
         let mut connection = lock(db)?;
 
-        store::delete(&mut connection, id, target_space_id)?;
+        let trashed_at = (held == HeldNotes::Trash).then(Utc::now);
+        let moved = store::delete(&mut connection, id, target_space_id, trashed_at)?;
         let changed = Changed::everything();
-        Ok(((), changed))
+        Ok((count(moved), changed))
     })
 }

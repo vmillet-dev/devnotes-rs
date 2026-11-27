@@ -230,7 +230,8 @@ pub(super) fn folder_switcher(
                     let Some(folder) = folders.iter().find(|folder| folder.id == edit.id) else {
                         return;
                     };
-                    if panel::folder(ui, edit, folder, language, actions) {
+                    let contents = state.folders.contents(&folder.id);
+                    if panel::folder(ui, edit, (folder, contents), language, actions) {
                         ui.close();
                     }
                 }
@@ -390,7 +391,8 @@ pub(super) fn breadcrumb(
         .show(|ui| {
             ui.set_width(260.0);
             let editing = edit.get_or_insert_with(|| FolderEdit::open(folder));
-            if panel::folder(ui, editing, folder, language, actions) {
+            let contents = state.folders.contents(&folder.id);
+            if panel::folder(ui, editing, (folder, contents), language, actions) {
                 ui.close();
             }
         });

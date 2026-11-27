@@ -2,6 +2,7 @@
 
 use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
+use engine::folders::board::PreviewLines;
 use engine::folders::model::FolderColour;
 
 use crate::notes::bench::{
@@ -479,4 +480,108 @@ fn a_name_cut_in_the_rail_is_read_whole_on_hover_and_its_menu_stays_in_reach() {
         .any(|words| words == long);
     assert!(said, "the full name in a tooltip");
     harness.get_by(|node| node.author_id() == Some("folder-edit"));
+}
+
+fn said_by(harness: &Harness<'_, Bench>, author_id: &str) -> String {
+    harness
+        .get_by(|node| node.author_id() == Some(author_id))
+        .accesskit_node()
+        .value()
+        .unwrap_or_default()
+}
+
+fn trashed(harness: &Harness<'_, Bench>) -> Vec<String> {
+    let backend = &harness.state().backend;
+    engine::db::run_here(backend.engine(), |engine| {
+        engine::notes::list_trash(engine, "")
+    })
+    .unwrap()
+    .into_iter()
+    .map(|row| row.note.id)
+    .collect()
+}
+
+fn latest_report(harness: &Harness<'_, Bench>) -> Option<i18n::Key> {
+    let status = &harness.state().state.status;
+    status.latest().map(|(_, message)| message.key)
+}
+
+#[test]
+fn a_space_deleted_with_its_notes_puts_them_in_the_trash_restored_in_its_refuge() {
+    let (backend, profile) = testing::unlocked();
+    space(&backend, "Home");
+    let reading = space(&backend, "Reading");
+    let draft = testing::snippet(reading.id.clone(), "an article".into());
+    let article = engine::db::run_here(backend.engine(), move |engine| {
+        engine::notes::create_note(engine, draft)
+    })
+    .unwrap()
+    .note
+    .id;
+    let mut harness = area(backend, profile);
+
+    click(&mut harness, "space-edit", "Options for space Reading");
+    let kept = said_by(&harness, "space-delete-consequence");
+    click_id(&mut harness, "space-delete-held");
+    click_id(&mut harness, "space-delete-held-1");
+    let trashing = said_by(&harness, "space-delete-consequence");
+    assert_ne!(kept, trashing, "the choice switches what is said");
+    assert!(
+        trashing.contains("trash") && trashing.contains("“Home”"),
+        "{trashing}"
+    );
+    click_id(&mut harness, "space-delete");
+    click_id(&mut harness, "space-delete");
+
+    assert_eq!(names(&harness, "space-option"), ["Home"]);
+    assert_eq!(trashed(&harness), [article]);
+    assert_eq!(cards(&harness), 0);
+    assert_eq!(
+        latest_report(&harness),
+        Some(i18n::keys::notes::SPACE_DELETED_TRASHED)
+    );
+}
+
+#[test]
+fn a_folder_deleted_with_its_notes_takes_its_sub_folder_and_trashes_them() {
+    let (backend, profile) = testing::unlocked();
+    let filed = testing::note(&backend, "filed");
+    let deeper = testing::note(&backend, "deeper");
+    testing::note(&backend, "loose");
+    let spaces = engine::db::run_here(backend.engine(), engine::spaces::list_spaces).unwrap();
+    let runbooks = folder(&backend, &spaces[0], None, "Runbooks");
+    let api = folder(&backend, &spaces[0], Some(&runbooks), "api");
+    for (note, into) in [(&filed, &runbooks), (&deeper, &api)] {
+        let (ids, into) = ([note.id.clone()], into.id.clone());
+        engine::db::run_here(backend.engine(), move |engine| {
+            engine::folders::file_notes(engine, &ids, Some(&into), PreviewLines::default())
+        })
+        .unwrap();
+    }
+    let mut harness = area(backend, profile);
+
+    click(&mut harness, "folder-edit", "Options for folder Runbooks");
+    let kept = said_by(&harness, "folder-delete-note");
+    assert!(
+        kept.contains("2 notes stay") && kept.contains("sub-folder"),
+        "{kept}"
+    );
+    click_id(&mut harness, "folder-delete-held");
+    click_id(&mut harness, "folder-delete-held-1");
+    let trashing = said_by(&harness, "folder-delete-note");
+    assert!(trashing.contains("2 notes go to the trash"), "{trashing}");
+    click_id(&mut harness, "folder-delete");
+    click_id(&mut harness, "folder-delete");
+
+    assert!(names(&harness, "folder-option").is_empty());
+    let mut gone = trashed(&harness);
+    gone.sort();
+    let mut expected = vec![filed.id.clone(), deeper.id.clone()];
+    expected.sort();
+    assert_eq!(gone, expected);
+    assert_eq!(cards(&harness), 1, "the loose note stays");
+    assert_eq!(
+        latest_report(&harness),
+        Some(i18n::keys::folders::DELETED_TRASHED)
+    );
 }

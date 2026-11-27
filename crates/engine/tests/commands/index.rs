@@ -123,7 +123,12 @@ fn folders_attachments_and_global_values_are_read_again() {
     written(&session, |e| delete_attachment(e, &attachment.id));
     written(&session, |e| set_global_placeholders(e, globals));
     written(&session, |e| {
-        delete_folder(e, &prod.id, engine::folders::board::PreviewLines::default())
+        delete_folder(
+            e,
+            &prod.id,
+            engine::folders::board::PreviewLines::default(),
+            engine::notes::model::HeldNotes::Keep,
+        )
     });
 }
 
@@ -138,5 +143,7 @@ fn a_corpus_wide_write_leaves_an_index_the_next_read_builds_whole() {
 
     session.wait(engine::index::fill);
     let refuge = session.space("Refuge");
-    written(&session, |e| delete_space(e, &space, &refuge));
+    written(&session, |e| {
+        delete_space(e, &space, &refuge, engine::notes::model::HeldNotes::Keep)
+    });
 }

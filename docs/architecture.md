@@ -2721,7 +2721,12 @@ space the panel explains why rather than offering a button that could only fail.
 goes before the first click**: `count_space_contents` answers the space's live notes and its
 folders when the panel opens, and the panel words them with the refuge chosen — « Ses 12 notes
 iront dans « Perso », hors de tout dossier. Ses 2 dossiers partent avec lui. » — since the
-folders cascade with the space and nothing undoes it. Each space
+folders cascade with the space and nothing undoes it. **Its notes are kept, or put in the trash**
+(« Ses notes » : « Les garder » / « Les mettre à la corbeille », `notes::model::HeldNotes`): trashed,
+they still go to the refuge, which a restore brings them back into; nothing is erased outside an
+explicit emptying of the trash. A folder's panel offers the same choice, counted by
+`count_folder_contents` (its live notes and sub-folders, all the way down). Either deletion is
+then said through the status notifier, with how many notes went where. Each space
 row is a `role="none"` wrapper holding the select button and the `⋯` trigger, so the menu
 keeps its direct menuitem children. Arrow-key navigation stays on the select buttons only.
 
@@ -2754,7 +2759,10 @@ holds is deliberately small:
 also why `delete_folder` takes no refuge argument where `delete_space(id, targetSpaceId)`
 must: what the folder held goes to **its parent** — its notes filed there, its sub-folders each
 to a free slot on that board — or loose at the top of the space. That is done in Rust, in one
-transaction, before the row goes; `parent_id`'s own `SET NULL` is only a guard.
+transaction, before the row goes; `parent_id`'s own `SET NULL` is only a guard. With
+`HeldNotes::Trash` the folder takes its whole sub-tree instead: every note under it is trashed,
+then the folders are deleted, and the notes' `SET NULL` leaves them to come back loose in the
+space.
 
 **A folder holds folders, one tree per space.** Every rule about it is `folders::model::Lineage`,
 built from ids and parents alone, so no name is opened to answer one: the sub-tree, the path, the
@@ -4586,7 +4594,8 @@ the library into rows; what nests in what is `folders::model::Lineage`'s, siblin
 `view::fold` of their name. A row's ⋯ opens its panel under it, one at a time: a space is
 pinned, renamed (written when the field is left, or on Enter), and deleted in two steps with a
 refuge chosen and what moves counted by the core first; a folder is recoloured, renamed, given a
-sub-folder, and deleted, what it held going up a level. A folder's row is dragged onto another
+sub-folder, and deleted, what it held going up a level. Either keeps its notes, or puts them in
+the trash with it. A folder's row is dragged onto another
 row — into that folder, or to the top of that space — or moved by `Alt+←` (up a level) and
 `Alt+→` (into the sibling above it); there is no order of siblings, so no `Alt+↑/↓`. The rail
 records its rows each frame and reports the gesture; whether the folder may go there is
@@ -4942,7 +4951,7 @@ The service functions, grouped by the feature that owns them (`crates/engine/src
 | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `notes`       | `count_notes_tagged`, `create_note`, `delete_note`, `delete_notes`, `delete_tags`, `empty_trash`, `fill_placeholders`, `get_note`, `list_global_placeholders`, `list_revisions`, `list_tags`, `list_trash`, `move_notes`, `move_notes_back`, `purge_notes`, `query_notes`, `rename_tags`, `restore_notes`, `restore_revision`, `revision_diff`, `seed_samples`, `set_global_placeholders`, `set_placeholder_values`, `tag_notes`, `untag_notes`, `update_note` |
 | `spaces`      | `count_space_contents`, `create_space`, `delete_space`, `list_spaces`, `pin_space`, `rename_space`                                                                                                                                                                                                                                                                                                                                                             |
-| `folders`     | `arrange_board`, `board_view`, `create_folder`, `delete_folder`, `file_notes`, `file_notes_back`, `list_folders`, `recolour_folder`, `rename_folder`, `save_board_layout`                                                                                                                                                                                                                                                                                      |
+| `folders`     | `arrange_board`, `board_view`, `count_folder_contents`, `create_folder`, `delete_folder`, `file_notes`, `file_notes_back`, `list_folders`, `recolour_folder`, `rename_folder`, `save_board_layout`                                                                                                                                                                                                                                                             |
 | `attachments` | `attach_clipboard_image`, `attach_file`, `delete_attachment`, `list_attachments`, `open_attachment`, `read_attachment`, `save_attachment`                                                                                                                                                                                                                                                                                                                      |
 | `transfer`    | `count_export`, `export_is_protected`, `export_notes` (over an `ExportScope`: the library, a space or a selection), `import_notes`, `share_notes`                                                                                                                                                                                                                                                                                                              |
 | `vault`       | `change_passphrase`, `create_vault`, `unlock_vault`, `vault_state`                                                                                                                                                                                                                                                                                                                                                                                             |
@@ -4963,7 +4972,8 @@ easily as the note it just opened.
 
 `delete_space` takes a **refuge** (`target_space_id`). The refuge is not optional: `notes.space_id` carries an `ON DELETE CASCADE`, so a bare delete would take
 the notes with it. `spaces::store::delete` moves them and drops the space in one
-transaction, in that order, and deliberately leaves `updated_at` alone — the canvas orders on
+transaction, in that order — with `HeldNotes::Trash`, the live notes are trashed before the move,
+or the refuge's own would be among them — and deliberately leaves `updated_at` alone — the canvas orders on
 that column, and refreshing it would float the whole absorbed space to the top as if every
 note had just been edited. A space cannot be its own refuge (`spaces::model::validate_move_target`);
 the cascade would take the notes back out one statement after the move.

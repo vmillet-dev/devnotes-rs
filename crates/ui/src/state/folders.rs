@@ -4,7 +4,8 @@
 //! again with it.
 
 use engine::folders::board::PreviewLines;
-use engine::folders::model::{Folder, FolderColour, FolderMove};
+use engine::folders::model::{Folder, FolderColour, FolderContents, FolderMove};
+use engine::notes::model::HeldNotes;
 use i18n::{Message, keys};
 
 use super::{QueryCell, Revision};
@@ -13,17 +14,20 @@ use crate::api::undo::Reversible;
 use crate::backend::{Backend, Pending};
 use crate::services::errors::ErrorNotifier;
 use crate::services::preferences::Preferences;
+use crate::services::status::StatusNotifier;
 
 /// The library's, like everything under `devnotes.notes.`: an id means nothing elsewhere.
 pub const ACTIVE_FOLDER_KEY: &str = "devnotes.notes.activeFolder";
 
 enum Write {
     Folder(Pending<Folder>),
-    /// What it held goes up a level, and so does the canvas if it was showing it: to `parent`.
+    /// What it held goes up a level or to the trash, and the canvas, if it was showing it, to
+    /// `parent`.
     Deleted {
-        pending: Pending<()>,
+        pending: Pending<u32>,
         folder: String,
         parent: Option<String>,
+        held: HeldNotes,
     },
     /// Offered back by the undo bar, named in its words.
     Moved {
@@ -55,6 +59,9 @@ pub struct FoldersState {
     writes: Vec<Writing>,
     /// The palette's « New folder » waits for its name.
     naming: bool,
+    /// The folder whose deletion is being considered, and what it would keep or trash.
+    counted: Option<String>,
+    contents: QueryCell<(String, Revision), FolderContents>,
 }
 
 impl FoldersState {
@@ -77,10 +84,11 @@ impl FoldersState {
         &mut self,
         backend: &Backend,
         revision: &mut Revision,
-        errors: &mut ErrorNotifier,
+        (status, errors): (&mut StatusNotifier, &mut ErrorNotifier),
     ) -> Answered {
         let mut answered = Answered::default();
         let mut left = Vec::new();
+        let mut said = Vec::new();
         self.writes.retain_mut(|writing| {
             let answer = match &mut writing.write {
                 Write::Folder(pending) => pending.poll().map(|answer| answer.map(|_| None)),
@@ -88,9 +96,13 @@ impl FoldersState {
                     pending,
                     folder,
                     parent,
-                } => pending
-                    .poll()
-                    .map(|answer| answer.map(|()| Some((folder.clone(), parent.clone())))),
+                    held,
+                } => pending.poll().map(|answer| {
+                    answer.map(|notes| {
+                        said.push(deleted(*held, notes));
+                        Some((folder.clone(), parent.clone()))
+                    })
+                }),
                 Write::Moved {
                     pending,
                     name,
@@ -119,7 +131,13 @@ impl FoldersState {
                 }
             }
         });
+        for message in said {
+            status.report(message);
+        }
         for (folder, parent) in left {
+            if self.counted.as_deref() == Some(folder.as_str()) {
+                self.counted = None;
+            }
             if self.chosen.as_deref() == Some(folder.as_str()) {
                 self.chosen = parent;
                 answered.moved = true;
@@ -130,6 +148,11 @@ impl FoldersState {
             && let Some(error) = self.folders.error()
         {
             errors.report(keys::errors::FOLDERS_LOAD_FAILED, error);
+        }
+        if let Some(id) = &self.counted {
+            self.contents.want((id.clone(), *revision));
+            self.contents
+                .update(|(id, _)| api::folders::contents(backend, id));
         }
         answered
     }
@@ -223,15 +246,29 @@ impl FoldersState {
     }
 
     /// What it held goes up a level, and so does the canvas if it was showing it.
-    pub fn delete(&mut self, backend: &Backend, id: String, lines: PreviewLines) {
+    pub fn delete(&mut self, backend: &Backend, id: String, lines: PreviewLines, held: HeldNotes) {
         let parent = self.find(&id).and_then(|folder| folder.parent_id.clone());
         let failed = Message::new(keys::errors::FOLDER_DELETE_FAILED);
         let write = Write::Deleted {
-            pending: api::folders::delete(backend, id.clone(), lines),
+            pending: api::folders::delete(backend, id.clone(), lines, held),
             folder: id,
             parent,
+            held,
         };
         self.push(write, failed);
+    }
+
+    pub fn count(&mut self, id: String) {
+        if self.counted.as_deref() != Some(id.as_str()) {
+            self.contents = QueryCell::default();
+            self.counted = Some(id);
+        }
+    }
+
+    pub fn contents(&self, id: &str) -> Option<&FolderContents> {
+        (self.counted.as_deref() == Some(id))
+            .then(|| self.contents.value())
+            .flatten()
     }
 
     /// Under `parent_id` of `space_id`, or at its top for `None`, with everything it holds;
@@ -261,4 +298,13 @@ impl FoldersState {
 fn trimmed(name: &str) -> Option<String> {
     let name = name.trim();
     (!name.is_empty()).then(|| name.to_owned())
+}
+
+/// How many notes stayed in the space, or went to the trash.
+fn deleted(held: HeldNotes, notes: u32) -> Message {
+    let key = match held {
+        HeldNotes::Keep => keys::folders::DELETED,
+        HeldNotes::Trash => keys::folders::DELETED_TRASHED,
+    };
+    Message::new(key).with("count", notes)
 }

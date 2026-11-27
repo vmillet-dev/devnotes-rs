@@ -5,7 +5,8 @@
 use crate::theme::tokens::{font, gap, radius};
 use egui::{Color32, CornerRadius, FontFamily, Rect, Response, Role, Sense, Stroke, Ui, Vec2};
 use egui::{StrokeKind, WidgetInfo};
-use engine::folders::model::{Folder, FolderColour};
+use engine::folders::model::{Folder, FolderColour, FolderContents};
+use engine::notes::model::HeldNotes;
 use engine::spaces::model::{Space, SpaceContents};
 use i18n::{Key, keys};
 
@@ -129,6 +130,7 @@ pub(super) struct SpaceEdit {
     focus: bool,
     /// Among the other spaces, in their order.
     refuge: usize,
+    held: HeldNotes,
     /// Two steps: nothing corpus-wide runs before saying what it touches.
     confirming: bool,
 }
@@ -140,6 +142,7 @@ impl SpaceEdit {
             name: space.name.clone(),
             focus: true,
             refuge: 0,
+            held: HeldNotes::Keep,
             confirming: false,
         }
     }
@@ -269,7 +272,13 @@ fn deletion(
 ) -> bool {
     let tr = |key| i18n::translate(language, key, &[]);
     push(actions, Action::CountSpace(space.id.clone()));
-    let move_to = tr(keys::notes::MOVE_NOTES_TO);
+    if held_choice(ui, &mut edit.held, "space-delete-held", language) {
+        edit.confirming = false;
+    }
+    let move_to = tr(match edit.held {
+        HeldNotes::Keep => keys::notes::MOVE_NOTES_TO,
+        HeldNotes::Trash => keys::notes::RESTORE_NOTES_IN,
+    });
     note(ui, &move_to, "space-move-label");
     edit.refuge = edit.refuge.min(others.len() - 1);
     let options: Vec<(usize, &str)> = others
@@ -296,6 +305,7 @@ fn deletion(
                 Action::DeleteSpace {
                     id: space.id.clone(),
                     refuge: refuge.id.clone(),
+                    held: edit.held,
                 },
             );
             close = true;
@@ -306,21 +316,51 @@ fn deletion(
     if let Some(contents) = contents {
         note(
             ui,
-            &consequences(*contents, &refuge.name, language),
+            &consequences(*contents, (&refuge.name, edit.held), language),
             "space-delete-consequence",
         );
     }
     close
 }
 
-/// The notes and where they go, then the folders that go with the space.
-fn consequences(contents: SpaceContents, refuge: &str, language: i18n::Language) -> String {
+/// What becomes of the notes: kept, as before, or put in the trash with what holds them. `true`
+/// when the choice changed.
+fn held_choice(
+    ui: &mut Ui,
+    held: &mut HeldNotes,
+    author_id: &str,
+    language: i18n::Language,
+) -> bool {
+    let tr = |key| i18n::translate(language, key, &[]);
+    let label = tr(keys::notes::HELD_NOTES);
+    note(ui, &label, &format!("{author_id}-label"));
+    let (keep, trash) = (tr(keys::notes::KEEP_NOTES), tr(keys::notes::TRASH_NOTES));
+    let options = [
+        (HeldNotes::Keep, keep.as_str()),
+        (HeldNotes::Trash, trash.as_str()),
+    ];
+    ChoiceMenu::new(&label, author_id, &options)
+        .show(ui, held)
+        .changed()
+}
+
+/// The notes and where they go, or that they go to the trash and come back there; then the
+/// folders that go with the space.
+fn consequences(
+    contents: SpaceContents,
+    (refuge, held): (&str, HeldNotes),
+    language: i18n::Language,
+) -> String {
     let notes = if contents.notes == 0 {
         i18n::translate(language, keys::notes::DELETE_SPACE_NO_NOTES, &[])
     } else {
+        let key = match held {
+            HeldNotes::Keep => keys::notes::DELETE_SPACE_NOTES,
+            HeldNotes::Trash => keys::notes::DELETE_SPACE_TRASH_NOTES,
+        };
         i18n::translate(
             language,
-            keys::notes::DELETE_SPACE_NOTES,
+            key,
             &[("count", contents.notes.into()), ("refuge", refuge.into())],
         )
     };
@@ -341,6 +381,7 @@ pub(super) struct FolderEdit {
     focus: bool,
     /// The sub-folder's name, once asked for: the panel still opens on what most come for.
     pub(super) nesting: Option<Draft>,
+    held: HeldNotes,
     confirming: bool,
 }
 
@@ -351,6 +392,7 @@ impl FolderEdit {
             name: folder.name.clone(),
             focus: true,
             nesting: None,
+            held: HeldNotes::Keep,
             confirming: false,
         }
     }
@@ -360,7 +402,7 @@ impl FolderEdit {
 pub(super) fn folder(
     ui: &mut Ui,
     edit: &mut FolderEdit,
-    folder: &Folder,
+    (folder, contents): (&Folder, Option<&FolderContents>),
     language: i18n::Language,
     actions: &mut Actions,
 ) -> bool {
@@ -403,6 +445,10 @@ pub(super) fn folder(
             close = true;
         }
         close |= sub_folder(ui, edit, folder, language, actions);
+        push(actions, Action::CountFolder(folder.id.clone()));
+        if held_choice(ui, &mut edit.held, "folder-delete-held", language) {
+            edit.confirming = false;
+        }
         let label = tr(if edit.confirming {
             keys::folders::DELETE_CONFIRM
         } else {
@@ -414,19 +460,48 @@ pub(super) fn folder(
             .show(ui);
         if delete.clicked() {
             if edit.confirming {
-                push(actions, Action::DeleteFolder(folder.id.clone()));
+                push(
+                    actions,
+                    Action::DeleteFolder {
+                        id: folder.id.clone(),
+                        held: edit.held,
+                    },
+                );
                 close = true;
             } else {
                 edit.confirming = true;
             }
         }
-        note(
-            ui,
-            &tr(keys::folders::DELETE_KEEPS_NOTES),
-            "folder-delete-note",
-        );
+        if let Some(contents) = contents {
+            let said = folder_consequences(*contents, edit.held, language);
+            note(ui, &said, "folder-delete-note");
+        }
     });
     close
+}
+
+/// What the folder's deletion does to the notes and the sub-folders under it, counted by the core.
+fn folder_consequences(
+    contents: FolderContents,
+    held: HeldNotes,
+    language: i18n::Language,
+) -> String {
+    let (notes, folders) = match held {
+        HeldNotes::Keep => (
+            keys::folders::DELETE_KEEP_NOTES,
+            keys::folders::DELETE_KEEP_FOLDERS,
+        ),
+        HeldNotes::Trash => (
+            keys::folders::DELETE_TRASH_NOTES,
+            keys::folders::DELETE_TRASH_FOLDERS,
+        ),
+    };
+    let notes = i18n::translate(language, notes, &[("count", contents.notes.into())]);
+    if contents.folders == 0 {
+        return notes;
+    }
+    let folders = i18n::translate(language, folders, &[("count", contents.folders.into())]);
+    format!("{notes} {folders}")
 }
 
 fn sub_folder(

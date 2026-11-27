@@ -315,7 +315,8 @@ fn folder_row(
         && edit.id == folder.id
     {
         let made_inside = edit.nesting.is_some();
-        let closed = panel::folder(ui, edit, folder, language, actions);
+        let contents = state.folders.contents(&folder.id);
+        let closed = panel::folder(ui, edit, (folder, contents), language, actions);
         if closed {
             if made_inside {
                 view.reveal(&folder.id);

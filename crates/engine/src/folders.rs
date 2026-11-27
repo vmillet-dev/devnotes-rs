@@ -9,13 +9,13 @@ use crate::count::saturating_u32 as count;
 use crate::db::lock;
 use crate::error::AppError;
 use crate::index::Changed;
-use crate::notes::model::NotePlacement;
+use crate::notes::model::{HeldNotes, NotePlacement};
 
 use board::{
     BoardArrangement, BoardQuery, BoardScope, BoardView, CardPlacement, Occupancy, PreviewLines,
     ZonePlacement,
 };
-use model::{Folder, FolderColour, FolderDraft, FolderMove, Lineage, NoteFiling};
+use model::{Folder, FolderColour, FolderContents, FolderDraft, FolderMove, Lineage, NoteFiling};
 
 /// The second way to look at a space, one level at a time: the root's sub-folders as zones,
 /// each gathering what is under it, and what is filed in the root itself free beside them. It
@@ -179,15 +179,32 @@ pub fn move_folder_back(engine: &Engine, was: &FolderMove) -> Result<bool, AppEr
     })
 }
 
-/// No refuge, unlike [`crate::spaces::delete_space`]: what it held goes to its parent, or
-/// loose at the top of the space. `lines` sizes the rows the parent's zone grows by.
-pub fn delete_folder(engine: &Engine, id: &str, lines: PreviewLines) -> Result<(), AppError> {
+/// What deleting the folder would keep or trash, counted under the lock: its live notes and its
+/// sub-folders, all the way down.
+pub fn count_folder_contents(engine: &Engine, id: &str) -> Result<FolderContents, AppError> {
+    let db = &engine.db;
+    let mut connection = lock(db)?;
+
+    Ok(store::contents(&mut connection, id)?)
+}
+
+/// No refuge, unlike [`crate::spaces::delete_space`]: what it held goes to its parent, or loose
+/// at the top of the space. With `HeldNotes::Trash` its sub-folders go with it and every note
+/// under it goes to the trash, restored loose in the space. `lines` sizes the rows the parent's
+/// zone grows by. Answers how many live notes it held.
+pub fn delete_folder(
+    engine: &Engine,
+    id: &str,
+    lines: PreviewLines,
+    held: HeldNotes,
+) -> Result<u32, AppError> {
     engine.write(|db| {
         let mut connection = lock(db)?;
 
-        store::delete(&mut connection, id, lines.card_height())?;
+        let trashed_at = (held == HeldNotes::Trash).then(Utc::now);
+        let held = store::delete(&mut connection, id, lines.card_height(), trashed_at)?;
         let changed = Changed::everything();
-        Ok(((), changed))
+        Ok((count(held), changed))
     })
 }
 
