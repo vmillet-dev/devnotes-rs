@@ -105,13 +105,15 @@ impl Chip<'_> {
     fn show(self, ui: &mut Ui, author_id: &str) -> bool {
         let p = palette(ui.ctx());
         let mono = FontFamily::Monospace;
-        let words = widgets::text(ui, self.words, font::META, 400.0, mono.clone(), p.text_1);
-        let count = self
-            .count
-            .map(|count| widgets::text(ui, &count.to_string(), font::META, 400.0, mono, p.text_2));
+        let named = widgets::text(ui, self.words, font::META, 400.0, mono, p.text_1)
+            .size()
+            .x;
+        let figure = self.count.map(|count| count.to_string());
         let lead = lead_width(ui, &self.lead);
-        let counted = count.as_ref().map_or(0.0, |galley| galley.size().x + 6.0);
-        let size = vec2(lead + words.size().x + counted + 20.0, 24.0);
+        let counted = figure
+            .as_deref()
+            .map_or(0.0, |figure| COUNT_GAP + count_size(ui, figure).x);
+        let size = vec2(lead + named + counted + 20.0, 24.0);
         let (on, enabled, label) = (self.on, self.enabled, self.words);
         let sense = if enabled {
             Sense::click()
@@ -163,30 +165,52 @@ impl Chip<'_> {
             ink,
         );
         paint(ui, left, rect, words, ink);
-        if let Some(count) = count {
-            paint(
-                ui,
-                left + count_at(ui, self.words),
-                rect,
-                count,
-                fade(p.text_2),
-            );
+        if let Some(figure) = &figure {
+            let at = (left + named + COUNT_GAP, rect.center().y);
+            paint_count(ui, figure, at, (on, enabled));
         }
         response.clicked()
     }
 }
 
-fn count_at(ui: &Ui, words: &str) -> f32 {
+/// Between a chip's words and its count.
+const COUNT_GAP: f32 = gap::SNUG;
+
+fn count_galley(ui: &Ui, figure: &str, ink: Color32) -> std::sync::Arc<Galley> {
     widgets::text(
         ui,
-        words,
-        font::META,
+        figure,
+        font::CAPTION,
         400.0,
-        FontFamily::Monospace,
-        Color32::WHITE,
+        FontFamily::Proportional,
+        ink,
     )
-    .size()
-    .x + 6.0
+}
+
+fn count_size(ui: &Ui, figure: &str) -> Vec2 {
+    count_galley(ui, figure, Color32::WHITE).size() + vec2(2.0 * gap::TIGHT, gap::LINE)
+}
+
+/// The count on a fill of its own: a tag ending in a digit does not run into it.
+fn paint_count(ui: &Ui, figure: &str, (left, middle): (f32, f32), (on, enabled): (bool, bool)) {
+    let p = palette(ui.ctx());
+    let (fill, ink) = if on {
+        (p.amber_fill.gamma_multiply(0.15), p.amber_text)
+    } else {
+        (p.bg_3, p.text_2)
+    };
+    let (fill, ink) = if enabled {
+        (fill, ink)
+    } else {
+        (fill.gamma_multiply(0.5), ink.gamma_multiply(0.5))
+    };
+    let size = count_size(ui, figure);
+    let rect = Rect::from_min_size(pos2(left, middle - size.y / 2.0), size);
+    ui.painter()
+        .rect_filled(rect, CornerRadius::same(u8::MAX), fill);
+    let galley = count_galley(ui, figure, ink);
+    ui.painter()
+        .galley(rect.center() - galley.size() / 2.0, galley, ink);
 }
 
 fn paint(ui: &Ui, left: f32, rect: Rect, galley: std::sync::Arc<Galley>, ink: Color32) {
@@ -396,9 +420,8 @@ fn tag_pills(ui: &mut Ui, view: &NotesView, facets: &Facets, actions: &mut Actio
                         .iter()
                         .find(|counted| &counted.value == tag)
                         .map(|counted| counted.count);
-                    let words = format!("#{tag}");
                     let chip = Chip {
-                        words: &words,
+                        words: tag,
                         count,
                         lead: Lead::None,
                         on: facets.tags.contains(tag),
@@ -496,17 +519,10 @@ fn language_chip(
 ) -> bool {
     let p = palette(ui.ctx());
     let size = badge_size(ui, &badge);
-    let count = count.map(|count| {
-        widgets::text(
-            ui,
-            &count.to_string(),
-            font::META,
-            400.0,
-            FontFamily::Monospace,
-            p.text_2,
-        )
-    });
-    let counted = count.as_ref().map_or(0.0, |galley| galley.size().x + 6.0);
+    let figure = count.map(|count| count.to_string());
+    let counted = figure
+        .as_deref()
+        .map_or(0.0, |figure| COUNT_GAP + count_size(ui, figure).x);
     // The other chips' frame, so the count reads inside it as theirs does.
     let corner = CornerRadius::same(radius::PANEL);
     let response = interact(
@@ -532,8 +548,9 @@ fn language_chip(
         rect.left() + 10.0,
         rect.center().y,
     );
-    if let Some(count) = count {
-        paint(ui, rect.left() + 10.0 + size.x + 6.0, rect, count, p.text_2);
+    if let Some(figure) = &figure {
+        let at = (rect.left() + 10.0 + size.x + COUNT_GAP, rect.center().y);
+        paint_count(ui, figure, at, (on, true));
     }
     response.clicked()
 }
@@ -626,5 +643,78 @@ mod tests {
         let mut harness = three();
         click_id(&mut harness, "facets-toggle");
         assert!(!has(&harness, "kind-chip-all"));
+    }
+
+    /// The words painted inside `within`, and where each stands.
+    fn painted(harness: &Harness<'_, Bench>, within: egui::Rect) -> Vec<(String, egui::Rect)> {
+        let shapes = &harness.output().shapes;
+        shapes
+            .iter()
+            .filter_map(|clipped| match &clipped.shape {
+                egui::Shape::Text(text) => {
+                    let rect = text.galley.rect.translate(text.pos.to_vec2());
+                    within
+                        .contains_rect(rect)
+                        .then(|| (text.galley.text().to_owned(), rect))
+                }
+                _ => None,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn a_tag_is_named_alone_and_its_count_stands_apart_in_a_badge() {
+        let (backend, profile) = testing::unlocked();
+        let ids: Vec<String> = (0..4)
+            .map(|n| testing::note(&backend, &format!("v2 n°{n}")).id.clone())
+            .collect();
+        let tagged = NotePatch {
+            tags: Some(vec!["v2".into()]),
+            ..NotePatch::default()
+        };
+        engine::db::run_here(backend.engine(), move |engine| {
+            for id in &ids {
+                engine::notes::update_note(engine, id, &tagged)?;
+            }
+            Ok::<_, engine::error::AppError>(())
+        })
+        .unwrap();
+        let mut harness = area(backend, profile);
+        click_id(&mut harness, "facets-toggle");
+
+        let pill = harness.get_by(|node| node.author_id() == Some("tag-pill"));
+        assert_eq!(
+            pill.accesskit_node().label().as_deref(),
+            Some("v2"),
+            "the count stays out"
+        );
+        let words = painted(&harness, pill.rect());
+        assert!(
+            words.iter().all(|(text, _)| !text.starts_with('#')),
+            "{words:?}"
+        );
+        let rect_of = |text: &str| {
+            words
+                .iter()
+                .find(|(painted, _)| painted == text)
+                .unwrap_or_else(|| panic!("{text} in {words:?}"))
+                .1
+        };
+        let (name, count) = (rect_of("v2"), rect_of("4"));
+        let p = crate::theme::palette(&harness.ctx);
+        let badge = harness
+            .output()
+            .shapes
+            .iter()
+            .find_map(|clipped| match &clipped.shape {
+                egui::Shape::Rect(shape)
+                    if shape.fill == p.bg_3 && shape.rect.contains_rect(count) =>
+                {
+                    Some(shape.rect)
+                }
+                _ => None,
+            });
+        let badge = badge.expect("the count sits on a badge of its own");
+        assert!(badge.left() > name.right(), "{name:?} {badge:?}");
     }
 }
