@@ -185,6 +185,5 @@ mod tests {
                 assert!(!entry.name.of(language).is_empty(), "{}", entry.id);
             }
         }
-        assert!(!docs_index().checked_on.is_empty());
     }
 }

@@ -17,8 +17,6 @@ const SHORTCUTS: [&str; 2] = ["Touches", "Keys"];
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Index {
-    /// The version the pages were last read against.
-    pub checked_on: String,
     pub groups: Vec<Group>,
 }
 
