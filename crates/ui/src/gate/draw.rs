@@ -84,8 +84,8 @@ pub fn show(
     install
 }
 
-/// Under the form, at the card's bottom: the version found and « Install now », then how far
-/// its download is. The field keeps the keys: nothing here asks for the focus.
+/// Under the form, at the card's bottom, in amber to be seen: the version found and « Install
+/// now », then how far its download is. The field keeps the keys: nothing here asks for the focus.
 fn update_line(ui: &mut Ui, offer: &Offer<'_>, language: Language) -> bool {
     let p = palette(ui.ctx());
     let said = match (offer.status, offer.percent) {
@@ -104,8 +104,11 @@ fn update_line(ui: &mut Ui, offer: &Offer<'_>, language: Language) -> bool {
     let top = ui.cursor().top();
     ui.painter()
         .hline(ui.max_rect().x_range(), top, Stroke::new(1.0, p.line_soft));
-    ui.horizontal(|ui| {
-        let shown = ui.label(small(&said, p.text_2));
+    ui.add_space(gap::TIGHT);
+    // A row of the button's height: `horizontal` centres on egui's smaller default.
+    let row = Vec2::new(ui.available_width(), widgets::MIN_TARGET + gap::TIGHT);
+    ui.allocate_ui_with_layout(row, Layout::left_to_right(Align::Center), |ui| {
+        let shown = ui.label(small(&said, p.amber_text));
         widgets::address(ui, &shown, "gate-update");
         if offer.status != Status::Available {
             return false;
@@ -113,7 +116,7 @@ fn update_line(ui: &mut Ui, offer: &Offer<'_>, language: Language) -> bool {
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             let install = i18n::translate(language, keys::update::INSTALL, &[]);
             Button::new(&install, "gate-update-install")
-                .kind(Kind::Quiet)
+                .kind(Kind::Accent)
                 .show(ui)
                 .clicked()
         })
