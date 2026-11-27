@@ -8,12 +8,18 @@ use model::{ChangelogRelease, ChangelogSection};
 const CHANGELOG: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../CHANGELOG.md"));
 
 pub fn app_changelog() -> Vec<ChangelogRelease> {
-    model::parse(CHANGELOG)
+    let mut releases = model::parse(CHANGELOG);
+    for release in &mut releases {
+        model::drop_what_is_not_in_the_app(&mut release.sections);
+    }
+    releases
 }
 
 /// The notes the updater hands over, read with the same grammar as the file.
 pub fn release_notes(markdown: &str) -> Vec<ChangelogSection> {
-    model::parse_section(markdown)
+    let mut sections = model::parse_section(markdown);
+    model::drop_what_is_not_in_the_app(&mut sections);
+    sections
 }
 
 #[cfg(test)]
@@ -83,6 +89,44 @@ mod tests {
             release_notes(&CHANGELOG[body_start..body_end]),
             app_changelog().remove(0).sections
         );
+    }
+
+    #[test]
+    fn the_shipped_file_shows_neither_the_site_nor_its_pages() {
+        for heading in model::NOT_IN_THE_APP {
+            assert!(
+                CHANGELOG.contains(&format!("### {heading}\n")),
+                "{heading} is in no release"
+            );
+        }
+        let shown: Vec<_> = app_changelog()
+            .into_iter()
+            .flat_map(|release| release.sections)
+            .map(|section| section.title)
+            .collect();
+
+        assert!(
+            !shown
+                .iter()
+                .any(|title| model::NOT_IN_THE_APP.contains(&title.as_str()))
+        );
+    }
+
+    /// Written by the script, recognised here: a heading renamed on one side alone would reach
+    /// the panel.
+    #[test]
+    fn the_headings_left_out_are_the_ones_the_release_script_writes() {
+        let script = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../scripts/release-notes.mjs"
+        ));
+
+        for heading in model::NOT_IN_THE_APP {
+            assert!(
+                script.contains(&format!("heading: '{heading}'")),
+                "{heading}"
+            );
+        }
     }
 
     /// The number is what makes the release on github.com navigable, and noise on a panel
