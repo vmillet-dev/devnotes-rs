@@ -3,7 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { filter } from 'rxjs';
 
-import { Lang, downloadPath, homePath } from '../core/lang';
+import { Lang, downloadPath, french, homePath } from '../core/lang';
 import { Language } from '../core/language';
 import { REPOSITORY } from '../core/site';
 import { ThemeStore } from '../core/theme.store';
@@ -33,10 +33,10 @@ const EN: typeof FR = {
   toDark: 'Switch to the dark theme',
   menu: 'Menu',
   source: 'Source code on GitHub',
-  switchTo: 'FR : lire cette page en français',
+  switchTo: french('FR : lire cette page en français'),
 };
 
-const TEXT: Readonly<Record<Lang, typeof FR>> = { fr: FR, en: EN };
+const TEXT: Readonly<Record<Lang, typeof FR>> = { fr: french(FR), en: EN };
 
 @Component({
   selector: 'app-site-header',

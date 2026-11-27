@@ -1,15 +1,30 @@
-// The opening: what it is, the screen itself, and what each part of it does.
+// The opening: what it is, the screen itself, and what each part of it does. Both columns start on
+// the same line and end on the same line: the headline over the facts, the lede over the buttons.
 .hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-  align-items: end;
+  // At 1.2, « Your snippets, » holds on its line: the headline breaks after each comma in both languages.
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  grid-template-areas:
+    'title side'
+    'facts side';
   gap: 28px 64px;
   padding-block: clamp(44px, 5vw, 64px) clamp(36px, 4vw, 56px);
 }
 
+.hero h1 {
+  grid-area: title;
+}
+
 .hero-side {
+  grid-area: side;
   display: grid;
+  align-content: start;
   gap: 22px;
+}
+
+.hero .facts {
+  grid-area: facts;
+  align-self: end;
 }
 
 // The two buttons one above the other at every width: side by side, whether they fit would depend on
@@ -48,6 +63,11 @@
   border-radius: 12px;
   background: var(--bg-1);
   box-shadow: 0 50px 90px -60px rgba(var(--black-rgb), 0.6);
+}
+
+// The capture and its marks, laid out together: a phone enlarges and crops them as one.
+.frame {
+  position: relative;
 }
 
 .shot img {
@@ -213,6 +233,11 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .hero {
+    grid-template-areas: 'title' 'side' 'facts';
+    row-gap: 22px;
+  }
+
   .legend {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -225,6 +250,18 @@
 @media (max-width: 640px) {
   .legend {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  // The whole window would be a texture at a phone's width: its top left corner (the three
+  // areas, the spaces, the search, the snippet's fields) at a size its words can be read.
+  // 897 × 722 of the capture's 2168 × 1362: the marks beyond it are cut with it.
+  .shot {
+    overflow: hidden;
+    aspect-ratio: 897 / 722;
+  }
+
+  .frame {
+    width: calc(100% * 2168 / 897);
   }
 
   .mark {

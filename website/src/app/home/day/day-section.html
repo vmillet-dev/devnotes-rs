@@ -3,7 +3,10 @@
   <div class="sec-h col">
     <span><b>02</b> / {{ day.section }}</span><span>{{ day.span }}</span>
   </div>
-  <div class="bridge col"><h2 id="day-h">{{ day.bridge }}</h2></div>
+  <div class="bridge col">
+    <h2 id="day-h">{{ day.heading }}</h2>
+    <p>{{ day.lede }}</p>
+  </div>
 
   <aside
     class="rail col"
@@ -33,12 +36,15 @@
       class="mo"
       [class]="'t-' + moment.tone"
       [class.on]="i === current()"
+      [class.wide]="wide(moment.scene)"
       [id]="moment.id"
       [attr.aria-labelledby]="moment.id + '-h'"
     >
       <div class="mo-t">
-        <p class="when"><time>{{ moment.time }}</time> <span>{{ moment.kind }}</span></p>
-        <h3 [id]="moment.id + '-h'">{{ moment.title }}</h3>
+        <div class="mo-h">
+          <p class="when"><time>{{ moment.time }}</time> <span>{{ moment.kind }}</span></p>
+          <h3 [id]="moment.id + '-h'">{{ moment.title }}</h3>
+        </div>
         <p><app-runs [runs]="moment.text" /></p>
         @if (moment.gesture) {
         <p class="gesture"><app-runs [runs]="moment.gesture" /></p>

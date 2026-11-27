@@ -247,10 +247,12 @@ function main() {
   writeFileSync(
     OUT,
     `// Written by scripts/docs.mjs from docs/content.
-import { Lang } from '../../core/lang';
+import { Lang, french } from '../../core/lang';
 import { DocPage } from '../doc.model';
 
-export const DOC_PAGES: Readonly<Record<Lang, readonly DocPage[]>> = ${JSON.stringify(pages)};
+const PAGES: Readonly<Record<Lang, readonly DocPage[]>> = ${JSON.stringify(pages)};
+
+export const DOC_PAGES: Readonly<Record<Lang, readonly DocPage[]>> = { fr: french(PAGES.fr), en: PAGES.en };
 `,
   );
   console.log(`${entries.length} pages read from docs/content, in ${LANGS.join(' and ')}.`);

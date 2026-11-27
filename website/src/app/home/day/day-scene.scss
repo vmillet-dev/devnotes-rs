@@ -4,7 +4,6 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   place-items: center;
-  min-height: 460px;
   padding: 56px var(--pad);
   overflow: hidden;
   background-image: radial-gradient(circle, var(--dot) 1.1px, transparent 1.7px);
@@ -30,16 +29,13 @@
   min-width: 0;
 }
 
-// A wide screen gives the pieces their room.
-@media (min-width: 1500px) {
-  :host > * {
-    zoom: 1.1;
-  }
+// The row sets how large its pieces are drawn (day-section.scss): a piece never goes past its cell.
+:host > * {
+  zoom: var(--scene-zoom, 1);
 }
 
 @media (max-width: 1000px) {
   :host {
-    min-height: 0;
     padding-block: 36px;
   }
 }

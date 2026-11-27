@@ -812,6 +812,12 @@
   --c: var(--purple);
 }
 
+@media (max-width: 640px) {
+  .scene .parts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .scene .dates {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -929,6 +935,22 @@
 
 .scene .line.gap {
   background: repeating-linear-gradient(135deg, transparent 0 5px, var(--line-soft) 5px 6px);
+}
+
+// Side by side, a phone would cut every line where its change is: one file above the other.
+@media (max-width: 640px) {
+  .scene .sides {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .scene .sides > div + div {
+    border-left: 0;
+    border-top: 1px solid var(--line-soft);
+  }
+
+  .scene .line {
+    font-size: 11px;
+  }
 }
 
 .anim .line.ch,

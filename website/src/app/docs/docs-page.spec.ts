@@ -52,7 +52,7 @@ describe('the documentation', () => {
     expect(blocks.length).toBeGreaterThan(0);
     for (const block of blocks) {
       expect(block.getAttribute('tabindex')).toBe('0');
-      expect(block.getAttribute('aria-label')).toMatch(/^Code : /);
+      expect(block.getAttribute('aria-label')).toMatch(/^Code\u00a0: /);
     }
   });
 });

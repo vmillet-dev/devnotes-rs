@@ -4,7 +4,7 @@ Installer DevNotes, choisir la phrase de passe de votre bibliothèque, et faire 
 
 ## Installer
 
-DevNotes fonctionne sous Windows, sous macOS (à partir de la version qui suit la 1.1.0) et sous Linux. Tous les fichiers sont sur [la page de téléchargement](https://devnotes.fr/telecharger), chacun en lien direct : prenez celui qui correspond à votre système. Il n’y a aucun moteur de navigateur à l’intérieur, donc rien d’autre à installer.
+DevNotes fonctionne sous Windows, sous macOS (depuis la version 1.2.0) et sous Linux. Tous les fichiers sont sur [la page de téléchargement](https://devnotes.fr/telecharger), chacun en lien direct : prenez celui qui correspond à votre système. Il n’y a aucun moteur de navigateur à l’intérieur, donc rien d’autre à installer.
 
 **Les fichiers de chaque version**
 
@@ -67,4 +67,4 @@ La barre de titre passe d’une zone à l’autre :
 
 ## Les mises à jour
 
-DevNotes vérifie lui-même s’il existe une version plus récente et vous la propose, avec ses notes de version : *Installer maintenant*, *Plus tard* ou *Ne plus me proposer la version …*. Le menu *À propos* propose aussi de *Rechercher les mises à jour*. Rien d’autre ne quitte votre machine : la vérification demande seulement à GitHub si une nouvelle version existe. L’installateur Windows et l’AppImage installent la mise à jour eux-mêmes, signée et vérifiée d’abord ; un .deb ou un .rpm est mis à jour par votre gestionnaire de paquets.
+DevNotes vérifie lui-même s’il existe une version plus récente et vous la propose, avec ses notes de version : *Installer maintenant*, *Plus tard* ou *Ne plus me proposer la version …*. Le menu *À propos* propose aussi de *Rechercher les mises à jour*. Rien d’autre ne quitte votre machine : la vérification demande seulement à GitHub si une nouvelle version existe. L’installateur Windows, l’application macOS et l’AppImage installent la mise à jour eux-mêmes, signée et vérifiée d’abord ; un .deb ou un .rpm est mis à jour par votre gestionnaire de paquets.

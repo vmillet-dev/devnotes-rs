@@ -32,7 +32,7 @@ describe('HomePage', () => {
     const page = await renderPage(HomePage);
     const capture = page.querySelector<HTMLImageElement>('.shot img');
 
-    expect(capture?.getAttribute('alt')).toMatch(/^DevNotes : /);
+    expect(capture?.getAttribute('alt')).toMatch(/^DevNotes\u00a0: /);
     expect(capture?.getAttribute('width')).toBe('2168');
     expect(capture?.getAttribute('height')).toBe('1362');
     expect(capture?.getAttribute('srcset')).toContain('/shots/notes-fr-dark-1084.webp 1084w');
@@ -43,6 +43,20 @@ describe('HomePage', () => {
     expect(marks).toHaveLength(6);
     for (const mark of marks) expect(mark.getAttribute('aria-hidden')).toBe('true');
     expect(page.querySelectorAll('.legend li')).toHaveLength(6);
+  });
+
+  it('sets its French as French is printed: no line break before : ; ? ! », nor after «', async () => {
+    const page = await renderPage(HomePage);
+    const walker = page.ownerDocument.createTreeWalker(page, NodeFilter.SHOW_TEXT);
+    const loose: string[] = [];
+    // The scenes draw the application, whose own words are typed with plain spaces.
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const text = node.textContent ?? '';
+      if (/ [:;?!»]|« /.test(text) && !node.parentElement?.closest('code, kbd, app-day-scene'))
+        loose.push(text);
+    }
+
+    expect(loose).toEqual([]);
   });
 
   it('tells the day in ten moments, each row named by its h3', async () => {

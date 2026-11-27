@@ -3,7 +3,7 @@
 // text larger, rather than drifting apart.
 .docs {
   display: grid;
-  grid-template-columns: minmax(220px, 264px) minmax(0, 1fr) minmax(180px, 220px);
+  grid-template-columns: minmax(200px, 232px) minmax(0, 1fr) minmax(170px, 196px);
 }
 
 .side,
@@ -148,7 +148,7 @@
 
 .article {
   min-width: 0;
-  padding: clamp(28px, 4vw, 48px) clamp(20px, 3.4vw, 56px) 72px;
+  padding: clamp(28px, 4vw, 48px) clamp(20px, 2.6vw, 48px) 72px;
   border-inline: 1px solid var(--line-soft);
   font-size: clamp(16px, 0.3vw + 11px, 18px);
   display: grid;

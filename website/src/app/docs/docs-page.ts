@@ -14,7 +14,7 @@ import {
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 
-import { Lang, OTHER } from '../core/lang';
+import { Lang, OTHER, french } from '../core/lang';
 import { Language } from '../core/language';
 import { ScrollFrame } from '../core/scroll-frame';
 import { Seo } from '../core/seo';
@@ -34,7 +34,7 @@ const FR = {
   title: (page: string) => `${page} – Documentation de DevNotes`,
   home: 'Documentation de DevNotes',
   search: 'Rechercher dans la documentation',
-  placeholder: 'Rechercher dans la doc',
+  placeholder: 'Rechercher',
   none: (query: string) => `Aucune section ne parle de « ${query} ».`,
   found: (count: number) => (count === 1 ? 'Une section' : `${count} sections`),
   crumbs: 'Fil d’Ariane',
@@ -61,7 +61,7 @@ const EN: typeof FR = {
   toc: 'On this page',
 };
 
-const TEXT: Readonly<Record<Lang, typeof FR>> = { fr: FR, en: EN };
+const TEXT: Readonly<Record<Lang, typeof FR>> = { fr: french(FR), en: EN };
 
 /** A page's sections, the same in number and order in both languages. */
 function sectionsOf(page: DocPage | undefined): readonly { readonly id: string; readonly text: string }[] {

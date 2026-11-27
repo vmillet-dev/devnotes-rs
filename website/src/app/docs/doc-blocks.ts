@@ -69,7 +69,7 @@ function view(block: Block): View {
 const CHIPS: Record<string, string> = { sh: 'l-sh', sql: 'l-sql', json: 'l-json', ts: 'l-ts', yml: 'l-yml' };
 
 const WORDS = {
-  fr: { copy: 'Copier', copied: 'Copié', code: 'Code : ', keys: 'Touches', action: 'Action' },
+  fr: { copy: 'Copier', copied: 'Copié', code: 'Code\u00a0: ', keys: 'Touches', action: 'Action' },
   en: { copy: 'Copy', copied: 'Copied', code: 'Code: ', keys: 'Keys', action: 'Action' },
 } as const satisfies Record<Lang, object>;
 

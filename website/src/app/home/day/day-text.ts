@@ -1,4 +1,4 @@
-import { Lang } from '../../core/lang';
+import { Lang, french } from '../../core/lang';
 import { Run } from '../runs';
 
 export type Scene =
@@ -22,7 +22,8 @@ export interface Moment {
 interface DayText {
   readonly section: string;
   readonly span: string;
-  readonly bridge: string;
+  readonly heading: string;
+  readonly lede: string;
   /** What the hour says before the first moment is reached. */
   readonly before: string;
   readonly moments: readonly Moment[];
@@ -31,8 +32,8 @@ interface DayText {
 const FR: DayText = {
   section: 'Une journée',
   span: 'Dix moments, de 08:52 à 18:10',
-  bridge:
-    "Vous voulez voir comment DevNotes s'utilise, concrètement ? Voici une journée dans la peau d'un développeur.",
+  heading: 'Une journée avec DevNotes.',
+  lede: "Une journée de développeur, de la liste du matin à la fermeture du soir : à chaque moment, ce que fait l'application.",
   before: 'Une journée de développeur',
   moments: [
     {
@@ -172,7 +173,8 @@ const FR: DayText = {
 const EN: DayText = {
   section: 'A day',
   span: 'Ten moments, from 08:52 to 18:10',
-  bridge: 'Want to see how DevNotes is used, day to day? Here is a day in the life of a developer.',
+  heading: 'A day with DevNotes.',
+  lede: "A developer's day, from the morning list to closing time: at each moment, what the application does.",
   before: "A developer's day",
   moments: [
     {
@@ -309,4 +311,4 @@ const EN: DayText = {
   ],
 };
 
-export const DAY_TEXT: Readonly<Record<Lang, DayText>> = { fr: FR, en: EN };
+export const DAY_TEXT: Readonly<Record<Lang, DayText>> = { fr: french(FR), en: EN };

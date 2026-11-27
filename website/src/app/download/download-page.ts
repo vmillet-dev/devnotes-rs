@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, afterNextRender, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import { Lang, downloadPath } from '../core/lang';
+import { Lang, downloadPath, french } from '../core/lang';
 import { Language } from '../core/language';
 import { CHECKSUMS, RELEASE_PAGE, System, VERSION, offers, systems, visitorSystem } from '../core/release';
 import { Seo } from '../core/seo';
@@ -106,7 +106,7 @@ const EN: typeof FR = {
   start: 'Getting started',
 };
 
-const TEXT: Readonly<Record<Lang, typeof FR>> = { fr: FR, en: EN };
+const TEXT: Readonly<Record<Lang, typeof FR>> = { fr: french(FR), en: EN };
 
 @Component({
   selector: 'app-download-page',

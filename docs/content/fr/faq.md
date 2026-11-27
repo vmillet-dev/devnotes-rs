@@ -8,7 +8,7 @@ Oui, et libre : il est publié sous licence GPL-3.0, son code est sur [GitHub](h
 
 ## Y a-t-il une version macOS ?
 
-Oui, à partir de la version qui suit la 1.1.0 : un fichier pour les Mac à puce Apple, un autre pour les Mac Intel. Au premier lancement, macOS le bloque, DevNotes n’ayant pas de certificat d’éditeur : ouvrez Réglages Système, Confidentialité et sécurité, puis Ouvrir quand même.
+Oui, depuis la version 1.2.0 : un fichier pour les Mac à puce Apple, un autre pour les Mac Intel. Au premier lancement, macOS le bloque, DevNotes n’ayant pas de certificat d’éditeur : ouvrez Réglages Système, Confidentialité et sécurité, puis Ouvrir quand même.
 
 ## Puis-je synchroniser deux ordinateurs ?
 
@@ -28,7 +28,7 @@ Entièrement. Seuls le client API, qui contacte les serveurs que vous lui donnez
 
 ## Comment mettre à jour ?
 
-DevNotes propose lui-même les nouvelles versions, avec leurs notes, et les installe pour l’installateur Windows et l’AppImage. Un `.deb` ou un `.rpm` est mis à jour par le gestionnaire de paquets de votre distribution. Vous pouvez aussi télécharger [la dernière version](https://devnotes.fr/telecharger) et l’installer par-dessus : vos bibliothèques ne sont pas touchées.
+DevNotes propose lui-même les nouvelles versions, avec leurs notes, et les installe pour l’installateur Windows, l’application macOS et l’AppImage. Un `.deb` ou un `.rpm` est mis à jour par le gestionnaire de paquets de votre distribution. Vous pouvez aussi télécharger [la dernière version](https://devnotes.fr/telecharger) et l’installer par-dessus : vos bibliothèques ne sont pas touchées.
 
 ## Mes bibliothèques d’une version précédente s’ouvriront-elles ?
 
