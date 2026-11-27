@@ -62,8 +62,9 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, view: &mut View, actions: &mut
     if state.updates.has_pending() {
         dot(ui, &anchor, state, "update-dot");
     }
-    // The check keeps the menu open for its answer; an offer is answered in its own dialog.
-    if state.updates.offered().is_some() {
+    // The check keeps the menu open for its answer; an offer is answered in its own dialog, which
+    // the unlock card does without.
+    if state.updates.offered().is_some() && state.gate.is_open() {
         Popup::close_id(ui.ctx(), Popup::default_response_id(&anchor));
     }
     let shown = Popup::menu(&anchor)

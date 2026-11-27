@@ -5,7 +5,7 @@ mod draw;
 pub mod passphrase;
 pub mod prompt;
 
-pub use draw::show;
+pub use draw::{Offer, show};
 
 use engine::error::{AppError, ErrorCode};
 use engine::libraries::registry::Registry;

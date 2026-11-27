@@ -49,7 +49,7 @@ pub(crate) fn show(
     view: &mut UpdateView,
     actions: &mut Actions,
 ) {
-    let Some(update) = state.updates.offered() else {
+    let Some(update) = state.updates.offered().filter(|_| state.gate.is_open()) else {
         return;
     };
     let cross = i18n::translate(state.language, i18n::keys::dialog::CLOSE, &[]);

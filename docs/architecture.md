@@ -6221,7 +6221,11 @@ key can produce an installable update. It is the key the Tauri releases were sig
   it back. ⚠️ Only the **silent** check at launch is silenced; the one asked from the menu always
   answers.
 - **The dot on the About menu** says « an update exists and is not installed », and outlives the
-  prompt it was raised with.
+  prompt it was raised with; the menu's entry then names the version and opens the offer again.
+  The menu says what a check found only when it was asked from it, and forgets it once closed.
+- **No dialog over the passphrase.** While the unlock card is shown, the offer is a line at its
+  bottom with « Install now »: a dialog would take the keys from someone typing their phrase.
+  Unlocking with the offer unanswered puts it away (`put_away`): the dot and the entry keep it.
 - **The notes the prompt shows** are the release's changelog section less what the user cannot see,
   carried by `latest.json` (→ "The update prompt shows the release's notes").
 - **The manifest** (`latest.json`, `scripts/latest-json.mjs`) carries the NSIS installer, the

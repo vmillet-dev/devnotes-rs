@@ -29,7 +29,13 @@ fn screen(backend: Backend, profile: tempfile::TempDir) -> Harness<'static, Scre
                     .gate
                     .update(&screen.backend, &mut screen.status, &mut screen.errors);
                 let mut asked = Vec::new();
-                show(ui, &screen.gate, &mut screen.view, Language::En, &mut asked);
+                show(
+                    ui,
+                    &screen.gate,
+                    &mut screen.view,
+                    (Language::En, None),
+                    &mut asked,
+                );
                 for action in asked {
                     screen.gate.apply(action, &mut screen.view, &screen.backend);
                 }

@@ -108,6 +108,13 @@ impl UpdateState {
             .filter(|_| self.status != Status::Installed)
     }
 
+    /// The offer said on the unlock card and left unanswered: the menu keeps it, no dialog opens.
+    pub fn put_away(&mut self) {
+        if self.status == Status::Available {
+            self.status = Status::Idle;
+        }
+    }
+
     /// The offer put away by « Later », shown again: no new check.
     pub fn reopen(&mut self) {
         if self.update.is_some() && self.status == Status::Idle {
