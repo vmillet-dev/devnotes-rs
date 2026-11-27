@@ -8,17 +8,28 @@ use i18n::{Key, Language, Message, keys};
 
 use super::passphrase::PassphraseField;
 use super::{Action, Gate, GateView};
+use crate::services::updates::Status;
 use crate::theme::palette;
 use crate::widgets::{self, Button, ChoiceMenu, Kind};
+use engine::app_info::METADATA;
 
-/// The whole window while the library is not open.
+/// An update found while the library is closed, as the caller knows it.
+pub struct Offer<'a> {
+    pub version: &'a str,
+    pub status: Status,
+    pub percent: Option<u32>,
+}
+
+/// The whole window while the library is not open. `true` when the update offered is to be
+/// installed: the gate only says it.
 pub fn show(
     ui: &mut Ui,
     gate: &Gate,
     view: &mut GateView,
-    language: Language,
+    (language, offer): (Language, Option<Offer<'_>>),
     actions: &mut Vec<Action>,
-) {
+) -> bool {
+    let mut install = false;
     let p = palette(ui.ctx());
     let tr = |key: Key| i18n::translate(language, key, &[]);
     let height_id = ui.scope_id().with("gate-height");
@@ -63,10 +74,52 @@ pub fn show(
                     } else {
                         form(ui, gate, view, language, actions);
                     }
+                    if let Some(offer) = &offer {
+                        install = update_line(ui, offer, language);
+                    }
                 });
             });
         ui.data_mut(|data| data.insert_temp(height_id, shown.response.rect.height()));
     });
+    install
+}
+
+/// Under the form, at the card's bottom: the version found and « Install now », then how far
+/// its download is. The field keeps the keys: nothing here asks for the focus.
+fn update_line(ui: &mut Ui, offer: &Offer<'_>, language: Language) -> bool {
+    let p = palette(ui.ctx());
+    let said = match (offer.status, offer.percent) {
+        (Status::Installed, _) => Message::new(keys::update::RESTARTING)
+            .with("app", METADATA.name)
+            .text(language),
+        (Status::Installing, Some(percent)) => Message::new(keys::update::DOWNLOADING_PERCENT)
+            .with("percent", percent)
+            .text(language),
+        (Status::Installing, None) => i18n::translate(language, keys::update::DOWNLOADING, &[]),
+        _ => Message::new(keys::vault::UPDATE_AVAILABLE)
+            .with("app", METADATA.name)
+            .with("version", offer.version)
+            .text(language),
+    };
+    let top = ui.cursor().top();
+    ui.painter()
+        .hline(ui.max_rect().x_range(), top, Stroke::new(1.0, p.line_soft));
+    ui.horizontal(|ui| {
+        let shown = ui.label(small(&said, p.text_2));
+        widgets::address(ui, &shown, "gate-update");
+        if offer.status != Status::Available {
+            return false;
+        }
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            let install = i18n::translate(language, keys::update::INSTALL, &[]);
+            Button::new(&install, "gate-update-install")
+                .kind(Kind::Quiet)
+                .show(ui)
+                .clicked()
+        })
+        .inner
+    })
+    .inner
 }
 
 /// Which library the panel is about, above what it asks: several can be asked for here.

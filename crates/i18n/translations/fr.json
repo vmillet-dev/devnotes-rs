@@ -1214,6 +1214,7 @@
     "close": "Fermer"
   },
   "vault": {
+    "updateAvailable": "{{app}} {{version}} est disponible",
     "library": "Bibliothèque",
     "switchLibrary": "Ouvrir une autre bibliothèque",
     "createTitle": "Protéger cette bibliothèque",

@@ -282,13 +282,17 @@ impl AppState {
         self.dialogs.begin_frame(ctx);
         self.help.update();
         self.updates.update(&self.settings, &mut self.errors);
-        let offered = self.updates.offered().is_some();
+        // The unlock card says the offer: no dialog takes the keys from the passphrase.
+        let offered = self.updates.offered().is_some() && self.gate.is_open();
         let prompt = crate::banners::update_prompt::id();
         self.dialogs.follow(ctx, Layer::Update, prompt, offered);
         if self
             .gate
             .update(backend, &mut self.status, &mut self.errors)
         {
+            if self.gate.is_open() {
+                self.updates.put_away();
+            }
             self.reset_library_scope(ctx, backend);
         }
         if self.autostart.update(backend, &mut self.settings) {

@@ -180,3 +180,10 @@ fn an_update_known_is_named_by_its_entry_drawn_clear_of_the_next() {
     click(&mut harness, "about-check-updates");
     assert!(present(&harness, "update-prompt"), "the offer reopened");
 }
+
+#[test]
+fn an_update_found_with_the_library_open_still_opens_its_dialog() {
+    let directory = tempfile::tempdir().unwrap();
+    let harness = launched(directory.path(), FakeUpdater::offering("0.26.0"));
+    assert!(present(&harness, "update-prompt"));
+}

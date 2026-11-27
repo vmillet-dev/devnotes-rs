@@ -371,15 +371,25 @@ impl eframe::App for DevNotesApp {
                     }
                 } else {
                     let mut asked = Vec::new();
-                    gate::show(
+                    let updates = &self.state.updates;
+                    let offer = updates.offered().map(|update| gate::Offer {
+                        version: &update.version,
+                        status: updates.status(),
+                        percent: updates.progress(),
+                    });
+                    let install = gate::show(
                         ui,
                         &self.state.gate,
                         &mut self.state.gate_view,
-                        language,
+                        (language, offer),
                         &mut asked,
                     );
                     for action in asked {
                         actions.push(Action::Gate(action));
+                    }
+                    if install {
+                        let asked = crate::banners::update_prompt::Ask::Install;
+                        actions.push(Action::Menu(crate::titlebar::Action::Update(asked)));
                     }
                 }
             });
@@ -438,6 +448,8 @@ mod area_switch_tests;
 #[cfg(test)]
 mod library_panel_tests;
 
+#[cfg(test)]
+mod gate_update_tests;
 #[cfg(test)]
 mod rail_toggle_tests;
 #[cfg(test)]

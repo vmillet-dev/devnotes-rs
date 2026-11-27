@@ -2085,3 +2085,24 @@ fn a_wrapped_list_selected_whole() {
     settle(&mut harness);
     capture(&mut harness, "note-menu");
 }
+
+#[test]
+fn an_update_found_at_the_gate() {
+    use crate::services::updates::UpdateState;
+    use crate::services::updates::fake::FakeUpdater;
+    let profile = tempfile::tempdir().unwrap();
+    let mut creating = launch(profile.path());
+    type_into(&mut creating, "vault-passphrase", PASSPHRASE);
+    type_into(&mut creating, "vault-confirmation", PASSPHRASE);
+    click(&mut creating, "vault-submit");
+    settle(&mut creating);
+    crate::testing::close_library(&creating.state().backend);
+    drop(creating);
+
+    let mut harness = launch(profile.path());
+    harness.state_mut().state.updates = UpdateState::with(FakeUpdater::offering("1.2.2"));
+    let app = harness.state_mut();
+    app.state.updates.check(&app.backend, true);
+    settle(&mut harness);
+    capture(&mut harness, "gate-update");
+}
