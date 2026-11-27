@@ -34,6 +34,8 @@ const DIMMED: f32 = 0.55;
 /// Held this close to an end of the strip, a dragged tab scrolls it, by this much a frame.
 const EDGE: f32 = 32.0;
 const EDGE_STEP: f32 = 8.0;
+/// Between « New request » and the environment picker.
+const END_GAP: f32 = gap::BLOCKS;
 
 /// What only the strip's drawing sees: the tab being dragged.
 #[derive(Default)]
@@ -79,7 +81,10 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, view: &mut TabsView, actions: 
         egui::UiBuilder::new()
             .max_rect(Rect::from_min_max(
                 pos2(toggle_rect.right() + 8.0, bar.top()),
-                pos2(bar.right() - end_width - 20.0, bar.bottom()),
+                pos2(
+                    bar.right() - end_width - BAR_INSET - gap::INSET,
+                    bar.bottom(),
+                ),
             ))
             .layout(egui::Layout::left_to_right(egui::Align::Min)),
     );
@@ -123,16 +128,18 @@ pub(super) fn show(ui: &mut Ui, state: &AppState, view: &mut TabsView, actions: 
     list.widget_info(|| WidgetInfo::labeled(Role::TabList, true, &label));
     widgets::address(&strip, &list, "http-tabs");
     let end = Rect::from_min_max(
-        pos2(bar.right() - end_width - 10.0, bar.top()),
-        pos2(bar.right() - 10.0, bar.bottom()),
+        pos2(bar.right() - end_width - BAR_INSET, bar.top()),
+        pos2(bar.right() - BAR_INSET, bar.bottom()),
     );
     let mut end_ui = ui.new_child(
         egui::UiBuilder::new()
             .max_rect(end)
             .layout(egui::Layout::left_to_right(egui::Align::Center)),
     );
+    // `end_width` counts this gap alone: an item spacing on top pushed the picker past the edge.
+    end_ui.spacing_mut().item_spacing.x = 0.0;
     new_request(&mut end_ui, actions, language);
-    end_ui.add_space(gap::CONTROLS);
+    end_ui.add_space(END_GAP);
     super::environment_picker::show(&mut end_ui, state, actions);
 }
 
@@ -364,7 +371,7 @@ fn close_glyph(ui: &Ui, close: &Response) {
 
 /// What the end of the strip takes: « New request » and the environment beside it.
 fn end_width(ui: &Ui, state: &AppState) -> f32 {
-    new_request_width(ui, state.language) + super::environment_picker::width(ui, state) + 8.0
+    new_request_width(ui, state.language) + END_GAP + super::environment_picker::width(ui, state)
 }
 
 fn new_request_width(ui: &Ui, language: i18n::Language) -> f32 {
