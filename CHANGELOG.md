@@ -12,6 +12,22 @@ Keep the shape — a `## ` heading per release, `### ` headings for the categori
 bullet per entry — or the entry will not be rendered. It is deliberately untranslated, like
 the release notes the updater hands over.
 
+## [1.2.1] - 2026-11-27
+
+### 🐛 Fixed
+
+- Windows: executable, shortcuts and taskbar show the DevNotes icon (#1666)
+
+### 🌐 Website
+
+- Website: French spacing, a capture of real notes, wider day scenes (#1663)
+- Documentation: the version under the pages follows Cargo.toml (#1665)
+
+### 🧰 Under the hood
+
+- Application build: the icon's resource compiler built on Windows alone (#1667)
+- Release notes: Documentation and Website sections, kept out of the app (#1664)
+
 ## [1.2.0] - 2026-11-26
 
 ### ✨ Added
