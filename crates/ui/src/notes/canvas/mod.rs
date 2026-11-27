@@ -76,7 +76,7 @@ pub fn show(ui: &mut Ui, state: &AppState, canvas_view: &mut CanvasView, actions
         });
         return;
     };
-    if view.matched == 0 {
+    if view.matched == 0 && !view.offers_creation() {
         let filtered = query.has_user_filters();
         // The page that explains this screen, not the top of the documentation.
         let (label, author_id) = if !filtered {

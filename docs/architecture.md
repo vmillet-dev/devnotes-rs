@@ -4389,8 +4389,9 @@ worked out once a frame and only the rows that cross the viewport are drawn
 (`ScrollArea::show_viewport`): of 30 000 notes, a screenful. Sections are the core's, in its
 order, empty ones included (they are exhaustive); the cell after a section's last card is its
 « paste or create » ghost when the core says so. The region (`canvas`) says loading, nothing
-found (`matched == 0`, `canvas-no-results`) or a failure with its retry (`canvas-retry`, which
-bumps the revision) instead of the sections.
+found (`matched == 0` with no section keeping the ghost, `NotesView::offers_creation`,
+`canvas-no-results`) or a failure with its retry (`canvas-retry`, which bumps the revision)
+instead of the sections: an empty folder or space is a place to create in, not a search.
 
 A card (`canvas::card`) draws the core's `DisplayNote` and decides nothing about it, in three
 bands (→ "A card is two layers"): the title bar (the card's box; the kind's icon,

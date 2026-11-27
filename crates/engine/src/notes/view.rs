@@ -461,6 +461,14 @@ impl NotesView {
     pub fn cards(&self) -> impl Iterator<Item = &Card> {
         self.sections.iter().flat_map(|section| &section.cards)
     }
+
+    /// A section keeps the card a note is created from: empty, the view is a place to create in,
+    /// not a search that found nothing.
+    pub fn offers_creation(&self) -> bool {
+        self.sections
+            .iter()
+            .any(|section| section.show_create_ghost)
+    }
 }
 
 /// What a card carries beside its note, read from other tables, and so apart from [`build`],
@@ -1153,6 +1161,38 @@ mod tests {
         assert!(view.is_filtering);
         assert_eq!(keys(&view), [NoteSectionKey::Results]);
         assert_eq!(view.matched, 2);
+    }
+
+    #[test]
+    fn an_empty_folder_still_offers_the_slot_a_note_is_created_from() {
+        let view = build(
+            Vec::new(),
+            Facets::default(),
+            &NotesQuery {
+                folder_id: Some("f-1".to_string()),
+                ..request()
+            },
+        );
+
+        assert_eq!(view.matched, 0);
+        assert_eq!(keys(&view), [NoteSectionKey::Results]);
+        assert!(view.sections[0].cards.is_empty());
+        assert!(view.offers_creation());
+    }
+
+    #[test]
+    fn a_search_that_finds_nothing_offers_nothing_to_create() {
+        let view = build(
+            vec![note("a", "Un")],
+            Facets::default(),
+            &NotesQuery {
+                search: "absent".to_string(),
+                ..request()
+            },
+        );
+
+        assert_eq!(view.matched, 0);
+        assert!(!view.offers_creation());
     }
 
     #[test]
