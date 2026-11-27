@@ -441,6 +441,7 @@
     "menu": {
       "cut": "Cut",
       "copy": "Copy",
+      "copyMarkdown": "Copy as Markdown",
       "paste": "Paste",
       "selectAll": "Select all"
     },
@@ -1015,6 +1016,7 @@
       "taskList": "Task list",
       "quote": "Quote",
       "codeBlock": "Code block",
+      "copyMarkdown": "Copy as Markdown",
       "markdown": "Typed at the start of a line, then a space: heading, list, numbered list, task, quote, code block"
     },
     "palette": {

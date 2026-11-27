@@ -241,3 +241,57 @@ fn a_paragraph_left_empty_after_a_code_block_is_not_written() {
     leave_code(&mut document, &caret_at(&[0], 1));
     assert_eq!(read(&write(&document)), read("```\na\n```"));
 }
+
+fn whole(document: &Document) -> Selection {
+    let leaves = tree::leaves(document);
+    let last = leaves.last().unwrap();
+    let length = tree::leaf(document, last).unwrap().len();
+    range((&leaves[0], 0), (last, length))
+}
+
+#[test]
+fn a_copy_keeps_the_markers_of_its_blocks_and_none_of_the_marks() {
+    let cases = [
+        ("- one\n- two", "- one\n- two"),
+        ("3. three\n4. four", "3. three\n4. four"),
+        ("- [ ] open\n- [x] done", "- [ ] open\n- [x] done"),
+        ("- one\n  - nested\n- two", "- one\n  - nested\n- two"),
+        ("> quoted\n>\n> again", "> quoted\n> again"),
+        ("# Title\n\n**bold** and `code`", "Title\nbold and code"),
+    ];
+    for (markdown, expected) in cases {
+        let document = read(markdown);
+        assert_eq!(copied(&document, &whole(&document)), expected, "{markdown}");
+    }
+}
+
+#[test]
+fn a_copy_cut_inside_items_keeps_their_numbers_and_within_one_item_its_text_alone() {
+    let document = read("1. first\n2. second\n3. third");
+    let from_second = range((&[0, 1, 0], 3), (&[0, 2, 0], 2));
+    assert_eq!(copied(&document, &from_second), "2. ond\n3. th");
+    let within = range((&[0, 1, 0], 0), (&[0, 1, 0], 6));
+    assert_eq!(copied(&document, &within), "second");
+}
+
+#[test]
+fn copied_as_markdown_reads_back_to_the_same_blocks() {
+    for markdown in [
+        "- one **bold**\n- two",
+        "3. three\n4. four",
+        "- [ ] open\n- [x] done",
+        "- one\n  - nested\n- two",
+        "> quoted",
+        "# Title\n\n**bold** and `code`",
+    ] {
+        let document = read(markdown);
+        let copied = copied_markdown(&document, &whole(&document));
+        assert_eq!(read(&copied), document, "{markdown} gave {copied}");
+    }
+    let document = read("1. first\n2. second\n3. third");
+    let from_second = range((&[0, 1, 0], 0), (&[0, 2, 0], 5));
+    assert_eq!(
+        copied_markdown(&document, &from_second),
+        "2. second\n3. third"
+    );
+}

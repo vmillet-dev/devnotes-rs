@@ -516,6 +516,7 @@ pub(super) fn show(ui: &mut Ui, view: &mut RichEditor, state: &AppState) -> Show
         surface.request_focus();
     }
     pointer(ui, view, &surface);
+    menu(view, &surface, state.language);
     if focused {
         lock_keys(ui, surface.id);
         shown.code_paste = keys(ui, view, state.clipboard.as_ref());
@@ -629,7 +630,7 @@ fn keys(
                 modifiers,
                 ..
             } => {
-                let shortcut = key_pressed(view, key, physical_key, modifiers);
+                let shortcut = key_pressed(ui, view, key, physical_key, modifiers);
                 if shortcut {
                     ran.push((modifiers, key));
                 }
@@ -671,22 +672,72 @@ fn paste(
     None
 }
 
+/// The selection as text, its lists' markers kept.
 fn copy(ui: &Ui, view: &RichEditor) {
     if !view.selection.is_empty() {
         ui.ctx()
-            .copy_text(edit::selected_text(&view.document, &view.selection));
+            .copy_text(edit::copied(&view.document, &view.selection));
     }
+}
+
+fn copy_markdown(ui: &Ui, view: &RichEditor) {
+    if !view.selection.is_empty() {
+        ui.ctx()
+            .copy_text(edit::copied_markdown(&view.document, &view.selection));
+    }
+}
+
+/// Cut, copy, copy as Markdown, paste, select all. Paste asks the window for the clipboard: it
+/// arrives at the next frame as an event the keys take.
+fn menu(view: &mut RichEditor, surface: &egui::Response, language: Language) {
+    use i18n::keys::editor::menu as words;
+    let popup = egui::Popup::context_menu(surface).frame(crate::widgets::menu_frame(&surface.ctx));
+    popup.show(|ui| {
+        crate::widgets::fitted_menu(ui, 0.0, |ui| {
+            ui.spacing_mut().item_spacing.y = 0.0;
+            let entries = [
+                (words::CUT, "rich-menu-cut"),
+                (words::COPY, "rich-menu-copy"),
+                (words::COPY_MARKDOWN, "rich-menu-copy-markdown"),
+                (words::PASTE, "rich-menu-paste"),
+                (words::SELECT_ALL, "rich-menu-select-all"),
+            ];
+            for (key, author_id) in entries {
+                let label = i18n::translate(language, key, &[]);
+                if !crate::widgets::menu_entry(ui, &label, author_id, false, false, false).clicked()
+                {
+                    continue;
+                }
+                match author_id {
+                    "rich-menu-cut" if !view.selection.is_empty() => {
+                        copy(ui, view);
+                        view.change(Step::Other, edit::delete_selection);
+                    }
+                    "rich-menu-copy" => copy(ui, view),
+                    "rich-menu-copy-markdown" => copy_markdown(ui, view),
+                    "rich-menu-paste" => ui
+                        .ctx()
+                        .send_viewport_cmd(egui::ViewportCommand::RequestPaste),
+                    "rich-menu-select-all" => view.select_all(),
+                    _ => {}
+                }
+                ui.close();
+                surface.request_focus();
+            }
+        });
+    });
 }
 
 /// `true` when the key was one of the text's shortcuts.
 fn key_pressed(
+    ui: &Ui,
     view: &mut RichEditor,
     key: Key,
     physical: Option<Key>,
     modifiers: Modifiers,
 ) -> bool {
     if let Some(command) = shortcuts::find(key, physical, modifiers) {
-        run_command(view, command);
+        run_command(ui, view, command);
         return true;
     }
     if let Some(shortcut) = images::key_pressed(view, key, modifiers) {
@@ -707,7 +758,7 @@ fn key_pressed(
     false
 }
 
-fn run_command(view: &mut RichEditor, command: shortcuts::Command) {
+fn run_command(ui: &Ui, view: &mut RichEditor, command: shortcuts::Command) {
     use shortcuts::Command;
     use toolbar::Tool;
     match command {
@@ -732,6 +783,7 @@ fn run_command(view: &mut RichEditor, command: shortcuts::Command) {
         Command::Undo => view.undo(false),
         Command::Redo => view.undo(true),
         Command::SelectAll => view.select_all(),
+        Command::CopyMarkdown => copy_markdown(ui, view),
     }
 }
 

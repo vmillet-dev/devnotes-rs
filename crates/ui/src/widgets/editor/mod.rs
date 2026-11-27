@@ -631,7 +631,12 @@ pub(crate) fn selection_rects(
         let to = range.end.min(row_end);
         let last = index + 1 == rows;
         if from < to || (last && past_end) {
-            let x0 = galley.pos_from_cursor(CCursor::new(from)).left();
+            // A row's start is also the end of the row above when the line wraps there: on this one.
+            let start = CCursor {
+                index: from.into(),
+                prefer_next_row: true,
+            };
+            let x0 = galley.pos_from_cursor(start).left();
             let mut x1 = galley.pos_from_cursor(CCursor::new(to)).left();
             if last && past_end {
                 x1 += char_width;

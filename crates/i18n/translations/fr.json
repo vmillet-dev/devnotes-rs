@@ -441,6 +441,7 @@
     "menu": {
       "cut": "Couper",
       "copy": "Copier",
+      "copyMarkdown": "Copier en Markdown",
       "paste": "Coller",
       "selectAll": "Tout sélectionner"
     },
@@ -1015,6 +1016,7 @@
       "taskList": "Liste de tâches",
       "quote": "Citation",
       "codeBlock": "Bloc de code",
+      "copyMarkdown": "Copier en Markdown",
       "markdown": "Tapés en début de ligne, suivis d’une espace : titre, liste, liste numérotée, tâche, citation, bloc de code"
     },
     "palette": {

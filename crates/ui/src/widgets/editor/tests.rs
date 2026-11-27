@@ -298,3 +298,36 @@ fn budgets() {
         );
     }
 }
+
+#[test]
+fn a_wrapped_line_selected_whole_is_lit_on_each_of_its_rows() {
+    let text = "one two three four five six seven eight nine ten eleven twelve".to_owned();
+    let length = text.chars().count();
+    let ctx = egui::Context::default();
+    let mut laid = None;
+    let mut output = ctx.run_pass(egui::RawInput::default(), |ctx| {
+        let body = egui::FontId::proportional(font::BODY);
+        let galley =
+            ctx.fonts_mut(|fonts| fonts.layout(text.clone(), body, egui::Color32::WHITE, 120.0));
+        laid = Some(galley);
+    });
+    output.textures_delta.clear();
+    let galley = laid.unwrap();
+    assert!(
+        galley.rows.len() >= 3,
+        "wrapped: {} rows",
+        galley.rows.len()
+    );
+
+    let rects = selection_rects(&galley, 0..length, false, 4.0);
+
+    assert_eq!(rects.len(), galley.rows.len());
+    for (row, rect) in galley.rows.iter().zip(&rects) {
+        assert!(rect.width() > 1.0, "{rect:?}");
+        assert!(
+            (rect.left() - row.rect().left()).abs() < 0.5,
+            "from its own start: {rect:?}"
+        );
+        assert!((rect.center().y - row.rect().center().y).abs() < 0.5);
+    }
+}

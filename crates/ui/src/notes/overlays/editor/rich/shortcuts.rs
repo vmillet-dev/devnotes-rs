@@ -20,9 +20,10 @@ pub(super) enum Command {
     Undo,
     Redo,
     SelectAll,
+    CopyMarkdown,
 }
 
-pub(super) const SHORTCUTS: [(&str, Command); 21] = [
+pub(super) const SHORTCUTS: [(&str, Command); 22] = [
     ("Mod-b", Command::Bold),
     ("Mod-i", Command::Italic),
     ("Mod-Shift-s", Command::Strike),
@@ -44,6 +45,8 @@ pub(super) const SHORTCUTS: [(&str, Command); 21] = [
     ("Mod-z", Command::Undo),
     ("Shift-Mod-z", Command::Redo),
     ("Mod-y", Command::Redo),
+    // Ctrl+C alone is the window's copy event; with Shift it reaches the editor as a key.
+    ("Mod-Shift-c", Command::CopyMarkdown),
 ];
 
 /// `Mod-a` is the editor's own, with the other keys of its keymap.

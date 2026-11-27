@@ -386,6 +386,29 @@ impl App {
         self.apply(vec![press(true), press(false), press(true), press(false)]);
     }
 
+    /// Ctrl+C as the window delivers it: a copy, not a key.
+    pub fn copy(&mut self) {
+        self.apply(vec![Event::Copy]);
+    }
+
+    /// Until the system's clipboard holds text that `holds` accepts.
+    pub fn clipboard_holds(&mut self, what: &str, holds: impl Fn(&str) -> bool) {
+        use platform::clipboard::Clipboard;
+        let until = Instant::now() + PATIENCE;
+        loop {
+            let held = platform::clipboard::System.text().unwrap_or_default();
+            if holds(&held) {
+                return;
+            }
+            assert!(
+                Instant::now() < until,
+                "{what}: still not true after {PATIENCE:?}; the clipboard holds {held:?}"
+            );
+            // A frame between two reads.
+            let _ = self.tree();
+        }
+    }
+
     /// A press at `from` and a release at `to`, in points from the control's corner.
     pub fn drag_in(&mut self, author_id: &str, from: (f32, f32), to: (f32, f32)) {
         self.wait_for(author_id);
