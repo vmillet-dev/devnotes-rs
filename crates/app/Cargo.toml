@@ -49,7 +49,9 @@ summary = "A developer's notes and snippets manager for the desktop"
 assets = [
     { source = "target/release/devnotes", dest = "/usr/bin/devnotes", mode = "755" },
     { source = "packaging/devnotes.desktop", dest = "/usr/share/applications/devnotes.desktop", mode = "644" },
+    { source = "icons/32x32.png", dest = "/usr/share/icons/hicolor/32x32/apps/devnotes.png", mode = "644" },
     { source = "icons/128x128.png", dest = "/usr/share/icons/hicolor/128x128/apps/devnotes.png", mode = "644" },
+    { source = "icons/icon.png", dest = "/usr/share/icons/hicolor/512x512/apps/devnotes.png", mode = "644" },
 ]
 
 [package.metadata.generate-rpm.requires]
@@ -81,6 +83,10 @@ puffin_http = { workspace = true, optional = true }
 [target.'cfg(any(target_os = "linux", target_os = "macos"))'.dependencies]
 # The one eframe uses, for its X11 switch (D15) and for macOS's menu bar.
 winit.workspace = true
+
+[build-dependencies]
+toml.workspace = true
+winresource.workspace = true
 
 [dev-dependencies]
 # `examples/tours.rs`, which assembles the README's tours, and their test.

@@ -6257,8 +6257,10 @@ three invariants `changelog::tests::the_shipped_file_parses_into_something_to_sh
 **The packages** are built by `cargo build -p app --release`, then `.github/actions/package`:
 `cargo packager` (NSIS per user on Windows; AppImage and deb on Linux; a `.dmg` and the updater's
 archive on macOS) and `cargo generate-rpm`,
-each signed with the minisign key, each checked to hold the application alone (→
-`docs/releasing.md`, "What gets published").
+each signed with the minisign key, each checked to hold the application alone and to carry the
+icon (→ `docs/releasing.md`, "What gets published"). On Windows the icon and the version are
+resources of `devnotes.exe`, embedded by `crates/app/build.rs` (`winresource`): the shell, the
+installer's shortcuts and the taskbar read the file, whatever the window sets.
 `packages.yml` runs the same action on a pull request that touches packaging, with a key made
 for the run, then installs 1.0.0 on a clean runner, refuses a 1.0.1 altered by one byte and
 installs the whole one through the application's own updater client
