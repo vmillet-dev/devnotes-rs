@@ -1,4 +1,5 @@
-//! The button that puts the sidebar away stands at one place, whichever area or page is shown.
+//! The ends of the bars: the button that puts the sidebar away stands at one place, whichever area
+//! or page is shown, and the HTTP strip ends where the request under it ends.
 
 use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
@@ -72,5 +73,44 @@ fn the_sidebar_toggle_stands_at_one_place_in_every_area_at_both_densities() {
                 "{density:?}: {page} at {rect:?}, the notes at {first:?}\n{seen:?}"
             );
         }
+    }
+}
+
+#[test]
+fn the_environment_picker_ends_at_the_margin_of_the_request_line() {
+    let directory = tempfile::tempdir().unwrap();
+    let mut harness = open_library(directory.path());
+    let backend = harness.state().backend();
+    let local = crate::http::tests::collection(backend, "Local");
+    crate::http::tests::request(
+        backend,
+        (&local, None),
+        "Login",
+        (RequestKind::Http, HttpMethod::Post),
+    );
+    click(&mut harness, "area-option-http");
+    harness
+        .get_by(|node| {
+            node.author_id() == Some("http-node-name")
+                && node.label().as_deref() == Some("POST Login")
+        })
+        .click();
+    let margin = harness.ctx.content_rect().right() - crate::theme::tokens::BAR_INSET;
+    for density in [
+        crate::theme::Density::Comfortable,
+        crate::theme::Density::Compact,
+    ] {
+        let ctx = harness.ctx.clone();
+        let app = harness.state_mut();
+        app.state.settings.density = density;
+        app.state.apply_look(&ctx);
+        settle(&mut harness);
+        let picker = toggle(&harness, "http-environment-picker").right();
+        let save = toggle(&harness, "http-save").right();
+        // « Save » ends where the measured widths of the line leave it: a point or two short.
+        assert!(
+            (picker - margin).abs() < 0.5 && save <= margin && margin - save < 3.0,
+            "{density:?}: the picker ends at {picker}, Save at {save}, the margin at {margin}"
+        );
     }
 }
