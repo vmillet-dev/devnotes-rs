@@ -134,7 +134,10 @@ more; the Linux ones depend on GTK (the tray alone), xkbcommon, Vulkan and the i
 library.
 
 Each package is checked to hold the application alone (one binary; the identity tool's lists are
-compiled into it) before anything is uploaded.
+compiled into it) before anything is uploaded, and to carry the icon: the hicolor icons and the
+`.desktop` entry on Linux, the `.icns` of the bundle and of the updater's archive on macOS. On
+Windows the icon is a resource of `devnotes.exe` itself, held by
+`crates/app/tests/windows_resources.rs`.
 
 **Signatures.** `cargo-packager` signs every package it writes with the minisign key, and the
 `.rpm` is signed by `cargo packager signer sign`. The key and its password are the release

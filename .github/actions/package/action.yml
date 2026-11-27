@@ -113,6 +113,34 @@ runs:
           check AppImage "$(ls "$RUNNER_TEMP/squashfs-root/usr/bin")" devnotes
         fi
 
+    # The icon the menus, the dock and the file managers show, read from the package and not from
+    # the window. Windows reads it from devnotes.exe, which a test of `crates/app` holds.
+    - name: Each package carries the icon
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        packages="$GITHUB_WORKSPACE/target/release/packages"
+        need() {
+          if ! echo "$2" | grep -qxF -- "$3"; then
+            echo "::error::$1 has no $3"
+            exit 1
+          fi
+          echo "$1: $3"
+        }
+        if [ "$RUNNER_OS" = macOS ]; then
+          app="$packages/DevNotes.app/Contents"
+          icns=$(plutil -extract CFBundleIconFile raw "$app/Info.plist")
+          need app "$(ls "$app/Resources")" "$icns"
+          need archive "$(tar -tzf "$(ls "$packages"/*.app.tar.gz)" | xargs -n1 basename)" "$icns"
+        else
+          icon=usr/share/icons/hicolor/512x512/apps/devnotes.png
+          deb=$(ls "$packages"/*.deb)
+          need deb "$(dpkg-deb -c "$deb" | awk '{ print $6 }' | sed 's|^\./||')" "$icon"
+          need deb "$(dpkg-deb --fsys-tarfile "$deb" | tar -xO --wildcards '*usr/share/applications/devnotes.desktop')" Icon=devnotes
+          need rpm "$(rpm -qlp "$(ls "$packages"/*.rpm)")" "/$icon"
+          need AppImage "$(ls -A "$RUNNER_TEMP/squashfs-root")" .DirIcon
+        fi
+
     # The packages, their signatures, and the standalone executable, renamed so that the two
     # operating systems do not overlap in a release.
     - name: Gather
